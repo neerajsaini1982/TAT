@@ -1,0 +1,24 @@
+<mat-toolbar color="primary">
+  <span>TAT — Time &amp; Attendance</span>
+  <span class="spacer"></span>
+
+  <button mat-icon-button (click)="themeService.toggleScheme()"
+          [attr.aria-label]="themeService.scheme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">
+    <mat-icon>{{ themeService.scheme() === 'light' ? 'dark_mode' : 'light_mode' }}</mat-icon>
+  </button>
+
+  <button mat-icon-button [matMenuTriggerFor]="themeMenu" aria-label="Choose theme color">
+    <mat-icon>palette</mat-icon>
+  </button>
+  <mat-menu #themeMenu="matMenu">
+    @for (option of themes; track option.name) {
+      <button mat-menu-item (click)="themeService.setTheme(option.name)">
+        {{ option.label }}
+      </button>
+    }
+  </mat-menu>
+</mat-toolbar>
+
+<main class="content">
+  <router-outlet />
+</main>

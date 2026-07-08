@@ -26,3 +26,7 @@ yarn-error.log*
 
 # Environment files (local configs)
 /.env.*
+
+# .NET build output
+[Bb]in/
+[Oo]bj/
