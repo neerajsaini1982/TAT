@@ -121,4 +121,18 @@ export class AvailabilityPage implements OnInit {
   submit(): void {
     this.save(true);
   }
+
+  // Sets every non-past day back to Not Available and saves immediately,
+  // so a week can be wiped clean in one click instead of toggling each
+  // day off by hand. Past days are left untouched (frozen server-side
+  // anyway).
+  resetWeek(): void {
+    if (!confirm('Reset all upcoming days in this week to Not Available?')) {
+      return;
+    }
+    this.days.update((days) =>
+      days.map((d) => (d.isPast ? d : { ...d, isAvailable: false, allDay: false })),
+    );
+    this.save(false);
+  }
 }
