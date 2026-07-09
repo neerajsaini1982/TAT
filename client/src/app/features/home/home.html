@@ -1,0 +1,43 @@
+<div class="cards">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Super Admin</mat-card-title>
+      <mat-card-subtitle>Manage locations and accounts across the whole system</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-actions>
+      <a mat-flat-button color="primary" routerLink="/sa">Continue</a>
+    </mat-card-actions>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Admin</mat-card-title>
+      <mat-card-subtitle>Manage accounts and settings for your location</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form (ngSubmit)="goToAdmin()" class="form" autocomplete="off">
+        <mat-form-field appearance="outline">
+          <mat-label>Location Code</mat-label>
+          <input matInput name="adminLocationCode" [(ngModel)]="adminLocationCode" required />
+        </mat-form-field>
+        <button mat-flat-button color="primary" type="submit">Continue</button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Employee</mat-card-title>
+      <mat-card-subtitle>Clock in and out for your shift</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form (ngSubmit)="goToEmployee()" class="form" autocomplete="off">
+        <mat-form-field appearance="outline">
+          <mat-label>Location Code</mat-label>
+          <input matInput name="employeeLocationCode" [(ngModel)]="employeeLocationCode" required />
+        </mat-form-field>
+        <button mat-flat-button color="primary" type="submit">Continue</button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+</div>
