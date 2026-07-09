@@ -1,0 +1,94 @@
+<div class="header">
+  <a mat-icon-button [routerLink]="['/', locationCode, 'admin']" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>Schedule — {{ locationCode }}</h2>
+</div>
+
+<div class="week-nav">
+  <button mat-icon-button (click)="previousWeek()" aria-label="Previous week">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+  <span class="week-label">{{ weekRangeLabel() }}</span>
+  <button mat-icon-button (click)="nextWeek()" aria-label="Next week">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+<div cdkDropListGroup class="schedule">
+  <div class="palette">
+    <span class="palette-label">Drag a shift onto a cell to assign it:</span>
+    <div cdkDropList id="palette" class="palette-list">
+      @for (shift of shifts(); track shift.id) {
+        <div class="chip template-chip" cdkDrag [cdkDragData]="{ kind: 'template', shift: shift }">
+          <span class="chip-name">{{ shift.name }}</span>
+          <span class="chip-time">{{ shiftTime(shift) }}</span>
+        </div>
+      }
+      @if (shifts().length === 0) {
+        <span class="palette-empty">No active shifts. Create some in Manage Shifts first.</span>
+      }
+    </div>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th class="employee-col">Employee</th>
+          @for (label of dayHeaders; track label) {
+            <th>{{ label }}</th>
+          }
+          <th class="total-col">Total Hrs</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.accountId) {
+          <tr>
+            <td class="employee-col">{{ row.name }}</td>
+            @for (day of row.days; track day.date) {
+              <td
+                cdkDropList
+                [id]="dropCellId(row.accountId, day.date)"
+                [cdkDropListData]="day"
+                (cdkDropListDropped)="onDrop($event, row, day)"
+                class="day-cell"
+                [class.unavailable]="!day.isAvailable"
+              >
+                <div class="availability-label">{{ day.availabilityLabel }}</div>
+                @for (a of day.assignments; track a.id) {
+                  <div class="chip assignment-chip" cdkDrag [cdkDragData]="{ kind: 'assignment', assignment: a }">
+                    <span class="chip-name">{{ a.shiftName }}</span>
+                    <span class="chip-time">{{ a.shiftStartTime.slice(0, 5) }}–{{ a.shiftEndTime.slice(0, 5) }}</span>
+                    <button type="button" class="chip-remove" (click)="removeAssignment(a)" aria-label="Remove shift">×</button>
+                  </div>
+                }
+              </td>
+            }
+            <td class="total-col">{{ row.totalHours }}</td>
+          </tr>
+        }
+        @if (rows().length === 0) {
+          <tr>
+            <td [attr.colspan]="dayHeaders.length + 2">No employees at this location yet.</td>
+          </tr>
+        }
+      </tbody>
+      @if (rows().length > 0) {
+        <tfoot>
+          <tr>
+            <td class="employee-col">Daily Total</td>
+            @for (total of dailyTotals(); track $index) {
+              <td>{{ total }}</td>
+            }
+            <td class="total-col"></td>
+          </tr>
+        </tfoot>
+      }
+    </table>
+  </div>
+</div>

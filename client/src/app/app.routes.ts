@@ -10,6 +10,7 @@ import { AdminHome } from './features/admin/admin-home/admin-home';
 import { AdminAccountsPage } from './features/admin/admin-accounts-page/admin-accounts-page';
 import { AdminShiftsPage } from './features/admin/admin-shifts-page/admin-shifts-page';
 import { AdminAvailabilityPage } from './features/admin/admin-availability-page/admin-availability-page';
+import { AdminSchedulePage } from './features/admin/admin-schedule-page/admin-schedule-page';
 import { EmployeeHome } from './features/employee/employee-home/employee-home';
 import { AvailabilityPage } from './features/employee/availability-page/availability-page';
 import { AvailabilityCalendarPage } from './features/employee/availability-calendar-page/availability-calendar-page';
@@ -30,6 +31,7 @@ export const routes: Routes = [
   { path: ':locationCode/admin/accounts', component: AdminAccountsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/shifts', component: AdminShiftsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/availability', component: AdminAvailabilityPage, canActivate: [adminGuard] },
+  { path: ':locationCode/admin/schedule', component: AdminSchedulePage, canActivate: [adminGuard] },
 
   { path: ':locationCode/employee', component: EmployeeHome },
   { path: ':locationCode/employee/availability', component: AvailabilityPage, canActivate: [employeeGuard] },
