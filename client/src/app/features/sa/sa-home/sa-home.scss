@@ -1,0 +1,21 @@
+.login-card {
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 0 0 8px;
+}
+
+mat-card-content {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}

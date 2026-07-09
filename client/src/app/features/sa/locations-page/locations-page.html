@@ -1,0 +1,89 @@
+<div class="header">
+  <a mat-icon-button routerLink="/sa" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>Locations</h2>
+  <span class="spacer"></span>
+  <button mat-flat-button color="primary" (click)="startCreate()">Add Location</button>
+</div>
+
+@if (showForm()) {
+  <mat-card class="form-card">
+    <mat-card-content>
+      <form (ngSubmit)="save()" class="form" autocomplete="off">
+        <mat-form-field appearance="outline">
+          <mat-label>Name</mat-label>
+          <input matInput name="name" [(ngModel)]="form.name" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Address</mat-label>
+          <input matInput name="address" [(ngModel)]="form.address" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Location Code</mat-label>
+          <input matInput name="locationCode" [(ngModel)]="form.locationCode" [disabled]="editingId() !== null" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Phone</mat-label>
+          <input matInput name="phone" [(ngModel)]="form.phone" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Email</mat-label>
+          <input matInput name="email" [(ngModel)]="form.email" />
+        </mat-form-field>
+        @if (editingId() !== null) {
+          <mat-slide-toggle name="isActive" [(ngModel)]="form.isActive">Active</mat-slide-toggle>
+        }
+        @if (error()) {
+          <p class="error">{{ error() }}</p>
+        }
+        <div class="form-actions">
+          <button mat-flat-button color="primary" type="submit">Save</button>
+          <button mat-button type="button" (click)="cancel()">Cancel</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+}
+
+<table mat-table [dataSource]="locations()" class="mat-elevation-z1">
+  <ng-container matColumnDef="name">
+    <th mat-header-cell *matHeaderCellDef>Name</th>
+    <td mat-cell *matCellDef="let l">{{ l.name }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="locationCode">
+    <th mat-header-cell *matHeaderCellDef>Code</th>
+    <td mat-cell *matCellDef="let l">{{ l.locationCode }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="phone">
+    <th mat-header-cell *matHeaderCellDef>Phone</th>
+    <td mat-cell *matCellDef="let l">{{ l.phone }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="email">
+    <th mat-header-cell *matHeaderCellDef>Email</th>
+    <td mat-cell *matCellDef="let l">{{ l.email }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="isActive">
+    <th mat-header-cell *matHeaderCellDef>Active</th>
+    <td mat-cell *matCellDef="let l">{{ l.isActive ? 'Yes' : 'No' }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="actions">
+    <th mat-header-cell *matHeaderCellDef></th>
+    <td mat-cell *matCellDef="let l">
+      <button mat-icon-button (click)="startEdit(l)" aria-label="Edit">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button mat-icon-button (click)="remove(l)" aria-label="Delete">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="columns"></tr>
+  <tr mat-row *matRowDef="let row; columns: columns"></tr>
+</table>

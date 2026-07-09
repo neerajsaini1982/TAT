@@ -31,5 +31,10 @@ yarn-error.log*
 [Bb]in/
 [Oo]bj/
 
+# Local SQLite databases
+*.db
+*.db-shm
+*.db-wal
+
 # Root-level dev tooling (concurrently, etc.)
 /node_modules/
