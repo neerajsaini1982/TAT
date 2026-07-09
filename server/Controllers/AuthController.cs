@@ -23,7 +23,7 @@ public class AuthController(AppDbContext db, TokenService tokens) : ControllerBa
         }
 
         var token = tokens.CreateToken(account, locationCode: null);
-        return Ok(new AuthResponse(token, account.Username, account.FirstName, account.LastName, account.Role.ToString(), null));
+        return Ok(new AuthResponse(token, account.Username, account.FirstName, account.LastName, account.Role.ToString(), null, null));
     }
 
     [HttpPost("admin-login")]
@@ -43,7 +43,7 @@ public class AuthController(AppDbContext db, TokenService tokens) : ControllerBa
         }
 
         var token = tokens.CreateToken(account, account.Location.LocationCode);
-        return Ok(new AuthResponse(token, account.Username, account.FirstName, account.LastName, account.Role.ToString(), account.Location.LocationCode));
+        return Ok(new AuthResponse(token, account.Username, account.FirstName, account.LastName, account.Role.ToString(), account.Location.LocationCode, account.Location.Name));
     }
 
     [HttpPost("employee-login")]
@@ -62,6 +62,6 @@ public class AuthController(AppDbContext db, TokenService tokens) : ControllerBa
         }
 
         var token = tokens.CreateToken(account, account.Location.LocationCode);
-        return Ok(new AuthResponse(token, account.Username, account.FirstName, account.LastName, account.Role.ToString(), account.Location.LocationCode));
+        return Ok(new AuthResponse(token, account.Username, account.FirstName, account.LastName, account.Role.ToString(), account.Location.LocationCode, account.Location.Name));
     }
 }

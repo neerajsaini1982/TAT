@@ -13,6 +13,7 @@ export interface AuthResponse {
   lastName: string;
   role: Role;
   locationCode: string | null;
+  locationName: string | null;
 }
 
 const STORAGE_KEY = 'tat-auth';
@@ -25,6 +26,7 @@ export class Auth {
   readonly isAuthenticated = computed(() => this.session() !== null);
   readonly role = computed(() => this.session()?.role ?? null);
   readonly locationCode = computed(() => this.session()?.locationCode ?? null);
+  readonly locationName = computed(() => this.session()?.locationName ?? null);
   readonly token = computed(() => this.session()?.token ?? null);
 
   async saLogin(username: string, password: string): Promise<void> {

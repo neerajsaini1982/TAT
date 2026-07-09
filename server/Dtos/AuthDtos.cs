@@ -12,4 +12,5 @@ public record AuthResponse(
     string FirstName,
     string LastName,
     string Role,
-    string? LocationCode);
+    string? LocationCode,
+    string? LocationName);
