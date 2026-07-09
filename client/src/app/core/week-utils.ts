@@ -49,6 +49,12 @@ export function maxAvailabilityDate(): Date {
 export const isBeyondAvailabilityWindow = (isoDate: string): boolean =>
   isoDate > formatDate(maxAvailabilityDate());
 
+export function dayOfWeekLabel(isoDate: string): string {
+  const jsDay = parseDate(isoDate).getDay(); // 0 = Sunday
+  const mondayFirstIndex = (jsDay + 6) % 7; // 0 = Monday
+  return DAY_LABELS[mondayFirstIndex];
+}
+
 export const toMmDdYyyy = (isoDate: string): string => {
   const [y, m, d] = isoDate.split('-');
   return `${m}/${d}/${y}`;

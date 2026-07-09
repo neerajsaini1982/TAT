@@ -5,16 +5,6 @@
   <h2>My Availability</h2>
 </div>
 
-<div class="week-nav">
-  <button mat-icon-button (click)="previousWeek()" [disabled]="!canGoPreviousWeek()" aria-label="Previous week">
-    <mat-icon>chevron_left</mat-icon>
-  </button>
-  <span class="week-label">{{ weekRangeLabel() }}</span>
-  <button mat-icon-button (click)="nextWeek()" [disabled]="!canGoNextWeek()" aria-label="Next week">
-    <mat-icon>chevron_right</mat-icon>
-  </button>
-</div>
-
 @if (isSubmitted()) {
   <div class="submitted-note">
     <mat-icon>check_circle</mat-icon>
@@ -27,38 +17,31 @@
 }
 
 <div class="days">
-  @for (day of visibleDays(); track day.date) {
-    <mat-card class="day-card" [class.past]="day.isPast" [class.available]="day.isAvailable && !day.isPast">
+  @for (day of days(); track day.date) {
+    <mat-card class="day-card" [class.available]="day.isAvailable">
       <mat-card-content>
         <div class="day-row">
           <div class="day-heading">
             <span class="day-name">{{ day.label }}</span>
             <span class="day-date">{{ day.dateLabel }}</span>
-            @if (day.isPast) {
-              <span class="past-label">Past</span>
-            }
           </div>
-          <mat-slide-toggle
-            [(ngModel)]="day.isAvailable"
-            [disabled]="day.isPast"
-            [class.toggle-unavailable]="!day.isAvailable"
-          >
+          <mat-slide-toggle [(ngModel)]="day.isAvailable" [class.toggle-unavailable]="!day.isAvailable">
             {{ day.isAvailable ? 'Available' : 'Not Available' }}
           </mat-slide-toggle>
         </div>
         @if (day.isAvailable) {
           <div class="time-row">
-            <mat-slide-toggle [(ngModel)]="day.allDay" [disabled]="day.isPast">All day</mat-slide-toggle>
+            <mat-slide-toggle [(ngModel)]="day.allDay">All day</mat-slide-toggle>
             @if (!day.allDay) {
               <mat-icon class="time-icon">schedule</mat-icon>
               <mat-form-field appearance="outline" class="time-field">
                 <mat-label>Start</mat-label>
-                <input matInput type="time" [(ngModel)]="day.startTime" [disabled]="day.isPast" />
+                <input matInput type="time" [(ngModel)]="day.startTime" />
               </mat-form-field>
               <span class="time-sep">–</span>
               <mat-form-field appearance="outline" class="time-field">
                 <mat-label>End</mat-label>
-                <input matInput type="time" [(ngModel)]="day.endTime" [disabled]="day.isPast" />
+                <input matInput type="time" [(ngModel)]="day.endTime" />
               </mat-form-field>
             }
           </div>
@@ -69,7 +52,7 @@
 </div>
 
 <div class="actions">
-  <button mat-button (click)="resetWeek()">Reset Week</button>
+  <button mat-button (click)="resetWeek()">Reset</button>
   <button mat-stroked-button (click)="saveDraft()">Save Draft</button>
   <button mat-flat-button color="primary" (click)="submit()">Submit</button>
 </div>

@@ -9,21 +9,6 @@
   }
 }
 
-.week-nav {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-bottom: 20px;
-
-  .week-label {
-    min-width: 160px;
-    text-align: center;
-    font-weight: 500;
-    font-size: 17px;
-  }
-}
-
 .submitted-note {
   display: flex;
   align-items: center;
@@ -62,10 +47,6 @@
     border-left-color: var(--mat-sys-primary);
   }
 
-  &.past {
-    opacity: 0.55;
-  }
-
   .day-row {
     display: flex;
     align-items: center;
@@ -89,17 +70,6 @@
     font-weight: 400;
     font-size: 15px;
     color: var(--mat-sys-on-surface-variant);
-  }
-
-  .past-label {
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-    text-transform: uppercase;
-    color: var(--mat-sys-on-surface-variant);
-    background: var(--mat-sys-surface-container-high);
-    padding: 2px 8px;
-    border-radius: 999px;
   }
 
   .time-row {
