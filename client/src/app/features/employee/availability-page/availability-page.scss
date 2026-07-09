@@ -1,0 +1,115 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.submitted-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 640px;
+  margin: 0 auto 16px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  font-size: 14px;
+
+  mat-icon {
+    flex-shrink: 0;
+  }
+}
+
+.error {
+  color: var(--mat-sys-error);
+  text-align: center;
+}
+
+.days {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.day-card {
+  border-left: 4px solid var(--mat-sys-outline-variant);
+  transition: border-color 0.15s ease;
+
+  &.available {
+    border-left-color: var(--mat-sys-primary);
+  }
+
+  .day-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .day-heading {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .day-name {
+    font-weight: 600;
+    font-size: 20px;
+  }
+
+  .day-date {
+    font-weight: 400;
+    font-size: 15px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .time-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .time-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .time-sep {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .time-field {
+    width: 130px;
+  }
+
+  // Red "off" state for the Available/Not Available toggle specifically
+  // (not the All day toggle), using Material's unselected-state tokens.
+  .toggle-unavailable {
+    --mat-slide-toggle-unselected-handle-color: var(--mat-sys-error);
+    --mat-slide-toggle-unselected-hover-handle-color: var(--mat-sys-error);
+    --mat-slide-toggle-unselected-focus-handle-color: var(--mat-sys-error);
+    --mat-slide-toggle-unselected-pressed-handle-color: var(--mat-sys-error);
+    --mat-slide-toggle-unselected-track-color: var(--mat-sys-error-container);
+    --mat-slide-toggle-unselected-hover-track-color: var(--mat-sys-error-container);
+    --mat-slide-toggle-unselected-focus-track-color: var(--mat-sys-error-container);
+    --mat-slide-toggle-unselected-pressed-track-color: var(--mat-sys-error-container);
+    --mat-slide-toggle-unselected-track-outline-color: var(--mat-sys-error);
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+}

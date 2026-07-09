@@ -1,0 +1,50 @@
+<div class="header">
+  <a mat-icon-button [routerLink]="['/', locationCode, 'employee']" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>My Availability</h2>
+</div>
+
+<div class="month-nav">
+  <button mat-icon-button (click)="previousMonth()" [disabled]="!canGoPreviousMonth()" aria-label="Previous month">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+  <span class="month-label">{{ monthLabel() }}</span>
+  <button mat-icon-button (click)="nextMonth()" [disabled]="!canGoNextMonth()" aria-label="Next month">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+  <button mat-stroked-button class="today-button" (click)="today()">Today</button>
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+<div class="calendar">
+  <div class="weekday-row">
+    @for (label of dayLabels; track label) {
+      <div class="weekday">{{ label }}</div>
+    }
+  </div>
+
+  <div class="grid">
+    @for (day of days(); track day.date) {
+      <button
+        type="button"
+        class="cell"
+        [class.other-month]="!day.isCurrentMonth"
+        [class.past]="day.isPast"
+        [class.beyond]="day.isBeyondWindow"
+        [class.today]="day.isToday"
+        [class.available]="day.isAvailable"
+        [disabled]="day.isPast || day.isBeyondWindow"
+        (click)="openDay(day)"
+      >
+        <span class="day-number">{{ day.dayOfMonth }}</span>
+        @if (day.isAvailable) {
+          <span class="pill">{{ dayTimeLabel(day) }}</span>
+        }
+      </button>
+    }
+  </div>
+</div>
