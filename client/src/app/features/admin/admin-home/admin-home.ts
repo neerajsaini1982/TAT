@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, isDevMode, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 
 import { Auth } from '../../../core/auth';
+import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 
 @Component({
   selector: 'app-admin-home',
@@ -19,8 +20,8 @@ export class AdminHome {
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
-  protected username = '';
-  protected password = '';
+  protected username = isDevMode() ? DEV_DEFAULTS.admin.username : '';
+  protected password = isDevMode() ? DEV_DEFAULTS.admin.password : '';
   protected readonly error = signal<string | null>(null);
   protected readonly loading = signal(false);
 

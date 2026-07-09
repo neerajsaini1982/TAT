@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, isDevMode, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 
 import { Auth } from '../../../core/auth';
+import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 
 @Component({
   selector: 'app-sa-home',
@@ -17,8 +18,8 @@ import { Auth } from '../../../core/auth';
 export class SaHome {
   protected readonly auth = inject(Auth);
 
-  protected username = '';
-  protected password = '';
+  protected username = isDevMode() ? DEV_DEFAULTS.sa.username : '';
+  protected password = isDevMode() ? DEV_DEFAULTS.sa.password : '';
   protected readonly error = signal<string | null>(null);
   protected readonly loading = signal(false);
 
