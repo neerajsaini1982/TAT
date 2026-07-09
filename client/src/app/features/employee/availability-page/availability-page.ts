@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -15,7 +15,9 @@ import {
   addDays,
   formatDate,
   formatWeekRange,
+  isBeyondAvailabilityWindow,
   isPastDate,
+  maxAvailabilityDate,
   mondayOf,
   toApiTime,
   toInputTime,
@@ -44,13 +46,26 @@ export class AvailabilityPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
-  protected readonly weekStart = signal(addDays(mondayOf(new Date()), 7));
+  protected readonly weekStart = signal(mondayOf(new Date()));
   protected readonly weekRangeLabel = () => formatWeekRange(this.weekStart());
   protected readonly submittedAt = signal<string | null>(null);
   protected readonly isSubmitted = signal(false);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly days = signal<DayModel[]>([]);
+
+  // Employees only plan today through the next 15 days: earlier weeks
+  // aren't navigable, and days outside that window are hidden entirely
+  // rather than just shown read-only.
+  protected readonly visibleDays = computed(() =>
+    this.days().filter((d) => !d.isPast && !isBeyondAvailabilityWindow(d.date)),
+  );
+  protected readonly canGoPreviousWeek = computed(
+    () => this.weekStart().getTime() > mondayOf(new Date()).getTime(),
+  );
+  protected readonly canGoNextWeek = computed(
+    () => addDays(this.weekStart(), 7).getTime() <= maxAvailabilityDate().getTime(),
+  );
 
   ngOnInit(): void {
     this.load();
@@ -87,11 +102,17 @@ export class AvailabilityPage implements OnInit {
   }
 
   previousWeek(): void {
+    if (!this.canGoPreviousWeek()) {
+      return;
+    }
     this.weekStart.set(addDays(this.weekStart(), -7));
     this.load();
   }
 
   nextWeek(): void {
+    if (!this.canGoNextWeek()) {
+      return;
+    }
     this.weekStart.set(addDays(this.weekStart(), 7));
     this.load();
   }
@@ -123,16 +144,18 @@ export class AvailabilityPage implements OnInit {
     this.save(true);
   }
 
-  // Sets every non-past day back to Not Available and saves immediately,
-  // so a week can be wiped clean in one click instead of toggling each
-  // day off by hand. Past days are left untouched (frozen server-side
-  // anyway).
+  // Sets every visible (non-past, in-window) day back to Not Available and
+  // saves immediately, so a week can be wiped clean in one click instead of
+  // toggling each day off by hand. Hidden days are left untouched (frozen
+  // server-side anyway).
   resetWeek(): void {
     if (!confirm('Reset all upcoming days in this week to Not Available?')) {
       return;
     }
     this.days.update((days) =>
-      days.map((d) => (d.isPast ? d : { ...d, isAvailable: false, allDay: false })),
+      days.map((d) =>
+        d.isPast || isBeyondAvailabilityWindow(d.date) ? d : { ...d, isAvailable: false, allDay: false },
+      ),
     );
     this.save(false);
   }

@@ -6,11 +6,11 @@
 </div>
 
 <div class="week-nav">
-  <button mat-icon-button (click)="previousWeek()" aria-label="Previous week">
+  <button mat-icon-button (click)="previousWeek()" [disabled]="!canGoPreviousWeek()" aria-label="Previous week">
     <mat-icon>chevron_left</mat-icon>
   </button>
   <span class="week-label">{{ weekRangeLabel() }}</span>
-  <button mat-icon-button (click)="nextWeek()" aria-label="Next week">
+  <button mat-icon-button (click)="nextWeek()" [disabled]="!canGoNextWeek()" aria-label="Next week">
     <mat-icon>chevron_right</mat-icon>
   </button>
 </div>
@@ -27,7 +27,7 @@
 }
 
 <div class="days">
-  @for (day of days(); track day.date) {
+  @for (day of visibleDays(); track day.date) {
     <mat-card class="day-card" [class.past]="day.isPast" [class.available]="day.isAvailable && !day.isPast">
       <mat-card-content>
         <div class="day-row">

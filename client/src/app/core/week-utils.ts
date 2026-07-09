@@ -38,6 +38,17 @@ export function formatWeekRange(weekStart: Date): string {
 // Plain ISO-date (yyyy-MM-dd) string comparison, no Date parsing needed.
 export const isPastDate = (isoDate: string): boolean => isoDate < formatDate(new Date());
 
+// Employees may only view/edit availability for today through this many
+// days out; enforced here (UI) and mirrored server-side in SaveMine.
+export const AVAILABILITY_WINDOW_DAYS = 15;
+
+export function maxAvailabilityDate(): Date {
+  return addDays(new Date(), AVAILABILITY_WINDOW_DAYS);
+}
+
+export const isBeyondAvailabilityWindow = (isoDate: string): boolean =>
+  isoDate > formatDate(maxAvailabilityDate());
+
 export const toMmDdYyyy = (isoDate: string): string => {
   const [y, m, d] = isoDate.split('-');
   return `${m}/${d}/${y}`;

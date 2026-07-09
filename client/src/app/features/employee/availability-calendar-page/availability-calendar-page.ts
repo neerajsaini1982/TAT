@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,7 +11,9 @@ import {
   addMonths,
   formatDate,
   formatMonthLabel,
+  isBeyondAvailabilityWindow,
   isPastDate,
+  maxAvailabilityDate,
   monthGridDays,
   mondayOf,
   parseDate,
@@ -26,6 +28,7 @@ interface CalendarDay {
   dayOfMonth: number;
   isCurrentMonth: boolean;
   isPast: boolean;
+  isBeyondWindow: boolean;
   isToday: boolean;
   isAvailable: boolean;
   allDay: boolean;
@@ -52,6 +55,15 @@ export class AvailabilityCalendarPage implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly days = signal<CalendarDay[]>([]);
 
+  // Employees only plan today through the next 15 days: earlier months
+  // aren't navigable, and later ones only once they'd show an in-window day.
+  protected readonly canGoPreviousMonth = computed(
+    () => this.monthAnchor().getTime() > startOfMonth(new Date()).getTime(),
+  );
+  protected readonly canGoNextMonth = computed(
+    () => addMonths(this.monthAnchor(), 1).getTime() <= maxAvailabilityDate().getTime(),
+  );
+
   ngOnInit(): void {
     this.load();
   }
@@ -74,16 +86,23 @@ export class AvailabilityCalendarPage implements OnInit {
           grid.map((date) => {
             const iso = formatDate(date);
             const dto = byDate.get(iso);
+            const isPast = isPastDate(iso);
+            const isBeyondWindow = isBeyondAvailabilityWindow(iso);
+            // Don't surface stored data for locked days: past availability
+            // shouldn't be shown, and days beyond the 15-day window aren't
+            // plannable yet.
+            const locked = isPast || isBeyondWindow;
             return {
               date: iso,
               dayOfMonth: date.getDate(),
               isCurrentMonth: date.getMonth() === this.monthAnchor().getMonth(),
-              isPast: isPastDate(iso),
+              isPast,
+              isBeyondWindow,
               isToday: iso === today,
-              isAvailable: dto?.isAvailable ?? false,
-              allDay: !!dto?.isAvailable && !dto.startTime && !dto.endTime,
-              startTime: toInputTime(dto?.startTime ?? null),
-              endTime: toInputTime(dto?.endTime ?? '17:00:00'),
+              isAvailable: !locked && (dto?.isAvailable ?? false),
+              allDay: !locked && !!dto?.isAvailable && !dto.startTime && !dto.endTime,
+              startTime: toInputTime(locked ? null : (dto?.startTime ?? null)),
+              endTime: toInputTime(locked ? null : (dto?.endTime ?? '17:00:00')),
             };
           }),
         );
@@ -97,11 +116,17 @@ export class AvailabilityCalendarPage implements OnInit {
   }
 
   previousMonth(): void {
+    if (!this.canGoPreviousMonth()) {
+      return;
+    }
     this.monthAnchor.set(addMonths(this.monthAnchor(), -1));
     this.load();
   }
 
   nextMonth(): void {
+    if (!this.canGoNextMonth()) {
+      return;
+    }
     this.monthAnchor.set(addMonths(this.monthAnchor(), 1));
     this.load();
   }
@@ -112,7 +137,7 @@ export class AvailabilityCalendarPage implements OnInit {
   }
 
   openDay(day: CalendarDay): void {
-    if (day.isPast) {
+    if (day.isPast || day.isBeyondWindow) {
       return;
     }
 

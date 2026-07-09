@@ -35,6 +35,7 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
         var accountId = CallerAccountId();
         var account = db.Accounts.Find(accountId)!;
         var today = DateOnly.FromDateTime(DateTime.Now);
+        var maxDate = today.AddDays(15);
 
         var availability = db.Availabilities
             .Include(a => a.Days)
@@ -44,9 +45,10 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
         // editable anytime. Only the date-based freeze below is a hard
         // rule. IsSubmitted/SubmittedAt are kept purely so the admin
         // roster can show who has filled theirs out at least once.
-        // Days before today are frozen: whatever was already on file (or
-        // blank, if nothing was saved yet) is kept no matter what the
-        // client sends, so a day can't be edited after it's passed.
+        // Days outside [today, today+15] are frozen: whatever was already
+        // on file (or blank, if nothing was saved yet) is kept no matter
+        // what the client sends, so a day can't be edited once it's past
+        // or before it's within the employee's planning window.
         var existingDaysByDate = (availability?.Days ?? Enumerable.Empty<AvailabilityDay>())
             .ToDictionary(d => d.Date);
 
@@ -63,7 +65,7 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
         availability.Days = request.Days
             .Select(d =>
             {
-                if (d.Date < today && existingDaysByDate.TryGetValue(d.Date, out var existing))
+                if ((d.Date < today || d.Date > maxDate) && existingDaysByDate.TryGetValue(d.Date, out var existing))
                 {
                     return new AvailabilityDay
                     {
@@ -74,7 +76,7 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
                     };
                 }
 
-                var isAvailable = d.Date >= today && d.IsAvailable;
+                var isAvailable = d.Date >= today && d.Date <= maxDate && d.IsAvailable;
                 return new AvailabilityDay
                 {
                     Date = d.Date,

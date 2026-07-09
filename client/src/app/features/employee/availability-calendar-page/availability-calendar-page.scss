@@ -87,7 +87,8 @@
     color: var(--mat-sys-outline);
   }
 
-  &.past {
+  &.past,
+  &.beyond {
     opacity: 0.55;
   }
 

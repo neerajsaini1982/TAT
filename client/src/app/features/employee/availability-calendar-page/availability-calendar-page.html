@@ -6,11 +6,11 @@
 </div>
 
 <div class="month-nav">
-  <button mat-icon-button (click)="previousMonth()" aria-label="Previous month">
+  <button mat-icon-button (click)="previousMonth()" [disabled]="!canGoPreviousMonth()" aria-label="Previous month">
     <mat-icon>chevron_left</mat-icon>
   </button>
   <span class="month-label">{{ monthLabel() }}</span>
-  <button mat-icon-button (click)="nextMonth()" aria-label="Next month">
+  <button mat-icon-button (click)="nextMonth()" [disabled]="!canGoNextMonth()" aria-label="Next month">
     <mat-icon>chevron_right</mat-icon>
   </button>
   <button mat-stroked-button class="today-button" (click)="today()">Today</button>
@@ -34,9 +34,10 @@
         class="cell"
         [class.other-month]="!day.isCurrentMonth"
         [class.past]="day.isPast"
+        [class.beyond]="day.isBeyondWindow"
         [class.today]="day.isToday"
         [class.available]="day.isAvailable"
-        [disabled]="day.isPast"
+        [disabled]="day.isPast || day.isBeyondWindow"
         (click)="openDay(day)"
       >
         <span class="day-number">{{ day.dayOfMonth }}</span>
