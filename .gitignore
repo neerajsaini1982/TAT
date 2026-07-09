@@ -30,3 +30,6 @@ yarn-error.log*
 # .NET build output
 [Bb]in/
 [Oo]bj/
+
+# Root-level dev tooling (concurrently, etc.)
+/node_modules/
