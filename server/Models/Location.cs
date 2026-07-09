@@ -15,4 +15,5 @@ public class Location
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<Account> Accounts { get; set; } = new List<Account>();
+    public ICollection<Shift> Shifts { get; set; } = new List<Shift>();
 }

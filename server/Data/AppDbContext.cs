@@ -7,6 +7,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 {
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<Account> Accounts => Set<Account>();
+    public DbSet<Shift> Shifts => Set<Shift>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,6 +30,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasOne(a => a.Location)
                 .WithMany(l => l.Accounts)
                 .HasForeignKey(a => a.LocationId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Shift>(entity =>
+        {
+            entity.HasOne(s => s.Location)
+                .WithMany(l => l.Shifts)
+                .HasForeignKey(s => s.LocationId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
     }

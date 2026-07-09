@@ -1,0 +1,103 @@
+<div class="header">
+  @if (!lockedLocationCode) {
+    <mat-form-field appearance="outline" class="location-filter">
+      <mat-label>Location</mat-label>
+      <mat-select [ngModel]="selectedLocation()" (ngModelChange)="onLocationFilterChange($event)" [compareWith]="compareLocations">
+        <mat-option [value]="null">All locations</mat-option>
+        @for (loc of locations(); track loc.id) {
+          <mat-option [value]="loc">{{ loc.name }} ({{ loc.locationCode }})</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  }
+  <span class="spacer"></span>
+  <button mat-flat-button color="primary" (click)="startCreate()">Add Shift</button>
+</div>
+
+@if (showForm()) {
+  <mat-card class="form-card">
+    <mat-card-content>
+      <form (ngSubmit)="save()" class="form" autocomplete="off">
+        <mat-form-field appearance="outline">
+          <mat-label>Shift Name</mat-label>
+          <input matInput name="name" [(ngModel)]="form.name" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Start Time</mat-label>
+          <input matInput type="time" name="startTime" [(ngModel)]="form.startTime" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>End Time</mat-label>
+          <input matInput type="time" name="endTime" [(ngModel)]="form.endTime" required />
+        </mat-form-field>
+        <mat-slide-toggle name="isBreakRequired" [(ngModel)]="form.isBreakRequired">Break Required</mat-slide-toggle>
+        <mat-slide-toggle name="isLunchRequired" [(ngModel)]="form.isLunchRequired">Lunch Required</mat-slide-toggle>
+        @if (editingId() !== null) {
+          <mat-slide-toggle name="isActive" [(ngModel)]="form.isActive">Active</mat-slide-toggle>
+        }
+        @if (error()) {
+          <p class="error">{{ error() }}</p>
+        }
+        <div class="form-actions">
+          <button mat-flat-button color="primary" type="submit">Save</button>
+          <button mat-button type="button" (click)="cancel()">Cancel</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+}
+
+<table mat-table [dataSource]="shifts()" class="mat-elevation-z1">
+  <ng-container matColumnDef="locationCode">
+    <th mat-header-cell *matHeaderCellDef>Location</th>
+    <td mat-cell *matCellDef="let s">{{ s.locationCode }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="name">
+    <th mat-header-cell *matHeaderCellDef>Name</th>
+    <td mat-cell *matCellDef="let s">{{ s.name }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="startTime">
+    <th mat-header-cell *matHeaderCellDef>Start</th>
+    <td mat-cell *matCellDef="let s">{{ toInputTime(s.startTime) }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="endTime">
+    <th mat-header-cell *matHeaderCellDef>End</th>
+    <td mat-cell *matCellDef="let s">{{ toInputTime(s.endTime) }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="isBreakRequired">
+    <th mat-header-cell *matHeaderCellDef>Break</th>
+    <td mat-cell *matCellDef="let s">{{ s.isBreakRequired ? 'Yes' : 'No' }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="isLunchRequired">
+    <th mat-header-cell *matHeaderCellDef>Lunch</th>
+    <td mat-cell *matCellDef="let s">{{ s.isLunchRequired ? 'Yes' : 'No' }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="isActive">
+    <th mat-header-cell *matHeaderCellDef>Active</th>
+    <td mat-cell *matCellDef="let s">{{ s.isActive ? 'Yes' : 'No' }}</td>
+  </ng-container>
+
+  <ng-container matColumnDef="actions">
+    <th mat-header-cell *matHeaderCellDef></th>
+    <td mat-cell *matCellDef="let s">
+      <button mat-icon-button (click)="startEdit(s)" aria-label="Edit">
+        <mat-icon>edit</mat-icon>
+      </button>
+      <button mat-icon-button (click)="duplicate(s)" aria-label="Duplicate">
+        <mat-icon>content_copy</mat-icon>
+      </button>
+      <button mat-icon-button (click)="remove(s)" aria-label="Delete">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </td>
+  </ng-container>
+
+  <tr mat-header-row *matHeaderRowDef="columns"></tr>
+  <tr mat-row *matRowDef="let row; columns: columns"></tr>
+</table>
