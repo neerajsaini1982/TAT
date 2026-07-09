@@ -5,6 +5,6 @@
 export const DEV_DEFAULTS = {
   sa: { username: 'sa', password: 'ChangeMe123!' },
   admin: { username: 'admin1', password: 'AdminPass1!' },
-  employeeCode: '496780',
+  employeeCode: '458789',
   locationCode: 'l2psj',
 };
