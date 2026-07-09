@@ -121,6 +121,20 @@
   .time-field {
     width: 130px;
   }
+
+  // Red "off" state for the Available/Not Available toggle specifically
+  // (not the All day toggle), using Material's unselected-state tokens.
+  .toggle-unavailable {
+    --mat-slide-toggle-unselected-handle-color: var(--mat-sys-error);
+    --mat-slide-toggle-unselected-hover-handle-color: var(--mat-sys-error);
+    --mat-slide-toggle-unselected-focus-handle-color: var(--mat-sys-error);
+    --mat-slide-toggle-unselected-pressed-handle-color: var(--mat-sys-error);
+    --mat-slide-toggle-unselected-track-color: var(--mat-sys-error-container);
+    --mat-slide-toggle-unselected-hover-track-color: var(--mat-sys-error-container);
+    --mat-slide-toggle-unselected-focus-track-color: var(--mat-sys-error-container);
+    --mat-slide-toggle-unselected-pressed-track-color: var(--mat-sys-error-container);
+    --mat-slide-toggle-unselected-track-outline-color: var(--mat-sys-error);
+  }
 }
 
 .actions {

@@ -38,8 +38,12 @@
               <span class="past-label">Past</span>
             }
           </div>
-          <mat-slide-toggle [(ngModel)]="day.isAvailable" [disabled]="day.isPast">
-            {{ day.isAvailable ? 'Available' : 'Off' }}
+          <mat-slide-toggle
+            [(ngModel)]="day.isAvailable"
+            [disabled]="day.isPast"
+            [class.toggle-unavailable]="!day.isAvailable"
+          >
+            {{ day.isAvailable ? 'Available' : 'Not Available' }}
           </mat-slide-toggle>
         </div>
         @if (day.isAvailable) {
