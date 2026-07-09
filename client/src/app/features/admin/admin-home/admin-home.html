@@ -1,0 +1,35 @@
+@if (!isSignedIn) {
+  <mat-card class="login-card">
+    <mat-card-header>
+      <mat-card-title>Admin Login</mat-card-title>
+      <mat-card-subtitle>Location: {{ locationCode }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form (ngSubmit)="login()" class="form">
+        <mat-form-field appearance="outline">
+          <mat-label>Username</mat-label>
+          <input matInput name="username" [(ngModel)]="username" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Password</mat-label>
+          <input matInput type="password" name="password" [(ngModel)]="password" required />
+        </mat-form-field>
+        @if (error()) {
+          <p class="error">{{ error() }}</p>
+        }
+        <button mat-flat-button color="primary" type="submit" [disabled]="loading()">Log In</button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+} @else {
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Admin Dashboard</mat-card-title>
+      <mat-card-subtitle>{{ locationCode }} — Signed in as {{ auth.session()?.username }}</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin', 'accounts']">Manage Accounts</a>
+      <button mat-stroked-button (click)="logout()">Log Out</button>
+    </mat-card-content>
+  </mat-card>
+}

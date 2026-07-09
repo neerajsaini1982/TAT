@@ -1,0 +1,88 @@
+// Include theming for Angular Material with `mat.theme()`.
+// This Sass mixin defines CSS custom properties used to style Angular Material
+// components according to the Material 3 design spec.
+// `theme-type: color-scheme` makes each theme respond to the `color-scheme`
+// CSS property at runtime, so light/dark mode can be toggled with plain JS
+// (no rebuild needed). Learn more: https://material.angular.dev/guide/theming
+@use 'sass:map';
+@use '@angular/material' as mat;
+
+// Preset color themes an admin can choose from. Add a new palette pair here
+// and a matching entry in `ThemeService.THEMES` to add another option.
+// Keys are quoted strings so `@each` below yields real strings, not
+// unquoted color-name identifiers (Sass warns on interpolating those).
+$themes: (
+  'azure': (
+    primary: mat.$azure-palette,
+    tertiary: mat.$blue-palette,
+  ),
+  'green': (
+    primary: mat.$green-palette,
+    tertiary: mat.$chartreuse-palette,
+  ),
+  'violet': (
+    primary: mat.$violet-palette,
+    tertiary: mat.$magenta-palette,
+  ),
+  'orange': (
+    primary: mat.$orange-palette,
+    tertiary: mat.$yellow-palette,
+  ),
+  'rose': (
+    primary: mat.$rose-palette,
+    tertiary: mat.$red-palette,
+  ),
+);
+
+html {
+  height: 100%;
+  @include mat.theme(
+    (
+      color: (
+        theme-type: color-scheme,
+        primary: map.get($themes, 'azure', primary),
+        tertiary: map.get($themes, 'azure', tertiary),
+      ),
+      typography: Roboto,
+      density: 0,
+    )
+  );
+}
+
+@each $name, $palette in $themes {
+  html[data-theme='#{$name}'] {
+    @include mat.theme(
+      (
+        color: (
+          theme-type: color-scheme,
+          primary: map.get($palette, primary),
+          tertiary: map.get($palette, tertiary),
+        ),
+      )
+    );
+  }
+}
+
+body {
+  // `color-scheme` is inherited from `<html>`, where ThemeService sets it
+  // at runtime (light | dark), driving the `light-dark()` values emitted
+  // by `mat.theme()` above. Do not hardcode it here.
+
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: var(--mat-sys-body-medium);
+
+  margin: 0;
+  height: 100%;
+}
+
+// Material 3's default top app bar uses a flat surface color with no
+// elevation, which reads as bland against a same-color page background.
+// Give it a slightly elevated surface tone + shadow instead of overriding
+// it with the primary color (which M3 intentionally moved away from).
+.mat-toolbar {
+  background-color: var(--mat-sys-surface-container);
+  box-shadow: var(--mat-sys-level1);
+}
+
+/* You can add global styles to this file, and also import other style files */
