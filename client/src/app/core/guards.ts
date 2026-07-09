@@ -21,3 +21,15 @@ export const adminGuard: CanActivateFn = (route) => {
 
   return ok || router.parseUrl(`/${locationCode}/admin`);
 };
+
+// Any authenticated role (Employee, Lead, Admin, Sa all clock in the same
+// way) can access their own location's employee sub-routes.
+export const employeeGuard: CanActivateFn = (route) => {
+  const auth = inject(Auth);
+  const router = inject(Router);
+  const locationCode = route.paramMap.get('locationCode');
+
+  const ok = auth.isAuthenticated() && auth.locationCode() === locationCode;
+
+  return ok || router.parseUrl(`/${locationCode}/employee`);
+};

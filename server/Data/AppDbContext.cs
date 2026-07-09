@@ -8,6 +8,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Location> Locations => Set<Location>();
     public DbSet<Account> Accounts => Set<Account>();
     public DbSet<Shift> Shifts => Set<Shift>();
+    public DbSet<Availability> Availabilities => Set<Availability>();
+    public DbSet<AvailabilityDay> AvailabilityDays => Set<AvailabilityDay>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -39,6 +41,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(l => l.Shifts)
                 .HasForeignKey(s => s.LocationId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Availability>(entity =>
+        {
+            entity.HasOne(a => a.Account)
+                .WithMany()
+                .HasForeignKey(a => a.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One submission per employee per week.
+            entity.HasIndex(a => new { a.AccountId, a.WeekStartDate }).IsUnique();
+        });
+
+        modelBuilder.Entity<AvailabilityDay>(entity =>
+        {
+            entity.HasOne(d => d.Availability)
+                .WithMany(a => a.Days)
+                .HasForeignKey(d => d.AvailabilityId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(d => new { d.AvailabilityId, d.Date }).IsUnique();
         });
     }
 }

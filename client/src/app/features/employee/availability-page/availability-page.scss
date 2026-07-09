@@ -1,0 +1,73 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  .week-label {
+    min-width: 160px;
+    text-align: center;
+    font-weight: 500;
+  }
+}
+
+.submitted-banner {
+  max-width: 600px;
+  margin: 0 auto 16px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  text-align: center;
+}
+
+.days {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.day-card {
+  .day-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .day-name {
+    font-weight: 500;
+  }
+
+  .time-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .time-field {
+    width: 130px;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}

@@ -1,0 +1,52 @@
+<div class="header">
+  <a mat-icon-button [routerLink]="['/', locationCode, 'admin']" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>Availability — {{ locationCode }}</h2>
+</div>
+
+<div class="week-nav">
+  <button mat-icon-button (click)="previousWeek()" aria-label="Previous week">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+  <span class="week-label">{{ weekRangeLabel() }}</span>
+  <button mat-icon-button (click)="nextWeek()" aria-label="Next week">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+</div>
+
+<div class="table-scroll">
+  <table>
+    <thead>
+      <tr>
+        <th>Employee</th>
+        @for (label of dayLabels; track label) {
+          <th>{{ label.slice(0, 3) }}</th>
+        }
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (person of roster(); track person.accountId) {
+        <tr>
+          <td>{{ person.firstName }} {{ person.lastName }}</td>
+          @for (day of person.days; track day.date) {
+            <td [class.unavailable]="!day.isAvailable">{{ dayLabel(day) }}</td>
+          }
+          <td>
+            @if (person.isSubmitted) {
+              <span class="submitted">Submitted</span>
+            } @else {
+              <span class="pending">Not submitted</span>
+            }
+          </td>
+        </tr>
+      }
+      @if (roster().length === 0) {
+        <tr>
+          <td [attr.colspan]="dayLabels.length + 2">No employees at this location yet.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

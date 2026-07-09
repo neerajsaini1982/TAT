@@ -9,8 +9,10 @@ import { SaShiftsPage } from './features/sa/sa-shifts-page/sa-shifts-page';
 import { AdminHome } from './features/admin/admin-home/admin-home';
 import { AdminAccountsPage } from './features/admin/admin-accounts-page/admin-accounts-page';
 import { AdminShiftsPage } from './features/admin/admin-shifts-page/admin-shifts-page';
+import { AdminAvailabilityPage } from './features/admin/admin-availability-page/admin-availability-page';
 import { EmployeeHome } from './features/employee/employee-home/employee-home';
-import { saGuard, adminGuard } from './core/guards';
+import { AvailabilityPage } from './features/employee/availability-page/availability-page';
+import { saGuard, adminGuard, employeeGuard } from './core/guards';
 
 export const routes: Routes = [
   { path: '', component: Home, pathMatch: 'full' },
@@ -26,8 +28,10 @@ export const routes: Routes = [
   { path: ':locationCode/admin', component: AdminHome },
   { path: ':locationCode/admin/accounts', component: AdminAccountsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/shifts', component: AdminShiftsPage, canActivate: [adminGuard] },
+  { path: ':locationCode/admin/availability', component: AdminAvailabilityPage, canActivate: [adminGuard] },
 
   { path: ':locationCode/employee', component: EmployeeHome },
+  { path: ':locationCode/employee/availability', component: AvailabilityPage, canActivate: [employeeGuard] },
 
   { path: ':locationCode', component: LocationHome, pathMatch: 'full' },
 ];

@@ -1,0 +1,64 @@
+<div class="header">
+  <a mat-icon-button [routerLink]="['/', locationCode, 'employee']" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>My Availability</h2>
+</div>
+
+<div class="week-nav">
+  <button mat-icon-button (click)="previousWeek()" aria-label="Previous week">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+  <span class="week-label">{{ weekRangeLabel() }}</span>
+  <button mat-icon-button (click)="nextWeek()" aria-label="Next week">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+</div>
+
+@if (isSubmitted()) {
+  <mat-card class="submitted-banner">
+    <mat-card-content>
+      Submitted on {{ submittedAt() | date: 'medium' }}. This week's availability is locked and can no longer be
+      changed.
+    </mat-card-content>
+  </mat-card>
+}
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+<div class="days">
+  @for (day of days; track day.date) {
+    <mat-card class="day-card">
+      <mat-card-content>
+        <div class="day-row">
+          <span class="day-name">{{ day.label }}</span>
+          <mat-slide-toggle [(ngModel)]="day.isAvailable" [disabled]="isSubmitted()">Available</mat-slide-toggle>
+        </div>
+        @if (day.isAvailable) {
+          <div class="time-row">
+            <mat-slide-toggle [(ngModel)]="day.allDay" [disabled]="isSubmitted()">All day</mat-slide-toggle>
+            @if (!day.allDay) {
+              <mat-form-field appearance="outline" class="time-field">
+                <mat-label>Start</mat-label>
+                <input matInput type="time" [(ngModel)]="day.startTime" [disabled]="isSubmitted()" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="time-field">
+                <mat-label>End</mat-label>
+                <input matInput type="time" [(ngModel)]="day.endTime" [disabled]="isSubmitted()" />
+              </mat-form-field>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>
+
+@if (!isSubmitted()) {
+  <div class="actions">
+    <button mat-stroked-button (click)="saveDraft()">Save Draft</button>
+    <button mat-flat-button color="primary" (click)="submit()">Submit</button>
+  </div>
+}

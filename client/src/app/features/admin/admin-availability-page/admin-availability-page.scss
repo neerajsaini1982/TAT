@@ -1,0 +1,54 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  .week-label {
+    min-width: 160px;
+    text-align: center;
+    font-weight: 500;
+  }
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+td.unavailable {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.submitted {
+  color: var(--mat-sys-primary);
+  font-weight: 500;
+}
+
+.pending {
+  color: var(--mat-sys-error);
+}
