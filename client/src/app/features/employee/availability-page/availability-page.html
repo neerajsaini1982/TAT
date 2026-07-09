@@ -29,24 +29,29 @@
 }
 
 <div class="days">
-  @for (day of days; track day.date) {
-    <mat-card class="day-card">
+  @for (day of days(); track day.date) {
+    <mat-card class="day-card" [class.past]="day.isPast">
       <mat-card-content>
         <div class="day-row">
-          <span class="day-name">{{ day.label }}</span>
-          <mat-slide-toggle [(ngModel)]="day.isAvailable" [disabled]="isSubmitted()">Available</mat-slide-toggle>
+          <span class="day-name">
+            {{ day.label }}
+            @if (day.isPast) {
+              <span class="past-label">(past)</span>
+            }
+          </span>
+          <mat-slide-toggle [(ngModel)]="day.isAvailable" [disabled]="isSubmitted() || day.isPast">Available</mat-slide-toggle>
         </div>
         @if (day.isAvailable) {
           <div class="time-row">
-            <mat-slide-toggle [(ngModel)]="day.allDay" [disabled]="isSubmitted()">All day</mat-slide-toggle>
+            <mat-slide-toggle [(ngModel)]="day.allDay" [disabled]="isSubmitted() || day.isPast">All day</mat-slide-toggle>
             @if (!day.allDay) {
               <mat-form-field appearance="outline" class="time-field">
                 <mat-label>Start</mat-label>
-                <input matInput type="time" [(ngModel)]="day.startTime" [disabled]="isSubmitted()" />
+                <input matInput type="time" [(ngModel)]="day.startTime" [disabled]="isSubmitted() || day.isPast" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="time-field">
                 <mat-label>End</mat-label>
-                <input matInput type="time" [(ngModel)]="day.endTime" [disabled]="isSubmitted()" />
+                <input matInput type="time" [(ngModel)]="day.endTime" [disabled]="isSubmitted() || day.isPast" />
               </mat-form-field>
             }
           </div>

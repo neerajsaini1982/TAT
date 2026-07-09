@@ -19,10 +19,13 @@ interface DayModel {
   allDay: boolean;
   startTime: string;
   endTime: string;
+  isPast: boolean;
 }
 
 const toInputTime = (apiTime: string | null): string => (apiTime ? apiTime.slice(0, 5) : '09:00');
 const toApiTime = (inputTime: string): string => (inputTime.length === 5 ? `${inputTime}:00` : inputTime);
+// Plain ISO-date string comparison (yyyy-MM-dd), so no Date parsing needed.
+const isPastDate = (isoDate: string): boolean => isoDate < formatDate(new Date());
 
 @Component({
   selector: 'app-availability-page',
@@ -41,7 +44,7 @@ export class AvailabilityPage implements OnInit {
   protected readonly isSubmitted = signal(false);
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected days: DayModel[] = [];
+  protected readonly days = signal<DayModel[]>([]);
 
   ngOnInit(): void {
     this.load();
@@ -62,14 +65,17 @@ export class AvailabilityPage implements OnInit {
   private applyDto(dto: AvailabilityDto): void {
     this.isSubmitted.set(dto.isSubmitted);
     this.submittedAt.set(dto.submittedAt);
-    this.days = dto.days.map((d, i) => ({
-      date: d.date,
-      label: DAY_LABELS[i],
-      isAvailable: d.isAvailable,
-      allDay: d.isAvailable && !d.startTime && !d.endTime,
-      startTime: toInputTime(d.startTime),
-      endTime: toInputTime(d.endTime ?? '17:00:00'),
-    }));
+    this.days.set(
+      dto.days.map((d, i) => ({
+        date: d.date,
+        label: DAY_LABELS[i],
+        isAvailable: d.isAvailable,
+        allDay: d.isAvailable && !d.startTime && !d.endTime,
+        startTime: toInputTime(d.startTime),
+        endTime: toInputTime(d.endTime ?? '17:00:00'),
+        isPast: isPastDate(d.date),
+      })),
+    );
     this.loading.set(false);
   }
 
@@ -88,7 +94,7 @@ export class AvailabilityPage implements OnInit {
     this.api
       .saveMine({
         weekStartDate: formatDate(this.weekStart()),
-        days: this.days.map((d) => ({
+        days: this.days().map((d) => ({
           date: d.date,
           isAvailable: d.isAvailable,
           startTime: d.isAvailable && !d.allDay ? toApiTime(d.startTime) : null,

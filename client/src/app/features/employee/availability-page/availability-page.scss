@@ -52,6 +52,16 @@
     font-weight: 500;
   }
 
+  .past-label {
+    font-weight: 400;
+    color: var(--mat-sys-on-surface-variant);
+    margin-left: 4px;
+  }
+
+  &.past {
+    opacity: 0.6;
+  }
+
   .time-row {
     display: flex;
     align-items: center;

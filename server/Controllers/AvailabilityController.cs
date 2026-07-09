@@ -34,6 +34,7 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
     {
         var accountId = CallerAccountId();
         var account = db.Accounts.Find(accountId)!;
+        var today = DateOnly.FromDateTime(DateTime.Now);
 
         var availability = db.Availabilities
             .Include(a => a.Days)
@@ -43,6 +44,12 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
         {
             return Conflict("Availability for this week has already been submitted and cannot be changed.");
         }
+
+        // Days before today are frozen: whatever was already on file (or
+        // blank, if nothing was saved yet) is kept no matter what the
+        // client sends, so a day can't be edited after it's passed.
+        var existingDaysByDate = (availability?.Days ?? Enumerable.Empty<AvailabilityDay>())
+            .ToDictionary(d => d.Date);
 
         if (availability is null)
         {
@@ -55,12 +62,27 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
         }
 
         availability.Days = request.Days
-            .Select(d => new AvailabilityDay
+            .Select(d =>
             {
-                Date = d.Date,
-                IsAvailable = d.IsAvailable,
-                StartTime = d.IsAvailable ? d.StartTime : null,
-                EndTime = d.IsAvailable ? d.EndTime : null,
+                if (d.Date < today && existingDaysByDate.TryGetValue(d.Date, out var existing))
+                {
+                    return new AvailabilityDay
+                    {
+                        Date = existing.Date,
+                        IsAvailable = existing.IsAvailable,
+                        StartTime = existing.StartTime,
+                        EndTime = existing.EndTime,
+                    };
+                }
+
+                var isAvailable = d.Date >= today && d.IsAvailable;
+                return new AvailabilityDay
+                {
+                    Date = d.Date,
+                    IsAvailable = isAvailable,
+                    StartTime = isAvailable ? d.StartTime : null,
+                    EndTime = isAvailable ? d.EndTime : null,
+                };
             })
             .ToList();
 
