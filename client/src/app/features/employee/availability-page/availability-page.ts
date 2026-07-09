@@ -15,6 +15,7 @@ import { DAY_LABELS, addDays, formatDate, formatWeekRange, mondayOf } from '../.
 interface DayModel {
   date: string;
   label: string;
+  dateLabel: string;
   isAvailable: boolean;
   allDay: boolean;
   startTime: string;
@@ -26,6 +27,10 @@ const toInputTime = (apiTime: string | null): string => (apiTime ? apiTime.slice
 const toApiTime = (inputTime: string): string => (inputTime.length === 5 ? `${inputTime}:00` : inputTime);
 // Plain ISO-date string comparison (yyyy-MM-dd), so no Date parsing needed.
 const isPastDate = (isoDate: string): boolean => isoDate < formatDate(new Date());
+const toMmDdYyyy = (isoDate: string): string => {
+  const [y, m, d] = isoDate.split('-');
+  return `${m}/${d}/${y}`;
+};
 
 @Component({
   selector: 'app-availability-page',
@@ -69,6 +74,7 @@ export class AvailabilityPage implements OnInit {
       dto.days.map((d, i) => ({
         date: d.date,
         label: DAY_LABELS[i],
+        dateLabel: toMmDdYyyy(d.date),
         isAvailable: d.isAvailable,
         allDay: d.isAvailable && !d.startTime && !d.endTime,
         startTime: toInputTime(d.startTime),

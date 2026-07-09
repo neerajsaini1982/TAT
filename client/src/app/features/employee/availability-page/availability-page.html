@@ -35,6 +35,7 @@
         <div class="day-row">
           <span class="day-name">
             {{ day.label }}
+            <span class="day-date">{{ day.dateLabel }}</span>
             @if (day.isPast) {
               <span class="past-label">(past)</span>
             }
