@@ -1,0 +1,31 @@
+<h2 mat-dialog-title>{{ data.dayLabel }} <span class="date">{{ data.dateLabel }}</span></h2>
+
+<mat-dialog-content>
+  <mat-slide-toggle [(ngModel)]="isAvailable" [class.toggle-unavailable]="!isAvailable">
+    {{ isAvailable ? 'Available' : 'Not Available' }}
+  </mat-slide-toggle>
+
+  @if (isAvailable) {
+    <div class="time-section">
+      <mat-slide-toggle [(ngModel)]="allDay">All day</mat-slide-toggle>
+      @if (!allDay) {
+        <div class="time-row">
+          <mat-form-field appearance="outline" class="time-field">
+            <mat-label>Start</mat-label>
+            <input matInput type="time" [(ngModel)]="startTime" />
+          </mat-form-field>
+          <span class="time-sep">–</span>
+          <mat-form-field appearance="outline" class="time-field">
+            <mat-label>End</mat-label>
+            <input matInput type="time" [(ngModel)]="endTime" />
+          </mat-form-field>
+        </div>
+      }
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="save()">Save</button>
+</mat-dialog-actions>

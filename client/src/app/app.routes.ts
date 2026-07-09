@@ -12,6 +12,7 @@ import { AdminShiftsPage } from './features/admin/admin-shifts-page/admin-shifts
 import { AdminAvailabilityPage } from './features/admin/admin-availability-page/admin-availability-page';
 import { EmployeeHome } from './features/employee/employee-home/employee-home';
 import { AvailabilityPage } from './features/employee/availability-page/availability-page';
+import { AvailabilityCalendarPage } from './features/employee/availability-calendar-page/availability-calendar-page';
 import { saGuard, adminGuard, employeeGuard } from './core/guards';
 
 export const routes: Routes = [
@@ -32,6 +33,7 @@ export const routes: Routes = [
 
   { path: ':locationCode/employee', component: EmployeeHome },
   { path: ':locationCode/employee/availability', component: AvailabilityPage, canActivate: [employeeGuard] },
+  { path: ':locationCode/employee/availability2', component: AvailabilityCalendarPage, canActivate: [employeeGuard] },
 
   { path: ':locationCode', component: LocationHome, pathMatch: 'full' },
 ];

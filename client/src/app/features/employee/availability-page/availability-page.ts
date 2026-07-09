@@ -10,7 +10,17 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
 import { AvailabilityApi, AvailabilityDto } from '../../../core/availability-api';
-import { DAY_LABELS, addDays, formatDate, formatWeekRange, mondayOf } from '../../../core/week-utils';
+import {
+  DAY_LABELS,
+  addDays,
+  formatDate,
+  formatWeekRange,
+  isPastDate,
+  mondayOf,
+  toApiTime,
+  toInputTime,
+  toMmDdYyyy,
+} from '../../../core/week-utils';
 
 interface DayModel {
   date: string;
@@ -22,15 +32,6 @@ interface DayModel {
   endTime: string;
   isPast: boolean;
 }
-
-const toInputTime = (apiTime: string | null): string => (apiTime ? apiTime.slice(0, 5) : '09:00');
-const toApiTime = (inputTime: string): string => (inputTime.length === 5 ? `${inputTime}:00` : inputTime);
-// Plain ISO-date string comparison (yyyy-MM-dd), so no Date parsing needed.
-const isPastDate = (isoDate: string): boolean => isoDate < formatDate(new Date());
-const toMmDdYyyy = (isoDate: string): string => {
-  const [y, m, d] = isoDate.split('-');
-  return `${m}/${d}/${y}`;
-};
 
 @Component({
   selector: 'app-availability-page',

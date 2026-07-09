@@ -1,0 +1,45 @@
+.date {
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--mat-sys-on-surface-variant);
+  margin-left: 4px;
+}
+
+mat-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 280px;
+}
+
+.time-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.time-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.time-sep {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.time-field {
+  width: 130px;
+}
+
+.toggle-unavailable {
+  --mat-slide-toggle-unselected-handle-color: var(--mat-sys-error);
+  --mat-slide-toggle-unselected-hover-handle-color: var(--mat-sys-error);
+  --mat-slide-toggle-unselected-focus-handle-color: var(--mat-sys-error);
+  --mat-slide-toggle-unselected-pressed-handle-color: var(--mat-sys-error);
+  --mat-slide-toggle-unselected-track-color: var(--mat-sys-error-container);
+  --mat-slide-toggle-unselected-hover-track-color: var(--mat-sys-error-container);
+  --mat-slide-toggle-unselected-focus-track-color: var(--mat-sys-error-container);
+  --mat-slide-toggle-unselected-pressed-track-color: var(--mat-sys-error-container);
+  --mat-slide-toggle-unselected-track-outline-color: var(--mat-sys-error);
+}
