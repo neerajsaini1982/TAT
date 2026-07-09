@@ -119,9 +119,6 @@ export class AvailabilityPage implements OnInit {
   }
 
   submit(): void {
-    if (!confirm('Once submitted, you will not be able to change your availability for this week. Continue?')) {
-      return;
-    }
     this.save(true);
   }
 }

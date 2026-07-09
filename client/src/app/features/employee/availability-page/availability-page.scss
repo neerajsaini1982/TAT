@@ -14,18 +14,31 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 
   .week-label {
     min-width: 160px;
     text-align: center;
     font-weight: 500;
+    font-size: 17px;
   }
 }
 
-.submitted-banner {
-  max-width: 600px;
+.submitted-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 640px;
   margin: 0 auto 16px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  font-size: 14px;
+
+  mat-icon {
+    flex-shrink: 0;
+  }
 }
 
 .error {
@@ -36,47 +49,73 @@
 .days {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-width: 600px;
+  gap: 10px;
+  max-width: 640px;
   margin: 0 auto;
 }
 
 .day-card {
+  border-left: 4px solid var(--mat-sys-outline-variant);
+  transition: border-color 0.15s ease;
+
+  &.available {
+    border-left-color: var(--mat-sys-primary);
+  }
+
+  &.past {
+    opacity: 0.55;
+  }
+
   .day-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
+  }
+
+  .day-heading {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .day-name {
-    font-weight: 500;
+    font-weight: 600;
     font-size: 20px;
   }
 
   .day-date {
     font-weight: 400;
-    font-size: 16px;
+    font-size: 15px;
     color: var(--mat-sys-on-surface-variant);
-    margin-left: 8px;
   }
 
   .past-label {
-    font-weight: 400;
-    font-size: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
     color: var(--mat-sys-on-surface-variant);
-    margin-left: 4px;
-  }
-
-  &.past {
-    opacity: 0.6;
+    background: var(--mat-sys-surface-container-high);
+    padding: 2px 8px;
+    border-radius: 999px;
   }
 
   .time-row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-top: 8px;
+    gap: 10px;
+    margin-top: 10px;
     flex-wrap: wrap;
+  }
+
+  .time-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .time-sep {
+    color: var(--mat-sys-on-surface-variant);
   }
 
   .time-field {
@@ -88,5 +127,5 @@
   display: flex;
   justify-content: center;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 20px;
 }

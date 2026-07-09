@@ -40,11 +40,10 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
             .Include(a => a.Days)
             .SingleOrDefault(a => a.AccountId == accountId && a.WeekStartDate == request.WeekStartDate);
 
-        if (availability is not null && availability.IsSubmitted)
-        {
-            return Conflict("Availability for this week has already been submitted and cannot be changed.");
-        }
-
+        // Submitting no longer locks the week: today-and-future days stay
+        // editable anytime. Only the date-based freeze below is a hard
+        // rule. IsSubmitted/SubmittedAt are kept purely so the admin
+        // roster can show who has filled theirs out at least once.
         // Days before today are frozen: whatever was already on file (or
         // blank, if nothing was saved yet) is kept no matter what the
         // client sends, so a day can't be edited after it's passed.
