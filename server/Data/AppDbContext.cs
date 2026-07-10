@@ -86,6 +86,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<LocationSettings>(entity =>
         {
             entity.Property(s => s.TimeFormat).HasConversion<string>();
+            entity.Property(s => s.DateFormat).HasConversion<string>();
 
             entity.HasOne(s => s.Location)
                 .WithMany()

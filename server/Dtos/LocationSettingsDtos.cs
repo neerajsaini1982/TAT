@@ -4,6 +4,7 @@ namespace Server.Dtos;
 
 public record LocationSettingsDto(
     TimeFormat TimeFormat,
+    DateFormat DateFormat,
     string TimeZone,
     int AvailabilityDays,
     string? SmtpHost,
@@ -18,6 +19,7 @@ public record LocationSettingsDto(
 
 public record UpdateLocationSettingsRequest(
     TimeFormat TimeFormat,
+    DateFormat DateFormat,
     string TimeZone,
     int AvailabilityDays,
     string? SmtpHost,

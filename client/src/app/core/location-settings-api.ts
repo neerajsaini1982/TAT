@@ -4,9 +4,11 @@ import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from './api-config';
 
 export type TimeFormat = 'TwelveHour' | 'TwentyFourHour';
+export type DateFormat = 'MmDdYyyy' | 'DdMmYyyy' | 'YyyyMmDd' | 'DdMmmYyyy' | 'MmmDdYyyy';
 
 export interface LocationSettingsDto {
   timeFormat: TimeFormat;
+  dateFormat: DateFormat;
   timeZone: string;
   availabilityDays: number;
   smtpHost: string | null;
@@ -20,6 +22,7 @@ export interface LocationSettingsDto {
 
 export interface UpdateLocationSettingsRequest {
   timeFormat: TimeFormat;
+  dateFormat: DateFormat;
   timeZone: string;
   availabilityDays: number;
   smtpHost: string | null;

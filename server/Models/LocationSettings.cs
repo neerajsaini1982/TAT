@@ -6,6 +6,15 @@ public enum TimeFormat
     TwentyFourHour,
 }
 
+public enum DateFormat
+{
+    MmDdYyyy, // 07/10/2026
+    DdMmYyyy, // 10/07/2026
+    YyyyMmDd, // 2026-07-10
+    DdMmmYyyy, // 10-Jul-2026
+    MmmDdYyyy, // Jul 10, 2026
+}
+
 // One row per Location, created on first access with sensible defaults.
 public class LocationSettings
 {
@@ -15,6 +24,7 @@ public class LocationSettings
     public Location? Location { get; set; }
 
     public TimeFormat TimeFormat { get; set; } = TimeFormat.TwelveHour;
+    public DateFormat DateFormat { get; set; } = DateFormat.MmDdYyyy;
 
     // IANA time zone id, e.g. "America/Los_Angeles".
     public string TimeZone { get; set; } = "America/Los_Angeles";

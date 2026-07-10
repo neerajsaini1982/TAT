@@ -28,6 +28,15 @@
         </mat-form-field>
 
         <mat-form-field appearance="outline">
+          <mat-label>Date Format</mat-label>
+          <mat-select [(ngModel)]="form.dateFormat" name="dateFormat">
+            @for (df of dateFormats; track df.value) {
+              <mat-option [value]="df.value">{{ df.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
           <mat-label>Time Zone</mat-label>
           <mat-select [(ngModel)]="form.timeZone" name="timeZone">
             @for (tz of timeZones; track tz.value) {

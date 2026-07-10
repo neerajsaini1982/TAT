@@ -11,7 +11,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatDialog } from '@angular/material/dialog';
 import { forkJoin } from 'rxjs';
 
-import { LocationSettingsApi, LocationSettingsDto, TimeFormat } from '../../../core/location-settings-api';
+import { DateFormat, LocationSettingsApi, LocationSettingsDto, TimeFormat } from '../../../core/location-settings-api';
 import { EmailTemplateDto, EmailTemplatesApi } from '../../../core/email-templates-api';
 import {
   EmailTemplateEditorDialog,
@@ -22,6 +22,41 @@ interface TimeZoneOption {
   value: string;
   label: string;
 }
+
+interface DateFormatOption {
+  value: DateFormat;
+  label: string;
+}
+
+// Live example using today's date, so the option reads clearly regardless
+// of when the admin is looking at this screen.
+function dateFormatExample(value: DateFormat): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  const mon = d.toLocaleDateString(undefined, { month: 'short' });
+  switch (value) {
+    case 'MmDdYyyy':
+      return `${mm}/${dd}/${yyyy}`;
+    case 'DdMmYyyy':
+      return `${dd}/${mm}/${yyyy}`;
+    case 'YyyyMmDd':
+      return `${yyyy}-${mm}-${dd}`;
+    case 'DdMmmYyyy':
+      return `${dd}-${mon}-${yyyy}`;
+    case 'MmmDdYyyy':
+      return `${mon} ${dd}, ${yyyy}`;
+  }
+}
+
+const DATE_FORMATS: DateFormatOption[] = [
+  { value: 'MmDdYyyy', label: `MM/DD/YYYY (${dateFormatExample('MmDdYyyy')})` },
+  { value: 'DdMmYyyy', label: `DD/MM/YYYY (${dateFormatExample('DdMmYyyy')})` },
+  { value: 'YyyyMmDd', label: `YYYY-MM-DD (${dateFormatExample('YyyyMmDd')})` },
+  { value: 'DdMmmYyyy', label: `DD-MMM-YYYY (${dateFormatExample('DdMmmYyyy')})` },
+  { value: 'MmmDdYyyy', label: `MMM DD, YYYY (${dateFormatExample('MmmDdYyyy')})` },
+];
 
 const TIME_ZONES: TimeZoneOption[] = [
   { value: 'America/Los_Angeles', label: 'Pacific Time (US)' },
@@ -38,6 +73,7 @@ const TIME_ZONES: TimeZoneOption[] = [
 
 interface FormModel {
   timeFormat: TimeFormat;
+  dateFormat: DateFormat;
   timeZone: string;
   availabilityDays: number;
   smtpHost: string;
@@ -51,6 +87,7 @@ interface FormModel {
 
 const emptyForm = (): FormModel => ({
   timeFormat: 'TwelveHour',
+  dateFormat: 'MmDdYyyy',
   timeZone: 'America/Los_Angeles',
   availabilityDays: 7,
   smtpHost: '',
@@ -86,6 +123,7 @@ export class AdminLocationSettingsPage implements OnInit {
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
   protected readonly timeZones = TIME_ZONES;
+  protected readonly dateFormats = DATE_FORMATS;
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -122,6 +160,7 @@ export class AdminLocationSettingsPage implements OnInit {
     this.hasSmtpPassword.set(settings.hasSmtpPassword);
     this.form = {
       timeFormat: settings.timeFormat,
+      dateFormat: settings.dateFormat,
       timeZone: settings.timeZone,
       availabilityDays: settings.availabilityDays,
       smtpHost: settings.smtpHost ?? '',
@@ -142,6 +181,7 @@ export class AdminLocationSettingsPage implements OnInit {
       .update(
         {
           timeFormat: this.form.timeFormat,
+          dateFormat: this.form.dateFormat,
           timeZone: this.form.timeZone,
           availabilityDays: this.form.availabilityDays,
           smtpHost: this.form.smtpHost || null,

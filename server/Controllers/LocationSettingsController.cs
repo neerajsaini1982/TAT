@@ -35,6 +35,7 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
 
         var settings = GetOrCreateSettings(location.Id);
         settings.TimeFormat = request.TimeFormat;
+        settings.DateFormat = request.DateFormat;
         settings.TimeZone = request.TimeZone;
         settings.AvailabilityDays = request.AvailabilityDays;
         settings.SmtpHost = request.SmtpHost;
@@ -86,6 +87,7 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
 
     private static LocationSettingsDto ToDto(LocationSettings s) => new(
         s.TimeFormat,
+        s.DateFormat,
         s.TimeZone,
         s.AvailabilityDays,
         s.SmtpHost,
