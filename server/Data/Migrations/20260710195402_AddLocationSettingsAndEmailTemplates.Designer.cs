@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Server.Data;
 
@@ -10,9 +11,11 @@ using Server.Data;
 namespace Server.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260710195402_AddLocationSettingsAndEmailTemplates")]
+    partial class AddLocationSettingsAndEmailTemplates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -213,10 +216,6 @@ namespace Server.Data.Migrations
 
                     b.Property<int>("AvailabilityDays")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("DateFormat")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
 
                     b.Property<int>("LocationId")
                         .HasColumnType("INTEGER");
