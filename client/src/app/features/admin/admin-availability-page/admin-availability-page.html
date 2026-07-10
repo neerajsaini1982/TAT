@@ -15,6 +15,10 @@
   </button>
 </div>
 
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
 <div class="table-scroll">
   <table>
     <thead>
@@ -31,7 +35,9 @@
         <tr>
           <td>{{ person.firstName }} {{ person.lastName }}</td>
           @for (day of person.days; track day.date) {
-            <td [class.unavailable]="!day.isAvailable">{{ dayLabel(day) }}</td>
+            <td [class.unavailable]="!day.isAvailable">
+              <button type="button" class="day-cell" (click)="editDay(person, day)">{{ dayLabel(day) }}</button>
+            </td>
           }
           <td>
             @if (person.isSubmitted) {

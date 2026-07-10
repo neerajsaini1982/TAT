@@ -3,17 +3,17 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
-import { forkJoin } from 'rxjs';
 
 import { AvailabilityApi, AvailabilityDto } from '../../../core/availability-api';
 import {
   DAY_LABELS_SHORT,
+  addDays,
   addMonths,
+  editableAvailabilityWeekStart,
   formatDate,
   formatMonthLabel,
-  isBeyondAvailabilityWindow,
+  isAvailabilitySubmissionOpen,
   isPastDate,
-  maxAvailabilityDate,
   monthGridDays,
   mondayOf,
   parseDate,
@@ -28,7 +28,7 @@ interface CalendarDay {
   dayOfMonth: number;
   isCurrentMonth: boolean;
   isPast: boolean;
-  isBeyondWindow: boolean;
+  isLocked: boolean;
   isToday: boolean;
   isAvailable: boolean;
   allDay: boolean;
@@ -55,14 +55,15 @@ export class AvailabilityCalendarPage implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly days = signal<CalendarDay[]>([]);
 
-  // Employees only plan today through the next 15 days: earlier months
-  // aren't navigable, and later ones only once they'd show an in-window day.
+  // Employees only ever have one editable week (next week, until Saturday):
+  // month navigation is limited to the range that could contain it.
   protected readonly canGoPreviousMonth = computed(
     () => this.monthAnchor().getTime() > startOfMonth(new Date()).getTime(),
   );
-  protected readonly canGoNextMonth = computed(
-    () => addMonths(this.monthAnchor(), 1).getTime() <= maxAvailabilityDate().getTime(),
-  );
+  protected readonly canGoNextMonth = computed(() => {
+    const lastEditableDay = addDays(editableAvailabilityWeekStart(), 6);
+    return addMonths(this.monthAnchor(), 1).getTime() <= startOfMonth(lastEditableDay).getTime();
+  });
 
   ngOnInit(): void {
     this.load();
@@ -74,35 +75,33 @@ export class AvailabilityCalendarPage implements OnInit {
 
     const grid = monthGridDays(this.monthAnchor());
     const today = formatDate(new Date());
-    const weekStarts: Date[] = [];
-    for (let i = 0; i < grid.length; i += 7) {
-      weekStarts.push(grid[i]);
-    }
+    const editableStart = formatDate(editableAvailabilityWeekStart());
+    const editableEnd = formatDate(addDays(editableAvailabilityWeekStart(), 6));
 
-    forkJoin(weekStarts.map((weekStart) => this.api.getMine(formatDate(weekStart)))).subscribe({
-      next: (weeks) => {
-        const byDate = new Map(weeks.flatMap((w) => w.days).map((d) => [d.date, d]));
+    this.api.getMine(editableStart).subscribe({
+      next: (dto) => {
+        const byDate = new Map(dto.days.map((d) => [d.date, d]));
+        const weekLocked = dto.isSubmitted || !isAvailabilitySubmissionOpen();
+
         this.days.set(
           grid.map((date) => {
             const iso = formatDate(date);
-            const dto = byDate.get(iso);
-            const isPast = isPastDate(iso);
-            const isBeyondWindow = isBeyondAvailabilityWindow(iso);
-            // Don't surface stored data for locked days: past availability
-            // shouldn't be shown, and days beyond the 15-day window aren't
-            // plannable yet.
-            const locked = isPast || isBeyondWindow;
+            const isEditableDate = iso >= editableStart && iso <= editableEnd;
+            const isLocked = !isEditableDate || weekLocked;
+            // Don't surface stored data for locked days: only the one open
+            // week is ever shown with real data.
+            const d = isEditableDate ? byDate.get(iso) : undefined;
             return {
               date: iso,
               dayOfMonth: date.getDate(),
               isCurrentMonth: date.getMonth() === this.monthAnchor().getMonth(),
-              isPast,
-              isBeyondWindow,
+              isPast: isPastDate(iso),
+              isLocked,
               isToday: iso === today,
-              isAvailable: !locked && (dto?.isAvailable ?? false),
-              allDay: !locked && !!dto?.isAvailable && !dto.startTime && !dto.endTime,
-              startTime: toInputTime(locked ? null : (dto?.startTime ?? null)),
-              endTime: toInputTime(locked ? null : (dto?.endTime ?? '17:00:00')),
+              isAvailable: !isLocked && (d?.isAvailable ?? false),
+              allDay: !isLocked && !!d?.isAvailable && !d.startTime && !d.endTime,
+              startTime: toInputTime(isLocked ? null : (d?.startTime ?? null)),
+              endTime: toInputTime(isLocked ? null : (d?.endTime ?? '17:00:00')),
             };
           }),
         );
@@ -137,7 +136,7 @@ export class AvailabilityCalendarPage implements OnInit {
   }
 
   openDay(day: CalendarDay): void {
-    if (day.isPast || day.isBeyondWindow) {
+    if (day.isLocked) {
       return;
     }
 
@@ -200,7 +199,7 @@ export class AvailabilityCalendarPage implements OnInit {
     this.days.update((days) =>
       days.map((day) => {
         const updated = byDate.get(day.date);
-        if (!updated) {
+        if (!updated || day.isLocked) {
           return day;
         }
         return {

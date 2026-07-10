@@ -33,11 +33,10 @@
         type="button"
         class="cell"
         [class.other-month]="!day.isCurrentMonth"
-        [class.past]="day.isPast"
-        [class.beyond]="day.isBeyondWindow"
+        [class.locked]="day.isLocked"
         [class.today]="day.isToday"
         [class.available]="day.isAvailable"
-        [disabled]="day.isPast || day.isBeyondWindow"
+        [disabled]="day.isLocked"
         (click)="openDay(day)"
       >
         <span class="day-number">{{ day.dayOfMonth }}</span>

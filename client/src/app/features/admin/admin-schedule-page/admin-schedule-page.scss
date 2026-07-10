@@ -29,6 +29,40 @@
   text-align: center;
 }
 
+.publish-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.published {
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+
+  &.draft {
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
 .palette {
   display: flex;
   align-items: center;
@@ -82,6 +116,14 @@
   color: var(--mat-sys-on-primary-container);
   padding-right: 20px;
   margin-bottom: 4px;
+
+  // Not posted yet: dashed outline distinguishes it from the solid look
+  // of an already-published (live, employee-visible) shift.
+  &.draft {
+    background: transparent;
+    border: 1px dashed var(--mat-sys-outline);
+    color: var(--mat-sys-on-surface-variant);
+  }
 }
 
 .chip-name {

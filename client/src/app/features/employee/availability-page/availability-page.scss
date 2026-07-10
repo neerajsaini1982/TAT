@@ -9,7 +9,14 @@
   }
 }
 
-.submitted-note {
+.week-label {
+  text-align: center;
+  font-weight: 500;
+  font-size: 17px;
+  margin-bottom: 12px;
+}
+
+.status-note {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -17,12 +24,25 @@
   margin: 0 auto 16px;
   padding: 10px 16px;
   border-radius: 8px;
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
   font-size: 14px;
 
   mat-icon {
     flex-shrink: 0;
+  }
+
+  &.submitted {
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+
+  &.locked {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+
+  &.open {
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
   }
 }
 

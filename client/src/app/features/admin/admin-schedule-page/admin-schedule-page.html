@@ -15,6 +15,28 @@
   </button>
 </div>
 
+<div class="publish-bar">
+  @if (isFullyPublished()) {
+    <span class="status-badge published">
+      <mat-icon>check_circle</mat-icon>
+      Published — visible to employees
+    </span>
+  } @else if (hasAssignments()) {
+    <span class="status-badge draft">
+      <mat-icon>visibility_off</mat-icon>
+      Draft — not visible to employees yet
+    </span>
+  }
+  <button
+    mat-flat-button
+    color="primary"
+    (click)="publish()"
+    [disabled]="!hasAssignments() || isFullyPublished() || publishing()"
+  >
+    Post Schedule
+  </button>
+</div>
+
 @if (error()) {
   <p class="error">{{ error() }}</p>
 }
@@ -61,7 +83,12 @@
               >
                 <div class="availability-label">{{ day.availabilityLabel }}</div>
                 @for (a of day.assignments; track a.id) {
-                  <div class="chip assignment-chip" cdkDrag [cdkDragData]="{ kind: 'assignment', assignment: a }">
+                  <div
+                    class="chip assignment-chip"
+                    [class.draft]="!a.isPublished"
+                    cdkDrag
+                    [cdkDragData]="{ kind: 'assignment', assignment: a }"
+                  >
                     <span class="chip-name">{{ a.shiftName }}</span>
                     <span class="chip-time">{{ a.shiftStartTime.slice(0, 5) }}–{{ a.shiftEndTime.slice(0, 5) }}</span>
                     <button type="button" class="chip-remove" (click)="removeAssignment(a)" aria-label="Remove shift">×</button>

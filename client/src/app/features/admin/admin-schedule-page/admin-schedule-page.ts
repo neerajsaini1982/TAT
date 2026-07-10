@@ -59,6 +59,16 @@ export class AdminSchedulePage implements OnInit {
     ),
   );
 
+  // The whole week is a draft/preview, invisible to employees, until the
+  // admin posts it. Any create/move against a published week reverts to
+  // draft until it's re-posted.
+  private readonly allAssignments = computed(() => this.rows().flatMap((r) => r.days.flatMap((d) => d.assignments)));
+  protected readonly hasAssignments = computed(() => this.allAssignments().length > 0);
+  protected readonly isFullyPublished = computed(
+    () => this.hasAssignments() && this.allAssignments().every((a) => a.isPublished),
+  );
+  protected readonly publishing = signal(false);
+
   ngOnInit(): void {
     this.load();
   }
@@ -159,6 +169,24 @@ export class AdminSchedulePage implements OnInit {
           error: (err) => this.error.set(err?.error ?? 'Failed to move shift.'),
         });
     }
+  }
+
+  publish(): void {
+    if (!confirm("Publish this week's schedule? It will become visible to employees on their My Schedule page.")) {
+      return;
+    }
+    this.publishing.set(true);
+    this.error.set(null);
+    this.assignmentsApi.publish(formatDate(this.weekStart()), this.locationCode).subscribe({
+      next: () => {
+        this.publishing.set(false);
+        this.load();
+      },
+      error: (err) => {
+        this.publishing.set(false);
+        this.error.set(err?.error ?? 'Failed to publish schedule.');
+      },
+    });
   }
 
   removeAssignment(assignment: ShiftAssignmentDto): void {

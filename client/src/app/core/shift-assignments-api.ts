@@ -14,6 +14,7 @@ export interface ShiftAssignmentDto {
   accountFirstName: string;
   accountLastName: string;
   date: string;
+  isPublished: boolean;
 }
 
 export interface CreateShiftAssignmentRequest {
@@ -54,5 +55,9 @@ export class ShiftAssignmentsApi {
 
   delete(id: number) {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  publish(weekStartDate: string, locationCode?: string) {
+    return this.http.post<void>(`${this.base}/publish`, { weekStartDate, locationCode });
   }
 }

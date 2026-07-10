@@ -30,12 +30,42 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
         var assignments = db.ShiftAssignments
             .Include(a => a.Shift)
             .Include(a => a.Account)
-            .Where(a => a.AccountId == accountId && a.Date >= today)
+            .Where(a => a.AccountId == accountId && a.Date >= today && a.IsPublished)
             .OrderBy(a => a.Date)
             .ThenBy(a => a.Shift!.StartTime)
             .ToList();
 
         return Ok(assignments.Select(ToDto));
+    }
+
+    // Bulk-marks every assignment in a location/week as published so it
+    // starts showing up in GetMine for the employees on it. Until this is
+    // called, the admin schedule grid is a draft/preview only.
+    [HttpPost("publish")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public IActionResult Publish(PublishScheduleRequest request)
+    {
+        var location = ResolveLocation(request.LocationCode);
+        if (location is null)
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        var weekEndDate = request.WeekStartDate.AddDays(6);
+        var assignments = db.ShiftAssignments
+            .Include(a => a.Shift)
+            .Where(a => a.Shift!.LocationId == location.Id && a.Date >= request.WeekStartDate && a.Date <= weekEndDate)
+            .ToList();
+
+        var publishedAt = DateTime.UtcNow;
+        foreach (var assignment in assignments)
+        {
+            assignment.IsPublished = true;
+            assignment.PublishedAt = publishedAt;
+        }
+
+        db.SaveChanges();
+        return NoContent();
     }
 
     [HttpGet]
@@ -198,5 +228,6 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
         a.AccountId,
         a.Account!.FirstName,
         a.Account.LastName,
-        a.Date);
+        a.Date,
+        a.IsPublished);
 }
