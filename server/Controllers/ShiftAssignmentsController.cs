@@ -107,6 +107,11 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
             return BadRequest("Only employees, leads, and admins can be scheduled.");
         }
 
+        if (!IsAvailable(account.Id, request.Date))
+        {
+            return BadRequest("This employee is not available on this date.");
+        }
+
         var alreadyAssigned = db.ShiftAssignments.Any(a =>
             a.ShiftId == shift.Id && a.AccountId == account.Id && a.Date == request.Date);
         if (alreadyAssigned)
@@ -150,6 +155,11 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
         if (account.Role is not (AccountRole.Employee or AccountRole.Lead or AccountRole.Admin))
         {
             return BadRequest("Only employees, leads, and admins can be scheduled.");
+        }
+
+        if (!IsAvailable(account.Id, request.Date))
+        {
+            return BadRequest("This employee is not available on this date.");
         }
 
         var alreadyAssigned = db.ShiftAssignments.Any(a =>
@@ -196,6 +206,15 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
         var callerLocationCode = CallerLocationCode();
         return db.Locations.SingleOrDefault(l => l.LocationCode == callerLocationCode);
     }
+
+    // An employee who hasn't said they're available that day (including
+    // never having submitted anything for that week) can't be assigned a
+    // shift there.
+    private bool IsAvailable(int accountId, DateOnly date) =>
+        db.Availabilities
+            .Where(a => a.AccountId == accountId)
+            .SelectMany(a => a.Days)
+            .Any(d => d.Date == date && d.IsAvailable);
 
     private bool CanAccess(string? locationCode) =>
         User.IsInRole(nameof(AccountRole.Sa)) || (locationCode is not null && locationCode == CallerLocationCode());

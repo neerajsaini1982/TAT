@@ -56,8 +56,9 @@ export class AvailabilityPage implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly days = signal<DayModel[]>([]);
 
-  // Locked once submitted, or once the Saturday deadline has passed.
-  protected readonly locked = computed(() => this.isSubmitted() || !this.submissionOpen);
+  // Submitting doesn't lock anything by itself — only the Saturday
+  // deadline does — so the employee can keep adjusting right up to it.
+  protected readonly locked = computed(() => !this.submissionOpen);
 
   ngOnInit(): void {
     this.load();
@@ -116,9 +117,6 @@ export class AvailabilityPage implements OnInit {
   }
 
   submit(): void {
-    if (!confirm("Submit your availability for this week? You won't be able to change it after submitting.")) {
-      return;
-    }
     this.save(true);
   }
 

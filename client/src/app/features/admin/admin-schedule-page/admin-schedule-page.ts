@@ -15,6 +15,10 @@ interface DayCell {
   dayLabel: string;
   isAvailable: boolean;
   availabilityLabel: string;
+  // Null while isAvailable is false, or when the employee marked the
+  // whole day open ("All day") rather than a specific window.
+  availableStartTime: string | null;
+  availableEndTime: string | null;
   assignments: ShiftAssignmentDto[];
 }
 
@@ -99,6 +103,8 @@ export class AdminSchedulePage implements OnInit {
               dayLabel: DAY_HEADERS[i],
               isAvailable: d.isAvailable,
               availabilityLabel: this.availabilityLabel(d.isAvailable, d.startTime, d.endTime),
+              availableStartTime: d.isAvailable ? d.startTime : null,
+              availableEndTime: d.isAvailable ? d.endTime : null,
               assignments: assignmentsByKey.get(`${person.accountId}|${d.date}`) ?? [],
             }));
             const totalHours = days.reduce(
@@ -146,12 +152,30 @@ export class AdminSchedulePage implements OnInit {
     return `cell-${accountId}-${date}`;
   }
 
+  // Blocks the drag from even entering a cell for a day the employee said
+  // they're not available (or hasn't submitted availability for at all),
+  // so the drop target visibly refuses it instead of silently failing.
+  canDropHere = (_drag: CdkDrag<DragItem>, drop: CdkDropList<DayCell>): boolean => drop.data.isAvailable;
+
   onDrop(event: CdkDragDrop<DayCell, DayCell, DragItem>, row: EmployeeRow, day: DayCell): void {
     if (event.previousContainer === event.container) {
       return;
     }
 
+    if (!day.isAvailable) {
+      this.error.set(`${row.name} is not available on ${day.dayLabel}.`);
+      return;
+    }
+
     const data = event.item.data;
+    const [shiftStart, shiftEnd] =
+      data.kind === 'template' ? [data.shift.startTime, data.shift.endTime] : [data.assignment.shiftStartTime, data.assignment.shiftEndTime];
+
+    const mismatch = this.partialAvailabilityWarning(day, shiftStart, shiftEnd);
+    if (mismatch && !confirm(`${mismatch} Assign anyway?`)) {
+      return;
+    }
+
     this.error.set(null);
 
     if (data.kind === 'template') {
@@ -169,6 +193,20 @@ export class AdminSchedulePage implements OnInit {
           error: (err) => this.error.set(err?.error ?? 'Failed to move shift.'),
         });
     }
+  }
+
+  // Employee said they're available, but not necessarily for the shift's
+  // full span (e.g. available 11-4, shift runs 11-7) — warn instead of
+  // silently under-covering the shift. "All day" availability (no
+  // specific window) always covers it.
+  private partialAvailabilityWarning(day: DayCell, shiftStart: string, shiftEnd: string): string | null {
+    if (!day.availableStartTime || !day.availableEndTime) {
+      return null;
+    }
+    if (shiftStart < day.availableStartTime || shiftEnd > day.availableEndTime) {
+      return `${day.dayLabel}: available ${day.availableStartTime.slice(0, 5)}–${day.availableEndTime.slice(0, 5)}, but this shift runs ${shiftStart.slice(0, 5)}–${shiftEnd.slice(0, 5)}.`;
+    }
+    return null;
   }
 
   publish(): void {

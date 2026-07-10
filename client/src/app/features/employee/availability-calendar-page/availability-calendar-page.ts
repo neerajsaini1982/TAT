@@ -81,7 +81,9 @@ export class AvailabilityCalendarPage implements OnInit {
     this.api.getMine(editableStart).subscribe({
       next: (dto) => {
         const byDate = new Map(dto.days.map((d) => [d.date, d]));
-        const weekLocked = dto.isSubmitted || !isAvailabilitySubmissionOpen();
+        // Submitting doesn't lock anything by itself — only the Saturday
+        // deadline does — so the employee can keep adjusting right up to it.
+        const weekLocked = !isAvailabilitySubmissionOpen();
 
         this.days.set(
           grid.map((date) => {

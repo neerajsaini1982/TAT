@@ -41,11 +41,13 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
 
         // Employees submit availability for exactly one week ahead ("next
         // week"), during the week before it, with a hard Saturday
-        // deadline. Once that week isn't the open one anymore (wrong week,
-        // deadline passed, or already submitted), every day is frozen:
-        // whatever was already on file (or blank) is kept no matter what
-        // the client sends, so nothing can be edited after the fact.
-        var isLocked = !IsOpenWeek(request.WeekStartDate) || (availability?.IsSubmitted ?? false);
+        // deadline. Submitting doesn't lock anything by itself — it's just
+        // a status marker for the admin roster — so the employee can keep
+        // adjusting and re-submitting right up to the deadline. Once that
+        // week isn't the open one anymore (wrong week or deadline passed),
+        // every day is frozen: whatever was already on file (or blank) is
+        // kept no matter what the client sends.
+        var isLocked = !IsOpenWeek(request.WeekStartDate);
 
         ApplyDays(availability ??= NewAvailability(accountId, request.WeekStartDate), request.Days, isLocked);
         if (availability.Id == 0)
