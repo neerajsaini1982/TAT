@@ -25,7 +25,8 @@
     </mat-card-header>
     <mat-card-content>
       <button mat-flat-button color="primary">Clock In</button>
-      <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'employee', 'availability']">My Availability</a>
+      <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'employee', 'schedule']">My Schedule</a>
+      <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'availability']">My Availability</a>
       <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'availability2']">Calendar View</a>
       <button mat-stroked-button (click)="logout()">Log Out</button>
     </mat-card-content>

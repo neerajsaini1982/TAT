@@ -38,16 +38,29 @@ export function formatWeekRange(weekStart: Date): string {
 // Plain ISO-date (yyyy-MM-dd) string comparison, no Date parsing needed.
 export const isPastDate = (isoDate: string): boolean => isoDate < formatDate(new Date());
 
-// Employees may only view/edit availability for today through this many
-// days out; enforced here (UI) and mirrored server-side in SaveMine.
-export const AVAILABILITY_WINDOW_DAYS = 15;
-
-export function maxAvailabilityDate(): Date {
-  return addDays(new Date(), AVAILABILITY_WINDOW_DAYS);
+// Employees submit availability for exactly one week ahead, during the
+// week before it: the only week ever open for self-service edits is next
+// week, and only through Saturday of the current week. Mirrored
+// server-side in AvailabilityController.SaveMine.
+export function editableAvailabilityWeekStart(): Date {
+  return addDays(mondayOf(new Date()), 7);
 }
 
-export const isBeyondAvailabilityWindow = (isoDate: string): boolean =>
-  isoDate > formatDate(maxAvailabilityDate());
+export function availabilitySubmissionDeadline(): Date {
+  return addDays(mondayOf(new Date()), 5); // Saturday of the current week
+}
+
+export const isAvailabilitySubmissionOpen = (): boolean =>
+  formatDate(new Date()) <= formatDate(availabilitySubmissionDeadline());
+
+// Whether a given date falls within the one week employees can currently
+// submit availability for (does not by itself account for the deadline or
+// an already-submitted week — see isAvailabilitySubmissionOpen for that).
+export const isEditableAvailabilityDate = (isoDate: string): boolean => {
+  const start = formatDate(editableAvailabilityWeekStart());
+  const end = formatDate(addDays(editableAvailabilityWeekStart(), 6));
+  return isoDate >= start && isoDate <= end;
+};
 
 export function dayOfWeekLabel(isoDate: string): string {
   const jsDay = parseDate(isoDate).getDay(); // 0 = Sunday

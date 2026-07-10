@@ -23,6 +23,11 @@
   }
 }
 
+.error {
+  color: var(--mat-sys-error);
+  text-align: center;
+}
+
 .table-scroll {
   overflow-x: auto;
 }
@@ -36,11 +41,32 @@ table {
 th,
 td {
   text-align: left;
-  padding: 8px 12px;
+  padding: 0;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
 }
 
-td.unavailable {
+th {
+  padding: 8px 12px;
+}
+
+td:first-child {
+  padding: 8px 12px;
+}
+
+.day-cell {
+  all: unset;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 12px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-low);
+  }
+}
+
+td.unavailable .day-cell {
   color: var(--mat-sys-on-surface-variant);
 }
 

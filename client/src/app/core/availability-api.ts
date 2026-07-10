@@ -41,6 +41,11 @@ export class AvailabilityApi {
     return this.http.put<AvailabilityDto>(`${this.base}/mine`, request);
   }
 
+  // Admin/Sa override: bypasses the employee-facing submit/deadline lock.
+  saveForAccount(accountId: number, request: SaveAvailabilityRequest) {
+    return this.http.put<AvailabilityDto>(`${this.base}/${accountId}`, request);
+  }
+
   getForLocation(weekStartDate: string, locationCode?: string) {
     const params = new URLSearchParams({ weekStartDate });
     if (locationCode) {

@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Shift> Shifts => Set<Shift>();
     public DbSet<Availability> Availabilities => Set<Availability>();
     public DbSet<AvailabilityDay> AvailabilityDays => Set<AvailabilityDay>();
+    public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -62,6 +63,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(d => new { d.AvailabilityId, d.Date }).IsUnique();
+        });
+
+        modelBuilder.Entity<ShiftAssignment>(entity =>
+        {
+            entity.HasOne(a => a.Shift)
+                .WithMany()
+                .HasForeignKey(a => a.ShiftId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(a => a.Account)
+                .WithMany()
+                .HasForeignKey(a => a.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Same employee can't be assigned to the same shift twice on the same day.
+            entity.HasIndex(a => new { a.ShiftId, a.AccountId, a.Date }).IsUnique();
         });
     }
 }
