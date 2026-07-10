@@ -32,6 +32,10 @@ export class ShiftAssignmentsApi {
   private readonly http = inject(HttpClient);
   private readonly base = `${API_BASE_URL}/shift-assignments`;
 
+  getMine() {
+    return this.http.get<ShiftAssignmentDto[]>(`${this.base}/mine`);
+  }
+
   getForWeek(weekStartDate: string, locationCode?: string) {
     const params = new URLSearchParams({ weekStartDate });
     if (locationCode) {

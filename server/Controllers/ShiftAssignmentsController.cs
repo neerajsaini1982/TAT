@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,14 +9,37 @@ using Server.Security;
 
 namespace Server.Controllers;
 
-// Admin-only: converts an employee's submitted availability into an actual
-// schedule by assigning them to a Shift template on a specific date.
+// Converts an employee's submitted availability into an actual schedule by
+// assigning them to a Shift template on a specific date. Managing
+// assignments is Admin/Sa-only (see the per-action policy below); any
+// authenticated account can read back its own via GetMine.
 [ApiController]
 [Route("api/shift-assignments")]
-[Authorize(Policy = "AdminOrAbove")]
+[Authorize]
 public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
 {
+    // Self-service: whoever is logged in sees only their own upcoming
+    // schedule, so an Employee/Lead/Admin can answer "when am I working
+    // next, and for how long" without needing the admin roster view.
+    [HttpGet("mine")]
+    public ActionResult<IEnumerable<ShiftAssignmentDto>> GetMine()
+    {
+        var accountId = CallerAccountId();
+        var today = DateOnly.FromDateTime(DateTime.Now);
+
+        var assignments = db.ShiftAssignments
+            .Include(a => a.Shift)
+            .Include(a => a.Account)
+            .Where(a => a.AccountId == accountId && a.Date >= today)
+            .OrderBy(a => a.Date)
+            .ThenBy(a => a.Shift!.StartTime)
+            .ToList();
+
+        return Ok(assignments.Select(ToDto));
+    }
+
     [HttpGet]
+    [Authorize(Policy = "AdminOrAbove")]
     public ActionResult<IEnumerable<ShiftAssignmentDto>> GetForWeek(
         [FromQuery] string? locationCode, [FromQuery] DateOnly weekStartDate)
     {
@@ -38,6 +62,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "AdminOrAbove")]
     public ActionResult<ShiftAssignmentDto> Create(CreateShiftAssignmentRequest request)
     {
         var shift = db.Shifts.Include(s => s.Location).SingleOrDefault(s => s.Id == request.ShiftId);
@@ -47,9 +72,9 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
             return BadRequest("Shift and employee must belong to the same location you manage.");
         }
 
-        if (account.Role is not (AccountRole.Employee or AccountRole.Lead))
+        if (account.Role is not (AccountRole.Employee or AccountRole.Lead or AccountRole.Admin))
         {
-            return BadRequest("Only employees and leads can be scheduled.");
+            return BadRequest("Only employees, leads, and admins can be scheduled.");
         }
 
         var alreadyAssigned = db.ShiftAssignments.Any(a =>
@@ -75,6 +100,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
     }
 
     [HttpPut("{id:int}/move")]
+    [Authorize(Policy = "AdminOrAbove")]
     public ActionResult<ShiftAssignmentDto> Move(int id, MoveShiftAssignmentRequest request)
     {
         var assignment = db.ShiftAssignments
@@ -89,6 +115,11 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
         if (account is null || account.LocationId != assignment.Shift!.LocationId)
         {
             return BadRequest("The employee must belong to the same location as the shift.");
+        }
+
+        if (account.Role is not (AccountRole.Employee or AccountRole.Lead or AccountRole.Admin))
+        {
+            return BadRequest("Only employees, leads, and admins can be scheduled.");
         }
 
         var alreadyAssigned = db.ShiftAssignments.Any(a =>
@@ -107,6 +138,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = "AdminOrAbove")]
     public IActionResult Delete(int id)
     {
         var assignment = db.ShiftAssignments
@@ -140,6 +172,9 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
 
     private string? CallerLocationCode() =>
         User.FindFirst(TokenService.LocationCodeClaimType)?.Value;
+
+    private int CallerAccountId() =>
+        int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     private static double ComputeHours(TimeOnly start, TimeOnly end)
     {
