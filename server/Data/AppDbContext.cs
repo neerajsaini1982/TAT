@@ -11,6 +11,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Availability> Availabilities => Set<Availability>();
     public DbSet<AvailabilityDay> AvailabilityDays => Set<AvailabilityDay>();
     public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
+    public DbSet<LocationSettings> LocationSettings => Set<LocationSettings>();
+    public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +81,28 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             // Same employee can't be assigned to the same shift twice on the same day.
             entity.HasIndex(a => new { a.ShiftId, a.AccountId, a.Date }).IsUnique();
+        });
+
+        modelBuilder.Entity<LocationSettings>(entity =>
+        {
+            entity.Property(s => s.TimeFormat).HasConversion<string>();
+
+            entity.HasOne(s => s.Location)
+                .WithMany()
+                .HasForeignKey(s => s.LocationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(s => s.LocationId).IsUnique();
+        });
+
+        modelBuilder.Entity<EmailTemplate>(entity =>
+        {
+            entity.HasOne(t => t.Location)
+                .WithMany()
+                .HasForeignKey(t => t.LocationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(t => new { t.LocationId, t.Key }).IsUnique();
         });
     }
 }

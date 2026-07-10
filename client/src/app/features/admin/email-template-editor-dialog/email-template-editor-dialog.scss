@@ -1,0 +1,52 @@
+.content {
+  width: 560px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subject-field {
+  width: 100%;
+}
+
+.toolbar {
+  display: flex;
+  gap: 2px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  padding: 4px;
+}
+
+.body-editor {
+  min-height: 200px;
+  max-height: 340px;
+  overflow-y: auto;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 0 0 4px 4px;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -2px;
+  }
+}
+
+.placeholders {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.placeholders-label {
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.placeholder-chip {
+  font-size: 12px;
+}

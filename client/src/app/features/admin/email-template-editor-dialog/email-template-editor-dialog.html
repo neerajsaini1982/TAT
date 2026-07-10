@@ -1,0 +1,43 @@
+<h2 mat-dialog-title>Edit Template — {{ data.displayName }}</h2>
+<mat-dialog-content class="content">
+  <mat-form-field appearance="outline" class="subject-field">
+    <mat-label>Subject</mat-label>
+    <input matInput [(ngModel)]="subject" />
+  </mat-form-field>
+
+  <div class="toolbar">
+    <button type="button" mat-icon-button (click)="format('bold')" aria-label="Bold">
+      <mat-icon>format_bold</mat-icon>
+    </button>
+    <button type="button" mat-icon-button (click)="format('italic')" aria-label="Italic">
+      <mat-icon>format_italic</mat-icon>
+    </button>
+    <button type="button" mat-icon-button (click)="format('underline')" aria-label="Underline">
+      <mat-icon>format_underlined</mat-icon>
+    </button>
+    <button type="button" mat-icon-button (click)="format('insertUnorderedList')" aria-label="Bullet list">
+      <mat-icon>format_list_bulleted</mat-icon>
+    </button>
+    <button type="button" mat-icon-button (click)="format('insertOrderedList')" aria-label="Numbered list">
+      <mat-icon>format_list_numbered</mat-icon>
+    </button>
+    <button type="button" mat-icon-button (click)="insertLink()" aria-label="Insert link">
+      <mat-icon>link</mat-icon>
+    </button>
+  </div>
+
+  <div #bodyEditor class="body-editor" contenteditable="true"></div>
+
+  <div class="placeholders">
+    <span class="placeholders-label">Insert field:</span>
+    @for (field of placeholderFields; track field.token) {
+      <button type="button" mat-stroked-button class="placeholder-chip" (click)="insertPlaceholder(field.token)">
+        {{ field.label }}
+      </button>
+    }
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="save()">Save</button>
+</mat-dialog-actions>
