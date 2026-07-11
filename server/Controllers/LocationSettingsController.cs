@@ -56,6 +56,7 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         settings.TimeZone = request.TimeZone;
         settings.AvailabilityDays = request.AvailabilityDays;
         settings.ClockInWindowMinutes = request.ClockInWindowMinutes;
+        settings.DevelopmentMode = request.DevelopmentMode;
         settings.SmtpHost = request.SmtpHost;
         settings.SmtpPort = request.SmtpPort;
         settings.SmtpUsername = request.SmtpUsername;
@@ -109,6 +110,7 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         s.TimeZone,
         s.AvailabilityDays,
         s.ClockInWindowMinutes,
+        s.DevelopmentMode,
         s.SmtpHost,
         s.SmtpPort,
         s.SmtpUsername,

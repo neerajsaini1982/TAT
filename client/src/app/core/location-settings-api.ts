@@ -12,6 +12,7 @@ export interface LocationSettingsDto {
   timeZone: string;
   availabilityDays: number;
   clockInWindowMinutes: number;
+  developmentMode: boolean;
   smtpHost: string | null;
   smtpPort: number | null;
   smtpUsername: string | null;
@@ -27,6 +28,7 @@ export interface UpdateLocationSettingsRequest {
   timeZone: string;
   availabilityDays: number;
   clockInWindowMinutes: number;
+  developmentMode: boolean;
   smtpHost: string | null;
   smtpPort: number | null;
   smtpUsername: string | null;

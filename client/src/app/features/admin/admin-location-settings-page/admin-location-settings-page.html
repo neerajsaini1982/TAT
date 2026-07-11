@@ -45,19 +45,21 @@
           </mat-select>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Availability Planning Window (days)</mat-label>
-          <input matInput type="number" min="1" max="60" [(ngModel)]="form.availabilityDays" name="availabilityDays" />
-        </mat-form-field>
+        <mat-slide-toggle [(ngModel)]="form.developmentMode" name="developmentMode">Development Mode</mat-slide-toggle>
       </mat-card-content>
     </mat-card>
 
     <mat-card class="section">
       <mat-card-header>
-        <mat-card-title>Clock In</mat-card-title>
-        <mat-card-subtitle>Controls when the Clock In button unlocks for a scheduled shift.</mat-card-subtitle>
+        <mat-card-title>Employee Settings</mat-card-title>
+        <mat-card-subtitle>Availability planning and clock-in behavior for this location.</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content class="section-content">
+        <mat-form-field appearance="outline">
+          <mat-label>Availability Planning Window (days)</mat-label>
+          <input matInput type="number" min="1" max="60" [(ngModel)]="form.availabilityDays" name="availabilityDays" />
+        </mat-form-field>
+
         <mat-form-field appearance="outline">
           <mat-label>Clock-In Window (minutes before shift start)</mat-label>
           <input
@@ -72,68 +74,72 @@
       </mat-card-content>
     </mat-card>
 
-    <mat-card class="section">
-      <mat-card-header>
-        <mat-card-title>SMTP (Outgoing Email)</mat-card-title>
-        <mat-card-subtitle>Used to send schedule and availability notifications.</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content class="section-content">
-        <mat-form-field appearance="outline">
-          <mat-label>SMTP Host</mat-label>
-          <input matInput [(ngModel)]="form.smtpHost" name="smtpHost" placeholder="smtp.example.com" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Port</mat-label>
-          <input matInput type="number" [(ngModel)]="form.smtpPort" name="smtpPort" placeholder="587" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Username</mat-label>
-          <input matInput [(ngModel)]="form.smtpUsername" name="smtpUsername" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Password</mat-label>
-          <input
-            matInput
-            type="password"
-            [(ngModel)]="form.smtpPassword"
-            name="smtpPassword"
-            [placeholder]="hasSmtpPassword() ? 'Unchanged' : ''"
-          />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>From Address</mat-label>
-          <input matInput [(ngModel)]="form.smtpFromAddress" name="smtpFromAddress" placeholder="no-reply@example.com" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>From Name</mat-label>
-          <input matInput [(ngModel)]="form.smtpFromName" name="smtpFromName" />
-        </mat-form-field>
-        <mat-slide-toggle [(ngModel)]="form.smtpUseSsl" name="smtpUseSsl">Use SSL/TLS</mat-slide-toggle>
-      </mat-card-content>
-    </mat-card>
+    <div class="section-group">
+      <h3 class="group-label">Email</h3>
+
+      <mat-card class="section grouped">
+        <mat-card-header>
+          <mat-card-title>SMTP (Outgoing Email)</mat-card-title>
+          <mat-card-subtitle>Used to send schedule and availability notifications.</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="section-content">
+          <mat-form-field appearance="outline">
+            <mat-label>SMTP Host</mat-label>
+            <input matInput [(ngModel)]="form.smtpHost" name="smtpHost" placeholder="smtp.example.com" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Port</mat-label>
+            <input matInput type="number" [(ngModel)]="form.smtpPort" name="smtpPort" placeholder="587" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput [(ngModel)]="form.smtpUsername" name="smtpUsername" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input
+              matInput
+              type="password"
+              [(ngModel)]="form.smtpPassword"
+              name="smtpPassword"
+              [placeholder]="hasSmtpPassword() ? 'Unchanged' : ''"
+            />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>From Address</mat-label>
+            <input matInput [(ngModel)]="form.smtpFromAddress" name="smtpFromAddress" placeholder="no-reply@example.com" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>From Name</mat-label>
+            <input matInput [(ngModel)]="form.smtpFromName" name="smtpFromName" />
+          </mat-form-field>
+          <mat-slide-toggle [(ngModel)]="form.smtpUseSsl" name="smtpUseSsl">Use SSL/TLS</mat-slide-toggle>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="section grouped">
+        <mat-card-header>
+          <mat-card-title>Email Templates</mat-card-title>
+          <mat-card-subtitle>Used for notifications sent from this location.</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="template-list">
+            @for (template of templates(); track template.key) {
+              <div class="template-row">
+                <div class="template-info">
+                  <span class="template-name">{{ template.displayName }}</span>
+                  <span class="template-subject">{{ template.subject }}</span>
+                </div>
+                <button mat-stroked-button type="button" (click)="editTemplate(template)">Edit</button>
+              </div>
+            }
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
 
     <div class="save-row">
       <button mat-flat-button color="primary" type="submit" [disabled]="saving()">Save Settings</button>
     </div>
   </form>
-
-  <mat-card class="section">
-    <mat-card-header>
-      <mat-card-title>Email Templates</mat-card-title>
-      <mat-card-subtitle>Used for notifications sent from this location.</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content>
-      <div class="template-list">
-        @for (template of templates(); track template.key) {
-          <div class="template-row">
-            <div class="template-info">
-              <span class="template-name">{{ template.displayName }}</span>
-              <span class="template-subject">{{ template.subject }}</span>
-            </div>
-            <button mat-stroked-button (click)="editTemplate(template)">Edit</button>
-          </div>
-        }
-      </div>
-    </mat-card-content>
-  </mat-card>
 }

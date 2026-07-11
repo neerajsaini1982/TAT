@@ -38,6 +38,9 @@ public class LocationSettings
     // button becomes enabled for that shift (see TimeEntriesController).
     public int ClockInWindowMinutes { get; set; } = 15;
 
+    // When on, exposes extra diagnostics/test affordances for this location.
+    public bool DevelopmentMode { get; set; } = false;
+
     public string? SmtpHost { get; set; }
     public int? SmtpPort { get; set; }
     public string? SmtpUsername { get; set; }
