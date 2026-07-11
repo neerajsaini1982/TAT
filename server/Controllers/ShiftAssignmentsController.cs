@@ -38,6 +38,34 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
         return Ok(assignments.Select(ToDto));
     }
 
+    // Shown on the employee login screen, before anyone has signed in — so
+    // it's deliberately public and returns only what's safe to show on a
+    // shared/kiosk screen (first name + last initial, no account ids).
+    [HttpGet("today")]
+    [AllowAnonymous]
+    public ActionResult<IEnumerable<TodayScheduleEntryDto>> GetToday([FromQuery] string locationCode)
+    {
+        var location = db.Locations.SingleOrDefault(l => l.LocationCode == locationCode);
+        if (location is null)
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var assignments = db.ShiftAssignments
+            .Include(a => a.Shift)
+            .Include(a => a.Account)
+            .Where(a => a.Shift!.LocationId == location.Id && a.Date == today && a.IsPublished)
+            .OrderBy(a => a.Shift!.StartTime)
+            .ToList();
+
+        return Ok(assignments.Select(a => new TodayScheduleEntryDto(
+            a.Shift!.Name,
+            a.Shift.StartTime,
+            a.Shift.EndTime,
+            $"{a.Account!.FirstName} {a.Account.LastName[..1]}.")));
+    }
+
     // Bulk-marks every assignment in a location/week as published so it
     // starts showing up in GetMine for the employees on it. Until this is
     // called, the admin schedule grid is a draft/preview only.
