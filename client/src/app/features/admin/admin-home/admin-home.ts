@@ -8,10 +8,19 @@ import { MatButtonModule } from '@angular/material/button';
 
 import { Auth } from '../../../core/auth';
 import { DEV_DEFAULTS } from '../../../core/dev-defaults';
+import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/current-week-schedule';
 
 @Component({
   selector: 'app-admin-home',
-  imports: [FormsModule, RouterLink, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule],
+  imports: [
+    FormsModule,
+    RouterLink,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    CurrentWeekSchedule,
+  ],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
 })

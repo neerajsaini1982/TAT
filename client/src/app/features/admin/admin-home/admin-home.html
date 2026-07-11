@@ -23,17 +23,21 @@
   </mat-card>
 } @else {
   <mat-card>
-    <mat-card-header>
-      <mat-card-title>Admin Dashboard</mat-card-title>
-      <mat-card-subtitle>{{ locationCode }} — Signed in as {{ auth.session()?.username }}</mat-card-subtitle>
-    </mat-card-header>
     <mat-card-content>
-      <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin', 'accounts']">Manage Accounts</a>
-      <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin', 'shifts']">Manage Shifts</a>
-      <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin', 'availability']">Availability</a>
-      <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin', 'schedule']">Schedule</a>
-      <a mat-stroked-button [routerLink]="['/', locationCode, 'admin', 'settings']">Settings</a>
-      <button mat-stroked-button (click)="logout()">Log Out</button>
+      <h1 class="welcome-title">Welcome, {{ auth.session()?.firstName }}</h1>
+      <p class="location-label">{{ locationCode }} — Signed in as {{ auth.session()?.username }}</p>
+
+      <div class="actions">
+        <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin', 'accounts']">Manage Accounts</a>
+        <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin', 'shifts']">Manage Shifts</a>
+        <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin', 'availability']">Availability</a>
+        <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin', 'schedule']">Schedule</a>
+        <a mat-stroked-button [routerLink]="['/', locationCode, 'admin', 'settings']">Settings</a>
+        <button mat-stroked-button (click)="logout()">Log Out</button>
+      </div>
+
+      <h2 class="section-title">This Week's Schedule</h2>
+      <app-current-week-schedule />
     </mat-card-content>
   </mat-card>
 }

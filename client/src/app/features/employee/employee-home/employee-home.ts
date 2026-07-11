@@ -10,10 +10,19 @@ import { firstValueFrom } from 'rxjs';
 import { Auth } from '../../../core/auth';
 import { AccountsApi } from '../../../core/accounts-api';
 import { DEV_DEFAULTS } from '../../../core/dev-defaults';
+import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/current-week-schedule';
 
 @Component({
   selector: 'app-employee-home',
-  imports: [FormsModule, RouterLink, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule],
+  imports: [
+    FormsModule,
+    RouterLink,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    CurrentWeekSchedule,
+  ],
   templateUrl: './employee-home.html',
   styleUrl: './employee-home.scss',
 })

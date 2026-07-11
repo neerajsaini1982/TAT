@@ -14,8 +14,27 @@
   margin: 0 0 8px;
 }
 
-mat-card-content {
+.welcome-title {
+  font-size: 34px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.location-label {
+  margin: 4px 0 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+  margin: 20px 0 0;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 28px 0 12px;
 }
