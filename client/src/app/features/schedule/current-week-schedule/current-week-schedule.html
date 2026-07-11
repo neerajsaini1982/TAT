@@ -1,25 +1,36 @@
 @if (!loading()) {
-  @if (days().length > 0) {
-    <div class="summary">
-      <mat-icon>schedule</mat-icon>
-      <span>This week: <strong>{{ totalHours() }} hours</strong> across {{ days().length }} {{ days().length === 1 ? 'day' : 'days' }}</span>
-    </div>
-    <div class="days">
-      @for (day of days(); track day.date) {
-        <div class="day-row">
+  <div class="summary">
+    <mat-icon>schedule</mat-icon>
+    @if (days().length > 0) {
+      <span>
+        {{ days().length }} {{ days().length === 1 ? 'day' : 'days' }} scheduled,
+        <strong>{{ totalHours() }} total hours</strong>
+      </span>
+    } @else {
+      <span>No shifts scheduled for the rest of this week.</span>
+    }
+  </div>
+}
+
+<div class="days">
+  @for (day of days(); track day.date) {
+    <mat-card class="day-card">
+      <mat-card-content>
+        <div class="day-heading">
           <div class="day-title">
             <span class="day-name">{{ day.dayLabel }}</span>
             <span class="day-date">{{ day.dateLabel }}</span>
           </div>
-          <div class="shifts">
-            @for (shift of day.shifts; track shift.id) {
-              <span class="shift">{{ shift.shiftName }} · {{ shiftTime(shift) }}</span>
-            }
-          </div>
+          <span class="day-hours">{{ day.hours }} hrs</span>
         </div>
-      }
-    </div>
-  } @else {
-    <p class="empty">No shifts scheduled for the rest of this week.</p>
+        @for (shift of day.shifts; track shift.id) {
+          <div class="shift-row">
+            <mat-icon class="shift-icon">work</mat-icon>
+            <span class="shift-name">{{ shift.shiftName }}</span>
+            <span class="shift-time">{{ shiftTime(shift) }}</span>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
   }
-}
+</div>

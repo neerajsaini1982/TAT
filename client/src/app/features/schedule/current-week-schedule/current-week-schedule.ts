@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
@@ -17,10 +18,11 @@ const round2 = (n: number): number => Math.round(n * 100) / 100;
 // Shown on the Employee/Admin/Lead home page right after login. Reuses the
 // same "mine" endpoint as the full schedule page, just narrowed down to the
 // Monday-Sunday of the current week (and, since that endpoint only returns
-// today onward, effectively "what's left of this week").
+// today onward, effectively "what's left of this week"). Card styling
+// mirrors EmployeeSchedulePage's day cards for a consistent look.
 @Component({
   selector: 'app-current-week-schedule',
-  imports: [MatIconModule],
+  imports: [MatCardModule, MatIconModule],
   templateUrl: './current-week-schedule.html',
   styleUrl: './current-week-schedule.scss',
 })
