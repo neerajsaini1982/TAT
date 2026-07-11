@@ -18,8 +18,10 @@ export interface AccountDto {
 }
 
 export interface CreateAccountRequest {
-  username: string;
-  password: string;
+  // Ignored (and not required) when role is 'Employee'; the server generates
+  // both since employees log in with a UserCode instead.
+  username?: string;
+  password?: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -56,5 +58,13 @@ export class AccountsApi {
 
   delete(id: number) {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  resetCode(id: number) {
+    return this.http.post<AccountDto>(`${this.base}/${id}/reset-code`, {});
+  }
+
+  resetMyCode() {
+    return this.http.post<AccountDto>(`${this.base}/mine/reset-code`, {});
   }
 }

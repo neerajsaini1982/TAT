@@ -14,8 +14,14 @@
   margin: 0 0 8px;
 }
 
+.new-code {
+  flex-basis: 100%;
+  margin: 4px 0 0;
+}
+
 mat-card-content {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   align-items: center;
 }

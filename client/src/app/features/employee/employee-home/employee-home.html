@@ -28,7 +28,14 @@
       <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'employee', 'schedule']">My Schedule</a>
       <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'availability']">My Availability</a>
       <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'availability2']">Calendar View</a>
+      <button mat-stroked-button (click)="resetCode()" [disabled]="resettingCode()">Reset My Code</button>
       <button mat-stroked-button (click)="logout()">Log Out</button>
+      @if (newCode()) {
+        <p class="new-code">Your new code is <strong>{{ newCode() }}</strong>. Write it down — you'll need it next time you sign in.</p>
+      }
+      @if (error()) {
+        <p class="error">{{ error() }}</p>
+      }
     </mat-card-content>
   </mat-card>
 }

@@ -15,8 +15,10 @@ public record AccountDto(
     string? LocationCode);
 
 public record CreateAccountRequest(
-    string Username,
-    string Password,
+    // Required unless Role is Employee — employees log in with a UserCode
+    // instead and get a username/password generated for them.
+    string? Username,
+    string? Password,
     string FirstName,
     string LastName,
     string Email,
