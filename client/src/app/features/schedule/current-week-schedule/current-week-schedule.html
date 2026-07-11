@@ -1,0 +1,92 @@
+@if (!loading()) {
+  <div class="summary">
+    <mat-icon>schedule</mat-icon>
+    @if (days().length > 0) {
+      <span>
+        {{ days().length }} {{ days().length === 1 ? 'day' : 'days' }} scheduled,
+        <strong>{{ totalHours() }} total hours</strong>
+      </span>
+    } @else {
+      <span>No shifts scheduled for the rest of this week.</span>
+    }
+  </div>
+}
+
+<div class="days">
+  @for (day of days(); track day.date) {
+    <mat-card class="day-card" [class.today]="day.isToday">
+      <mat-card-content>
+        <div class="day-heading">
+          <div class="day-title">
+            <span class="day-name">{{ day.dayLabel }}</span>
+            <span class="day-date">{{ day.dateLabel }}</span>
+            @if (day.isToday) {
+              <span class="today-badge">Today</span>
+            }
+          </div>
+          <span class="day-hours">{{ day.hours }} hrs</span>
+        </div>
+        @for (shift of day.shifts; track shift.assignment.id) {
+          <div class="shift-row">
+            <mat-icon class="shift-icon">work</mat-icon>
+            <span class="shift-name">{{ shift.assignment.shiftName }}</span>
+            <span class="shift-time">{{ shiftTime(shift.assignment) }}</span>
+            @if (day.isToday) {
+              <div class="punch-action">
+                @switch (shift.status) {
+                  @case ('not-started') {
+                    <button
+                      mat-flat-button
+                      color="primary"
+                      (click)="clockIn(shift)"
+                      [disabled]="!shift.canClockIn || busyShiftId() === shift.assignment.id"
+                    >
+                      Clock In
+                    </button>
+                    @if (!shift.canClockIn) {
+                      <span class="punch-hint">Opens at {{ shift.earliestClockInLabel }}</span>
+                    }
+                  }
+                  @case ('working') {
+                    <span class="punch-note">Clocked in at {{ timeLabel(shift.entry!.clockInAt) }}</span>
+                    @if (!shift.entry!.breakStartAt) {
+                      <button mat-stroked-button (click)="breakStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                        Break Start
+                      </button>
+                    }
+                    @if (!shift.entry!.lunchStartAt) {
+                      <button mat-stroked-button (click)="lunchStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                        Lunch Start
+                      </button>
+                    }
+                    <button mat-flat-button color="primary" (click)="clockOut(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                      Clock Out
+                    </button>
+                  }
+                  @case ('on-break') {
+                    <span class="punch-note">On break since {{ timeLabel(shift.entry!.breakStartAt!) }}</span>
+                    <button mat-flat-button color="primary" (click)="breakEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                      Break End
+                    </button>
+                  }
+                  @case ('on-lunch') {
+                    <span class="punch-note">On lunch since {{ timeLabel(shift.entry!.lunchStartAt!) }}</span>
+                    <button mat-flat-button color="primary" (click)="lunchEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                      Lunch End
+                    </button>
+                  }
+                  @case ('clocked-out') {
+                    <span class="punch-note clocked-out">
+                      <mat-icon>check_circle</mat-icon>
+                      Clocked out at {{ timeLabel(shift.entry!.clockOutAt!) }} · {{ hoursWorked(shift.entry!) }} hrs worked
+                    </span>
+                  }
+                }
+              </div>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+  }
+</div>

@@ -29,6 +29,28 @@
 .section {
   max-width: 720px;
   margin: 0 auto 16px;
+
+  &.grouped {
+    margin-bottom: 8px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}
+
+.section-group {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.group-label {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .section-content {

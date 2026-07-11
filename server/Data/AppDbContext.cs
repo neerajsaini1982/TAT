@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Server.Models;
 
 namespace Server.Data;
@@ -13,6 +14,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
     public DbSet<LocationSettings> LocationSettings => Set<LocationSettings>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+    public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
+
+    // SQLite has no native "datetime with offset" column type, so EF Core
+    // round-trips every DateTime as Kind=Unspecified after a read — even
+    // though every DateTime in this app is always UTC (DateTime.UtcNow).
+    // Left alone, that means a value just set in memory (Kind=Utc,
+    // serializes with a trailing "Z") and the same value reloaded from the
+    // DB (Kind=Unspecified, no "Z") serialize differently, so the client's
+    // Date parsing treats one as UTC and the other as local time. Stamping
+    // Kind=Utc on every read fixes it project-wide instead of field by field.
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.Properties<DateTime>().HaveConversion<UtcDateTimeConverter>();
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -105,5 +120,30 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             entity.HasIndex(t => new { t.LocationId, t.Key }).IsUnique();
         });
+
+        modelBuilder.Entity<TimeEntry>(entity =>
+        {
+            entity.HasOne(t => t.Account)
+                .WithMany()
+                .HasForeignKey(t => t.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(t => t.ShiftAssignment)
+                .WithMany()
+                .HasForeignKey(t => t.ShiftAssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One clock-in per shift assignment.
+            entity.HasIndex(t => t.ShiftAssignmentId).IsUnique();
+        });
+    }
+
+    private sealed class UtcDateTimeConverter : ValueConverter<DateTime, DateTime>
+    {
+        public UtcDateTimeConverter() : base(
+            v => v,
+            v => DateTime.SpecifyKind(v, DateTimeKind.Utc))
+        {
+        }
     }
 }

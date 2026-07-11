@@ -9,10 +9,10 @@ namespace Server.Controllers;
 
 [ApiController]
 [Route("api/location-settings")]
-[Authorize(Policy = "AdminOrAbove")]
 public class LocationSettingsController(AppDbContext db) : ControllerBase
 {
     [HttpGet]
+    [Authorize(Policy = "AdminOrAbove")]
     public ActionResult<LocationSettingsDto> Get([FromQuery] string? locationCode)
     {
         var location = ResolveLocation(locationCode);
@@ -24,7 +24,24 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         return Ok(ToDto(GetOrCreateSettings(location.Id)));
     }
 
+    // Self-service: lets any signed-in account (e.g. an Employee) read just
+    // the Clock In window, without exposing SMTP credentials etc.
+    [HttpGet("mine")]
+    [Authorize]
+    public ActionResult<EmployeeLocationSettingsDto> GetMine()
+    {
+        var location = db.Locations.SingleOrDefault(l => l.LocationCode == CallerLocationCode());
+        if (location is null)
+        {
+            return NotFound();
+        }
+
+        var settings = GetOrCreateSettings(location.Id);
+        return Ok(new EmployeeLocationSettingsDto(settings.ClockInWindowMinutes));
+    }
+
     [HttpPut]
+    [Authorize(Policy = "AdminOrAbove")]
     public ActionResult<LocationSettingsDto> Update([FromQuery] string? locationCode, UpdateLocationSettingsRequest request)
     {
         var location = ResolveLocation(locationCode);
@@ -38,6 +55,8 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         settings.DateFormat = request.DateFormat;
         settings.TimeZone = request.TimeZone;
         settings.AvailabilityDays = request.AvailabilityDays;
+        settings.ClockInWindowMinutes = request.ClockInWindowMinutes;
+        settings.DevelopmentMode = request.DevelopmentMode;
         settings.SmtpHost = request.SmtpHost;
         settings.SmtpPort = request.SmtpPort;
         settings.SmtpUsername = request.SmtpUsername;
@@ -90,6 +109,8 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         s.DateFormat,
         s.TimeZone,
         s.AvailabilityDays,
+        s.ClockInWindowMinutes,
+        s.DevelopmentMode,
         s.SmtpHost,
         s.SmtpPort,
         s.SmtpUsername,

@@ -19,16 +19,27 @@
   </mat-card>
 } @else {
   <mat-card>
-    <mat-card-header>
-      <mat-card-title>Welcome, {{ auth.session()?.firstName }}</mat-card-title>
-      <mat-card-subtitle>{{ locationCode }}</mat-card-subtitle>
-    </mat-card-header>
     <mat-card-content>
-      <button mat-flat-button color="primary">Clock In</button>
-      <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'employee', 'schedule']">My Schedule</a>
-      <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'availability']">My Availability</a>
-      <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'availability2']">Calendar View</a>
-      <button mat-stroked-button (click)="logout()">Log Out</button>
+      <h1 class="welcome-title">Welcome, {{ auth.session()?.firstName }}</h1>
+      <p class="location-label">{{ locationCode }}</p>
+
+      <div class="actions">
+        <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'employee', 'schedule']">My Schedule</a>
+        <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'availability']">My Availability</a>
+        <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'availability2']">Calendar View</a>
+        <button mat-stroked-button (click)="resetCode()" [disabled]="resettingCode()">Reset My Code</button>
+        <button mat-stroked-button (click)="logout()">Log Out</button>
+      </div>
+
+      @if (newCode()) {
+        <p class="new-code">Your new code is <strong>{{ newCode() }}</strong>. Write it down — you'll need it next time you sign in.</p>
+      }
+      @if (error()) {
+        <p class="error">{{ error() }}</p>
+      }
+
+      <h2 class="section-title">This Week's Schedule</h2>
+      <app-current-week-schedule />
     </mat-card-content>
   </mat-card>
 }

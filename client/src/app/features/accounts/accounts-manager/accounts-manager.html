@@ -18,15 +18,17 @@
   <mat-card class="form-card">
     <mat-card-content>
       <form (ngSubmit)="save()" class="form" autocomplete="off">
-        <mat-form-field appearance="outline">
-          <mat-label>Username</mat-label>
-          <input matInput name="username" [(ngModel)]="form.username" [disabled]="editingId() !== null" required />
-        </mat-form-field>
-        @if (editingId() === null) {
+        @if (form.role !== 'Employee') {
           <mat-form-field appearance="outline">
-            <mat-label>Password</mat-label>
-            <input matInput type="password" name="password" [(ngModel)]="form.password" required />
+            <mat-label>Username</mat-label>
+            <input matInput name="username" [(ngModel)]="form.username" [disabled]="editingId() !== null" required />
           </mat-form-field>
+          @if (editingId() === null) {
+            <mat-form-field appearance="outline">
+              <mat-label>Password</mat-label>
+              <input matInput type="password" name="password" [(ngModel)]="form.password" required />
+            </mat-form-field>
+          }
         }
         <mat-form-field appearance="outline">
           <mat-label>First Name</mat-label>
@@ -76,7 +78,7 @@
 
   <ng-container matColumnDef="username">
     <th mat-header-cell *matHeaderCellDef>Username</th>
-    <td mat-cell *matCellDef="let a">{{ a.username }}</td>
+    <td mat-cell *matCellDef="let a">{{ a.role === 'Employee' ? '' : a.username }}</td>
   </ng-container>
 
   <ng-container matColumnDef="firstName">
@@ -96,7 +98,19 @@
 
   <ng-container matColumnDef="userCode">
     <th mat-header-cell *matHeaderCellDef>User Code</th>
-    <td mat-cell *matCellDef="let a">{{ a.userCode }}</td>
+    <td mat-cell *matCellDef="let a">
+      {{ a.userCode }}
+      @if (a.userCode) {
+        <button
+          mat-icon-button
+          (click)="resetCode(a)"
+          [disabled]="resettingId() === a.id"
+          aria-label="Reset user code"
+        >
+          <mat-icon>refresh</mat-icon>
+        </button>
+      }
+    </td>
   </ng-container>
 
   <ng-container matColumnDef="isActive">
@@ -109,6 +123,9 @@
     <td mat-cell *matCellDef="let a">
       <button mat-icon-button (click)="startEdit(a)" aria-label="Edit">
         <mat-icon>edit</mat-icon>
+      </button>
+      <button mat-icon-button (click)="duplicate(a)" aria-label="Duplicate">
+        <mat-icon>content_copy</mat-icon>
       </button>
       <button mat-icon-button (click)="remove(a)" aria-label="Delete">
         <mat-icon>delete</mat-icon>

@@ -67,6 +67,7 @@ export class AccountsManager implements OnInit {
   protected readonly editingId = signal<number | null>(null);
   protected readonly showForm = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly resettingId = signal<number | null>(null);
   protected form: FormModel = emptyForm();
 
   get columns(): string[] {
@@ -107,6 +108,23 @@ export class AccountsManager implements OnInit {
     this.showForm.set(true);
   }
 
+  // Pre-fills the create form from an existing account so the admin can
+  // adjust it and save it as a brand new account. Username/password/user
+  // code are never copied — those get (re)generated on save.
+  duplicate(account: AccountDto): void {
+    this.editingId.set(null);
+    this.form = {
+      ...emptyForm(),
+      firstName: `${account.firstName} (Copy)`,
+      lastName: account.lastName,
+      email: account.email,
+      phone: account.phone,
+      role: account.role,
+    };
+    this.error.set(null);
+    this.showForm.set(true);
+  }
+
   cancel(): void {
     this.showForm.set(false);
   }
@@ -122,10 +140,11 @@ export class AccountsManager implements OnInit {
         return;
       }
 
+      const isEmployee = this.form.role === 'Employee';
       this.accountsApi
         .create({
-          username: this.form.username,
-          password: this.form.password,
+          username: isEmployee ? undefined : this.form.username,
+          password: isEmployee ? undefined : this.form.password,
           firstName: this.form.firstName,
           lastName: this.form.lastName,
           email: this.form.email,
@@ -167,6 +186,23 @@ export class AccountsManager implements OnInit {
     this.accountsApi.delete(account.id).subscribe({
       next: () => this.load(),
       error: (err) => alert(err?.error ?? 'Failed to delete account.'),
+    });
+  }
+
+  resetCode(account: AccountDto): void {
+    if (!confirm(`Generate a new user code for ${account.firstName} ${account.lastName}? The old code will stop working immediately.`)) {
+      return;
+    }
+    this.resettingId.set(account.id);
+    this.accountsApi.resetCode(account.id).subscribe({
+      next: () => {
+        this.resettingId.set(null);
+        this.load();
+      },
+      error: (err) => {
+        this.resettingId.set(null);
+        alert(err?.error ?? 'Failed to reset user code.');
+      },
     });
   }
 }
