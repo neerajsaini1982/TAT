@@ -11,6 +11,7 @@ import { Auth } from '../../../core/auth';
 import { AccountsApi } from '../../../core/accounts-api';
 import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/current-week-schedule';
+import { AvailabilityEditor } from '../availability-editor/availability-editor';
 
 @Component({
   selector: 'app-employee-home',
@@ -22,6 +23,7 @@ import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/curren
     MatInputModule,
     MatButtonModule,
     CurrentWeekSchedule,
+    AvailabilityEditor,
   ],
   templateUrl: './employee-home.html',
   styleUrl: './employee-home.scss',
