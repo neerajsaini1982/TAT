@@ -51,12 +51,12 @@
                     <span class="punch-note">Clocked in at {{ timeLabel(shift.entry!.clockInAt) }}</span>
                     @if (!shift.entry!.breakStartAt) {
                       <button mat-stroked-button (click)="breakStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Break In
+                        Break Start
                       </button>
                     }
                     @if (!shift.entry!.lunchStartAt) {
                       <button mat-stroked-button (click)="lunchStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Lunch In
+                        Lunch Start
                       </button>
                     }
                     <button mat-flat-button color="primary" (click)="clockOut(shift)" [disabled]="busyShiftId() === shift.assignment.id">
@@ -66,13 +66,13 @@
                   @case ('on-break') {
                     <span class="punch-note">On break since {{ timeLabel(shift.entry!.breakStartAt!) }}</span>
                     <button mat-flat-button color="primary" (click)="breakEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                      Break Out
+                      Break End
                     </button>
                   }
                   @case ('on-lunch') {
                     <span class="punch-note">On lunch since {{ timeLabel(shift.entry!.lunchStartAt!) }}</span>
                     <button mat-flat-button color="primary" (click)="lunchEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                      Lunch Out
+                      Lunch End
                     </button>
                   }
                   @case ('clocked-out') {
