@@ -11,6 +11,7 @@ export interface LocationSettingsDto {
   dateFormat: DateFormat;
   timeZone: string;
   availabilityDays: number;
+  clockInWindowMinutes: number;
   smtpHost: string | null;
   smtpPort: number | null;
   smtpUsername: string | null;
@@ -25,6 +26,7 @@ export interface UpdateLocationSettingsRequest {
   dateFormat: DateFormat;
   timeZone: string;
   availabilityDays: number;
+  clockInWindowMinutes: number;
   smtpHost: string | null;
   smtpPort: number | null;
   smtpUsername: string | null;
@@ -32,6 +34,11 @@ export interface UpdateLocationSettingsRequest {
   smtpUseSsl: boolean;
   smtpFromAddress: string | null;
   smtpFromName: string | null;
+}
+
+// Minimal subset any signed-in account can read (see LocationSettingsController.GetMine).
+export interface EmployeeLocationSettingsDto {
+  clockInWindowMinutes: number;
 }
 
 @Service()
@@ -42,6 +49,10 @@ export class LocationSettingsApi {
   get(locationCode?: string) {
     const params = locationCode ? `?locationCode=${encodeURIComponent(locationCode)}` : '';
     return this.http.get<LocationSettingsDto>(`${this.base}${params}`);
+  }
+
+  getMine() {
+    return this.http.get<EmployeeLocationSettingsDto>(`${this.base}/mine`);
   }
 
   update(request: UpdateLocationSettingsRequest, locationCode?: string) {

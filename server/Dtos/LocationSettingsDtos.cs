@@ -7,6 +7,7 @@ public record LocationSettingsDto(
     DateFormat DateFormat,
     string TimeZone,
     int AvailabilityDays,
+    int ClockInWindowMinutes,
     string? SmtpHost,
     int? SmtpPort,
     string? SmtpUsername,
@@ -22,6 +23,7 @@ public record UpdateLocationSettingsRequest(
     DateFormat DateFormat,
     string TimeZone,
     int AvailabilityDays,
+    int ClockInWindowMinutes,
     string? SmtpHost,
     int? SmtpPort,
     string? SmtpUsername,
@@ -31,3 +33,7 @@ public record UpdateLocationSettingsRequest(
     bool SmtpUseSsl,
     string? SmtpFromAddress,
     string? SmtpFromName);
+
+// Minimal subset any signed-in account (not just Admin/Sa) can read, so an
+// Employee's client can compute when its own Clock In buttons unlock.
+public record EmployeeLocationSettingsDto(int ClockInWindowMinutes);

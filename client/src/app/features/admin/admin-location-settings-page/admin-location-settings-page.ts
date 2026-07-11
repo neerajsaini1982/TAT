@@ -76,6 +76,7 @@ interface FormModel {
   dateFormat: DateFormat;
   timeZone: string;
   availabilityDays: number;
+  clockInWindowMinutes: number;
   smtpHost: string;
   smtpPort: number | null;
   smtpUsername: string;
@@ -90,6 +91,7 @@ const emptyForm = (): FormModel => ({
   dateFormat: 'MmDdYyyy',
   timeZone: 'America/Los_Angeles',
   availabilityDays: 7,
+  clockInWindowMinutes: 15,
   smtpHost: '',
   smtpPort: null,
   smtpUsername: '',
@@ -163,6 +165,7 @@ export class AdminLocationSettingsPage implements OnInit {
       dateFormat: settings.dateFormat,
       timeZone: settings.timeZone,
       availabilityDays: settings.availabilityDays,
+      clockInWindowMinutes: settings.clockInWindowMinutes,
       smtpHost: settings.smtpHost ?? '',
       smtpPort: settings.smtpPort,
       smtpUsername: settings.smtpUsername ?? '',
@@ -184,6 +187,7 @@ export class AdminLocationSettingsPage implements OnInit {
           dateFormat: this.form.dateFormat,
           timeZone: this.form.timeZone,
           availabilityDays: this.form.availabilityDays,
+          clockInWindowMinutes: this.form.clockInWindowMinutes,
           smtpHost: this.form.smtpHost || null,
           smtpPort: this.form.smtpPort,
           smtpUsername: this.form.smtpUsername || null,

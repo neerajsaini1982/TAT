@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
     public DbSet<LocationSettings> LocationSettings => Set<LocationSettings>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+    public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -104,6 +105,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(t => new { t.LocationId, t.Key }).IsUnique();
+        });
+
+        modelBuilder.Entity<TimeEntry>(entity =>
+        {
+            entity.HasOne(t => t.Account)
+                .WithMany()
+                .HasForeignKey(t => t.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(t => t.ShiftAssignment)
+                .WithMany()
+                .HasForeignKey(t => t.ShiftAssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One clock-in per shift assignment.
+            entity.HasIndex(t => t.ShiftAssignmentId).IsUnique();
         });
     }
 }

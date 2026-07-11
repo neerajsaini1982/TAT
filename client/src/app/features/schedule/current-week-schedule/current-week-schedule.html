@@ -14,20 +14,45 @@
 
 <div class="days">
   @for (day of days(); track day.date) {
-    <mat-card class="day-card">
+    <mat-card class="day-card" [class.today]="day.isToday">
       <mat-card-content>
         <div class="day-heading">
           <div class="day-title">
             <span class="day-name">{{ day.dayLabel }}</span>
             <span class="day-date">{{ day.dateLabel }}</span>
+            @if (day.isToday) {
+              <span class="today-badge">Today</span>
+            }
           </div>
           <span class="day-hours">{{ day.hours }} hrs</span>
         </div>
-        @for (shift of day.shifts; track shift.id) {
+        @for (shift of day.shifts; track shift.assignment.id) {
           <div class="shift-row">
             <mat-icon class="shift-icon">work</mat-icon>
-            <span class="shift-name">{{ shift.shiftName }}</span>
-            <span class="shift-time">{{ shiftTime(shift) }}</span>
+            <span class="shift-name">{{ shift.assignment.shiftName }}</span>
+            <span class="shift-time">{{ shiftTime(shift.assignment) }}</span>
+            @if (day.isToday) {
+              <div class="clock-in-action">
+                @if (shift.clockedIn) {
+                  <span class="clocked-in-badge">
+                    <mat-icon>check_circle</mat-icon>
+                    Clocked In
+                  </span>
+                } @else {
+                  <button
+                    mat-flat-button
+                    color="primary"
+                    (click)="clockIn(shift)"
+                    [disabled]="!shift.canClockIn || clockingInId() === shift.assignment.id"
+                  >
+                    Clock In
+                  </button>
+                  @if (!shift.canClockIn) {
+                    <span class="clock-in-hint">Opens at {{ shift.earliestClockInLabel }}</span>
+                  }
+                }
+              </div>
+            }
           </div>
         }
       </mat-card-content>
