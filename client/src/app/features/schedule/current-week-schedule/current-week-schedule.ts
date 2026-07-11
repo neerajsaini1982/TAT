@@ -2,18 +2,21 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { catchError, forkJoin, of } from 'rxjs';
+import { Observable, catchError, forkJoin, of } from 'rxjs';
 
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
-import { TimeEntriesApi } from '../../../core/time-entries-api';
+import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
 import { LocationSettingsApi } from '../../../core/location-settings-api';
 import { addDays, dayOfWeekLabel, formatDate, mondayOf, parseDate, toMmDdYyyy } from '../../../core/week-utils';
+
+type PunchStatus = 'not-started' | 'working' | 'on-break' | 'on-lunch' | 'clocked-out';
 
 interface DayShift {
   assignment: ShiftAssignmentDto;
   earliestClockInLabel: string;
   canClockIn: boolean;
-  clockedIn: boolean;
+  entry: TimeEntryDto | null;
+  status: PunchStatus;
 }
 
 interface DayGroup {
@@ -39,13 +42,43 @@ function formatHHmm(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
+function statusOf(entry: TimeEntryDto | null): PunchStatus {
+  if (!entry) {
+    return 'not-started';
+  }
+  if (entry.clockOutAt) {
+    return 'clocked-out';
+  }
+  if (entry.breakStartAt && !entry.breakEndAt) {
+    return 'on-break';
+  }
+  if (entry.lunchStartAt && !entry.lunchEndAt) {
+    return 'on-lunch';
+  }
+  return 'working';
+}
+
+// Net hours worked once clocked out: wall time minus break and lunch time.
+function workedHours(entry: TimeEntryDto): number {
+  const msBetween = (start: string, end: string) => new Date(end).getTime() - new Date(start).getTime();
+
+  let ms = msBetween(entry.clockInAt, entry.clockOutAt!);
+  if (entry.breakStartAt && entry.breakEndAt) {
+    ms -= msBetween(entry.breakStartAt, entry.breakEndAt);
+  }
+  if (entry.lunchStartAt && entry.lunchEndAt) {
+    ms -= msBetween(entry.lunchStartAt, entry.lunchEndAt);
+  }
+  return round2(ms / 3_600_000);
+}
+
 // Shown on the Employee/Admin/Lead home page right after login. Reuses the
 // same "mine" endpoint as the full schedule page, just narrowed down to the
 // Monday-Sunday of the current week (and, since that endpoint only returns
 // today onward, effectively "what's left of this week"). Card styling
 // mirrors EmployeeSchedulePage's day cards for a consistent look. Today's
-// card additionally gets a working Clock In button per shift, gated by the
-// location's ClockInWindowMinutes setting.
+// card additionally walks each shift through Clock In -> (Break | Lunch)* ->
+// Clock Out, gated by the location's ClockInWindowMinutes setting.
 @Component({
   selector: 'app-current-week-schedule',
   imports: [MatButtonModule, MatCardModule, MatIconModule],
@@ -59,7 +92,7 @@ export class CurrentWeekSchedule implements OnInit {
 
   protected readonly loading = signal(true);
   protected readonly days = signal<DayGroup[]>([]);
-  protected readonly clockingInId = signal<number | null>(null);
+  protected readonly busyShiftId = signal<number | null>(null);
   protected readonly totalHours = computed(() =>
     round2(this.days().reduce((sum, d) => sum + d.hours, 0)),
   );
@@ -77,7 +110,7 @@ export class CurrentWeekSchedule implements OnInit {
       entries: this.timeEntriesApi.getMine(today).pipe(catchError(() => of([]))),
     }).subscribe({
       next: ({ assignments, settings, entries }) => {
-        const clockedInShiftIds = new Set(entries.map((e) => e.shiftAssignmentId));
+        const entryByShiftId = new Map(entries.map((e) => [e.shiftAssignmentId, e]));
         const now = new Date();
 
         const byDate = new Map<string, ShiftAssignmentDto[]>();
@@ -96,12 +129,13 @@ export class CurrentWeekSchedule implements OnInit {
               const shifts: DayShift[] = assignmentsForDay.map((assignment) => {
                 const earliestClockInAt = combineDateAndTime(assignment.date, assignment.shiftStartTime);
                 earliestClockInAt.setMinutes(earliestClockInAt.getMinutes() - settings.clockInWindowMinutes);
-                const clockedIn = clockedInShiftIds.has(assignment.id);
+                const entry = entryByShiftId.get(assignment.id) ?? null;
                 return {
                   assignment,
                   earliestClockInLabel: formatHHmm(earliestClockInAt),
-                  canClockIn: isToday && !clockedIn && now >= earliestClockInAt,
-                  clockedIn,
+                  canClockIn: isToday && !entry && now >= earliestClockInAt,
+                  entry,
+                  status: statusOf(entry),
                 };
               });
 
@@ -125,29 +159,76 @@ export class CurrentWeekSchedule implements OnInit {
     return `${shift.shiftStartTime.slice(0, 5)}–${shift.shiftEndTime.slice(0, 5)}`;
   }
 
+  timeLabel(iso: string): string {
+    return formatHHmm(new Date(iso));
+  }
+
+  hoursWorked(entry: TimeEntryDto): number {
+    return workedHours(entry);
+  }
+
   clockIn(shift: DayShift): void {
-    if (!shift.canClockIn || this.clockingInId() !== null) {
+    if (!shift.canClockIn) {
       return;
     }
-    this.clockingInId.set(shift.assignment.id);
-    this.timeEntriesApi.clockIn(shift.assignment.id).subscribe({
-      next: () => {
-        this.clockingInId.set(null);
-        this.markClockedIn(shift.assignment.id);
+    this.run(shift.assignment.id, this.timeEntriesApi.clockIn(shift.assignment.id));
+  }
+
+  breakStart(shift: DayShift): void {
+    if (shift.entry) {
+      this.run(shift.assignment.id, this.timeEntriesApi.breakStart(shift.entry.id));
+    }
+  }
+
+  breakEnd(shift: DayShift): void {
+    if (shift.entry) {
+      this.run(shift.assignment.id, this.timeEntriesApi.breakEnd(shift.entry.id));
+    }
+  }
+
+  lunchStart(shift: DayShift): void {
+    if (shift.entry) {
+      this.run(shift.assignment.id, this.timeEntriesApi.lunchStart(shift.entry.id));
+    }
+  }
+
+  lunchEnd(shift: DayShift): void {
+    if (shift.entry) {
+      this.run(shift.assignment.id, this.timeEntriesApi.lunchEnd(shift.entry.id));
+    }
+  }
+
+  clockOut(shift: DayShift): void {
+    if (shift.entry) {
+      this.run(shift.assignment.id, this.timeEntriesApi.clockOut(shift.entry.id));
+    }
+  }
+
+  private run(shiftAssignmentId: number, action: Observable<TimeEntryDto>): void {
+    if (this.busyShiftId() !== null) {
+      return;
+    }
+    this.busyShiftId.set(shiftAssignmentId);
+    action.subscribe({
+      next: (entry) => {
+        this.busyShiftId.set(null);
+        this.applyEntry(shiftAssignmentId, entry);
       },
       error: (err) => {
-        this.clockingInId.set(null);
-        alert(err?.error ?? 'Failed to clock in.');
+        this.busyShiftId.set(null);
+        alert(err?.error ?? 'Something went wrong.');
       },
     });
   }
 
-  private markClockedIn(shiftAssignmentId: number): void {
+  private applyEntry(shiftAssignmentId: number, entry: TimeEntryDto): void {
     this.days.update((days) =>
       days.map((day) => ({
         ...day,
         shifts: day.shifts.map((s) =>
-          s.assignment.id === shiftAssignmentId ? { ...s, clockedIn: true, canClockIn: false } : s,
+          s.assignment.id === shiftAssignmentId
+            ? { ...s, entry, status: statusOf(entry), canClockIn: false }
+            : s,
         ),
       })),
     );

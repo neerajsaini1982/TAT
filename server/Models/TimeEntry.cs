@@ -2,8 +2,8 @@ namespace Server.Models;
 
 // A punch created when an employee clocks in for one of their scheduled
 // shifts. One entry per ShiftAssignment (see AppDbContext's unique index).
-// ClockOutAt is nullable because clocking out isn't implemented yet — every
-// entry is currently open-ended.
+// At most one break and one lunch per shift, taken sequentially — see
+// TimeEntriesController for the allowed state transitions.
 public class TimeEntry
 {
     public int Id { get; set; }
@@ -15,5 +15,9 @@ public class TimeEntry
     public ShiftAssignment? ShiftAssignment { get; set; }
 
     public DateTime ClockInAt { get; set; }
+    public DateTime? BreakStartAt { get; set; }
+    public DateTime? BreakEndAt { get; set; }
+    public DateTime? LunchStartAt { get; set; }
+    public DateTime? LunchEndAt { get; set; }
     public DateTime? ClockOutAt { get; set; }
 }

@@ -8,6 +8,10 @@ export interface TimeEntryDto {
   shiftAssignmentId: number;
   accountId: number;
   clockInAt: string;
+  breakStartAt: string | null;
+  breakEndAt: string | null;
+  lunchStartAt: string | null;
+  lunchEndAt: string | null;
   clockOutAt: string | null;
 }
 
@@ -22,5 +26,25 @@ export class TimeEntriesApi {
 
   clockIn(shiftAssignmentId: number) {
     return this.http.post<TimeEntryDto>(`${this.base}/clock-in`, { shiftAssignmentId });
+  }
+
+  breakStart(id: number) {
+    return this.http.post<TimeEntryDto>(`${this.base}/${id}/break-start`, {});
+  }
+
+  breakEnd(id: number) {
+    return this.http.post<TimeEntryDto>(`${this.base}/${id}/break-end`, {});
+  }
+
+  lunchStart(id: number) {
+    return this.http.post<TimeEntryDto>(`${this.base}/${id}/lunch-start`, {});
+  }
+
+  lunchEnd(id: number) {
+    return this.http.post<TimeEntryDto>(`${this.base}/${id}/lunch-end`, {});
+  }
+
+  clockOut(id: number) {
+    return this.http.post<TimeEntryDto>(`${this.base}/${id}/clock-out`, {});
   }
 }

@@ -102,29 +102,37 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-.clock-in-action {
+.punch-action {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   margin-left: auto;
 }
 
-.clock-in-hint {
+.punch-hint {
   font-size: 12px;
   color: var(--mat-sys-on-surface-variant);
   white-space: nowrap;
 }
 
-.clocked-in-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 600;
-  color: var(--mat-sys-primary);
+.punch-note {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
 
-  mat-icon {
-    font-size: 18px;
-    width: 18px;
-    height: 18px;
+  &.clocked-out {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    color: var(--mat-sys-primary);
+    white-space: normal;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
   }
 }

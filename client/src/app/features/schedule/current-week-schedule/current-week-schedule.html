@@ -32,23 +32,54 @@
             <span class="shift-name">{{ shift.assignment.shiftName }}</span>
             <span class="shift-time">{{ shiftTime(shift.assignment) }}</span>
             @if (day.isToday) {
-              <div class="clock-in-action">
-                @if (shift.clockedIn) {
-                  <span class="clocked-in-badge">
-                    <mat-icon>check_circle</mat-icon>
-                    Clocked In
-                  </span>
-                } @else {
-                  <button
-                    mat-flat-button
-                    color="primary"
-                    (click)="clockIn(shift)"
-                    [disabled]="!shift.canClockIn || clockingInId() === shift.assignment.id"
-                  >
-                    Clock In
-                  </button>
-                  @if (!shift.canClockIn) {
-                    <span class="clock-in-hint">Opens at {{ shift.earliestClockInLabel }}</span>
+              <div class="punch-action">
+                @switch (shift.status) {
+                  @case ('not-started') {
+                    <button
+                      mat-flat-button
+                      color="primary"
+                      (click)="clockIn(shift)"
+                      [disabled]="!shift.canClockIn || busyShiftId() === shift.assignment.id"
+                    >
+                      Clock In
+                    </button>
+                    @if (!shift.canClockIn) {
+                      <span class="punch-hint">Opens at {{ shift.earliestClockInLabel }}</span>
+                    }
+                  }
+                  @case ('working') {
+                    <span class="punch-note">Clocked in at {{ timeLabel(shift.entry!.clockInAt) }}</span>
+                    @if (!shift.entry!.breakStartAt) {
+                      <button mat-stroked-button (click)="breakStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                        Break In
+                      </button>
+                    }
+                    @if (!shift.entry!.lunchStartAt) {
+                      <button mat-stroked-button (click)="lunchStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                        Lunch In
+                      </button>
+                    }
+                    <button mat-flat-button color="primary" (click)="clockOut(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                      Clock Out
+                    </button>
+                  }
+                  @case ('on-break') {
+                    <span class="punch-note">On break since {{ timeLabel(shift.entry!.breakStartAt!) }}</span>
+                    <button mat-flat-button color="primary" (click)="breakEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                      Break Out
+                    </button>
+                  }
+                  @case ('on-lunch') {
+                    <span class="punch-note">On lunch since {{ timeLabel(shift.entry!.lunchStartAt!) }}</span>
+                    <button mat-flat-button color="primary" (click)="lunchEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                      Lunch Out
+                    </button>
+                  }
+                  @case ('clocked-out') {
+                    <span class="punch-note clocked-out">
+                      <mat-icon>check_circle</mat-icon>
+                      Clocked out at {{ timeLabel(shift.entry!.clockOutAt!) }} · {{ hoursWorked(shift.entry!) }} hrs worked
+                    </span>
                   }
                 }
               </div>

@@ -5,6 +5,10 @@ public record TimeEntryDto(
     int ShiftAssignmentId,
     int AccountId,
     DateTime ClockInAt,
+    DateTime? BreakStartAt,
+    DateTime? BreakEndAt,
+    DateTime? LunchStartAt,
+    DateTime? LunchEndAt,
     DateTime? ClockOutAt);
 
 public record ClockInRequest(int ShiftAssignmentId);
