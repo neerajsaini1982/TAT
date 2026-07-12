@@ -11,8 +11,9 @@ namespace Server.Controllers;
 // Punch-clock entries. Self-service only: an account clocks itself in for
 // one of its own published shifts, within a per-location window
 // (LocationSettings.ClockInWindowMinutes) before that shift's start time,
-// then moves through at most one Break and one Lunch (taken sequentially,
-// one at a time) before clocking out.
+// then moves through at most one Break, one Lunch, and (for longer shifts)
+// a second Break after Lunch has ended — taken sequentially, one at a time
+// — before clocking out.
 [ApiController]
 [Route("api/time-entries")]
 [Authorize]
@@ -88,9 +89,9 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
         {
             return "Already clocked out.";
         }
-        if (IsOnLunch(entry))
+        if (IsOnLunch(entry) || IsOnBreak2(entry))
         {
-            return "End lunch before starting a break.";
+            return "End your current break or lunch before starting a break.";
         }
         if (entry.BreakStartAt is not null)
         {
@@ -120,9 +121,9 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
         {
             return "Already clocked out.";
         }
-        if (IsOnBreak(entry))
+        if (IsOnBreak(entry) || IsOnBreak2(entry))
         {
-            return "End your break before starting lunch.";
+            return "End your current break before starting lunch.";
         }
         if (entry.LunchStartAt is not null)
         {
@@ -145,6 +146,44 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
         return null;
     });
 
+    // A second break, only meaningful for longer shifts — available any
+    // time after lunch has ended (see IsOnLunch/LunchEndAt below).
+    [HttpPost("{id:int}/break2-start")]
+    public ActionResult<TimeEntryDto> Break2Start(int id) => Transition(id, entry =>
+    {
+        if (entry.ClockOutAt is not null)
+        {
+            return "Already clocked out.";
+        }
+        if (entry.LunchEndAt is null)
+        {
+            return "Finish your lunch before starting a second break.";
+        }
+        if (IsOnBreak(entry) || IsOnLunch(entry))
+        {
+            return "End your current break or lunch before starting a second break.";
+        }
+        if (entry.Break2StartAt is not null)
+        {
+            return "Second break has already been used for this shift.";
+        }
+
+        entry.Break2StartAt = DateTime.UtcNow;
+        return null;
+    });
+
+    [HttpPost("{id:int}/break2-end")]
+    public ActionResult<TimeEntryDto> Break2End(int id) => Transition(id, entry =>
+    {
+        if (!IsOnBreak2(entry))
+        {
+            return "Not currently on a second break.";
+        }
+
+        entry.Break2EndAt = DateTime.UtcNow;
+        return null;
+    });
+
     [HttpPost("{id:int}/clock-out")]
     public ActionResult<TimeEntryDto> ClockOut(int id) => Transition(id, entry =>
     {
@@ -159,6 +198,10 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
         if (IsOnLunch(entry))
         {
             return "End lunch before clocking out.";
+        }
+        if (IsOnBreak2(entry))
+        {
+            return "End your second break before clocking out.";
         }
 
         entry.ClockOutAt = DateTime.UtcNow;
@@ -190,6 +233,8 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
 
     private static bool IsOnLunch(TimeEntry t) => t.LunchStartAt is not null && t.LunchEndAt is null;
 
+    private static bool IsOnBreak2(TimeEntry t) => t.Break2StartAt is not null && t.Break2EndAt is null;
+
     private int CallerAccountId() =>
         int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -202,5 +247,7 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
         t.BreakEndAt,
         t.LunchStartAt,
         t.LunchEndAt,
+        t.Break2StartAt,
+        t.Break2EndAt,
         t.ClockOutAt);
 }

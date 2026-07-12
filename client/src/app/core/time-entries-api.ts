@@ -12,6 +12,8 @@ export interface TimeEntryDto {
   breakEndAt: string | null;
   lunchStartAt: string | null;
   lunchEndAt: string | null;
+  break2StartAt: string | null;
+  break2EndAt: string | null;
   clockOutAt: string | null;
 }
 
@@ -42,6 +44,14 @@ export class TimeEntriesApi {
 
   lunchEnd(id: number) {
     return this.http.post<TimeEntryDto>(`${this.base}/${id}/lunch-end`, {});
+  }
+
+  break2Start(id: number) {
+    return this.http.post<TimeEntryDto>(`${this.base}/${id}/break2-start`, {});
+  }
+
+  break2End(id: number) {
+    return this.http.post<TimeEntryDto>(`${this.base}/${id}/break2-end`, {});
   }
 
   clockOut(id: number) {

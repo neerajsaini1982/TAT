@@ -135,7 +135,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
             return BadRequest("Only employees, leads, and admins can be scheduled.");
         }
 
-        if (!IsAvailable(account.Id, request.Date))
+        if (!IsDevelopmentMode(shift.LocationId) && !IsAvailable(account.Id, request.Date))
         {
             return BadRequest("This employee is not available on this date.");
         }
@@ -185,7 +185,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
             return BadRequest("Only employees, leads, and admins can be scheduled.");
         }
 
-        if (!IsAvailable(account.Id, request.Date))
+        if (!IsDevelopmentMode(assignment.Shift!.LocationId) && !IsAvailable(account.Id, request.Date))
         {
             return BadRequest("This employee is not available on this date.");
         }
@@ -237,12 +237,21 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
 
     // An employee who hasn't said they're available that day (including
     // never having submitted anything for that week) can't be assigned a
-    // shift there.
+    // shift there — unless the location has Development Mode on, which
+    // waives this check entirely (see IsDevelopmentMode).
     private bool IsAvailable(int accountId, DateOnly date) =>
         db.Availabilities
             .Where(a => a.AccountId == accountId)
             .SelectMany(a => a.Days)
             .Any(d => d.Date == date && d.IsAvailable);
+
+    // Lets an admin assign shifts regardless of submitted availability,
+    // for locations that opt into it via LocationSettings.
+    private bool IsDevelopmentMode(int locationId) =>
+        db.LocationSettings
+            .Where(s => s.LocationId == locationId)
+            .Select(s => (bool?)s.DevelopmentMode)
+            .SingleOrDefault() ?? false;
 
     private bool CanAccess(string? locationCode) =>
         User.IsInRole(nameof(AccountRole.Sa)) || (locationCode is not null && locationCode == CallerLocationCode());

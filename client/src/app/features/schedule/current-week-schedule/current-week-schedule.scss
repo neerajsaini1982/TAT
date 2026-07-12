@@ -94,6 +94,27 @@
   height: 18px;
 }
 
+// Same per-employee color as the admin Schedule grid (see employeeColor()),
+// so an employee reads as the same color across both screens.
+.employee-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--employee-color, var(--mat-sys-primary));
+}
+
+.employee-name {
+  font-weight: 700;
+
+  &::after {
+    content: '—';
+    margin-left: 8px;
+    color: var(--mat-sys-on-surface-variant);
+    font-weight: 400;
+  }
+}
+
 .shift-name {
   font-weight: 500;
 }
@@ -116,18 +137,44 @@
   white-space: nowrap;
 }
 
-.punch-note {
+// A vertical, chronological readout of one shift's punches: Clock In,
+// Break, Lunch, 2nd Break, Clock Out — in that order, top to bottom, so
+// there's exactly one way to read "what happened and when" regardless of
+// which step is currently in progress.
+.punch-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0 0 26px;
+  padding-left: 12px;
+  border-left: 2px solid var(--mat-sys-outline-variant);
+}
+
+.punch-step {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 13px;
   color: var(--mat-sys-on-surface-variant);
-  white-space: nowrap;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: inherit;
+  }
+
+  // The step currently in progress (on break/lunch) — called out so it's
+  // obvious at a glance which single action is pending.
+  &.active {
+    color: var(--mat-sys-primary);
+    font-weight: 600;
+  }
 
   &.clocked-out {
-    display: flex;
-    align-items: center;
-    gap: 4px;
     font-weight: 600;
     color: var(--mat-sys-primary);
-    white-space: normal;
 
     mat-icon {
       font-size: 18px;

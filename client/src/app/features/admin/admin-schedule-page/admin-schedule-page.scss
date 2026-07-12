@@ -29,6 +29,23 @@
   text-align: center;
 }
 
+.dev-mode-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  color: var(--mat-sys-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
 .publish-bar {
   display: flex;
   align-items: center;
@@ -115,13 +132,19 @@
   background: var(--mat-sys-primary-container);
   color: var(--mat-sys-on-primary-container);
   padding-right: 20px;
+  padding-left: 10px;
   margin-bottom: 4px;
+  // Colored per employee (see employeeColor()) so a chip is identifiable
+  // even when the table is scrolled and the employee's row label is out
+  // of view.
+  border-left: 4px solid var(--employee-color, var(--mat-sys-primary));
 
   // Not posted yet: dashed outline distinguishes it from the solid look
   // of an already-published (live, employee-visible) shift.
   &.draft {
     background: transparent;
     border: 1px dashed var(--mat-sys-outline);
+    border-left: 4px solid var(--employee-color, var(--mat-sys-outline));
     color: var(--mat-sys-on-surface-variant);
   }
 }
@@ -180,6 +203,19 @@ th {
   font-weight: 500;
 }
 
+// The dot only renders where --employee-color is actually bound (the
+// per-row name cell); header/footer .employee-col cells don't set it, so
+// var(...)'s fallback keeps them from showing a stray colored dot.
+.employee-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--employee-color, transparent);
+  vertical-align: middle;
+}
+
 .total-col {
   min-width: 70px;
   text-align: center;
@@ -194,6 +230,13 @@ th {
     background: var(--mat-sys-error-container);
     opacity: 0.6;
     cursor: not-allowed;
+
+    // Development Mode: still flagged as "not available" for context, but
+    // actually droppable — so it shouldn't look blocked.
+    &.override-allowed {
+      opacity: 0.85;
+      cursor: grab;
+    }
   }
 }
 
