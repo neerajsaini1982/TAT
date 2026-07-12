@@ -8,6 +8,8 @@ import { forkJoin } from 'rxjs';
 import { AvailabilityApi } from '../../../core/availability-api';
 import { ShiftDto, ShiftsApi } from '../../../core/shifts-api';
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
+import { LocationSettingsApi } from '../../../core/location-settings-api';
+import { employeeColor } from '../../../core/employee-colors';
 import { addDays, formatDate, formatWeekRange, mondayOf } from '../../../core/week-utils';
 
 interface DayCell {
@@ -46,6 +48,7 @@ export class AdminSchedulePage implements OnInit {
   private readonly availabilityApi = inject(AvailabilityApi);
   private readonly shiftsApi = inject(ShiftsApi);
   private readonly assignmentsApi = inject(ShiftAssignmentsApi);
+  private readonly settingsApi = inject(LocationSettingsApi);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
@@ -56,6 +59,11 @@ export class AdminSchedulePage implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly shifts = signal<ShiftDto[]>([]);
   protected readonly rows = signal<EmployeeRow[]>([]);
+  // When on, admins can assign shifts regardless of submitted availability —
+  // see LocationSettings.DevelopmentMode and the server-side enforcement in
+  // ShiftAssignmentsController.
+  protected readonly developmentMode = signal(false);
+  protected readonly employeeColor = employeeColor;
 
   protected readonly dailyTotals = computed(() =>
     DAY_HEADERS.map((_, i) =>
@@ -74,6 +82,10 @@ export class AdminSchedulePage implements OnInit {
   protected readonly publishing = signal(false);
 
   ngOnInit(): void {
+    this.settingsApi.get(this.locationCode).subscribe({
+      next: (settings) => this.developmentMode.set(settings.developmentMode),
+      error: () => this.developmentMode.set(false),
+    });
     this.load();
   }
 
@@ -155,14 +167,16 @@ export class AdminSchedulePage implements OnInit {
   // Blocks the drag from even entering a cell for a day the employee said
   // they're not available (or hasn't submitted availability for at all),
   // so the drop target visibly refuses it instead of silently failing.
-  canDropHere = (_drag: CdkDrag<DragItem>, drop: CdkDropList<DayCell>): boolean => drop.data.isAvailable;
+  // Development Mode waives this entirely.
+  canDropHere = (_drag: CdkDrag<DragItem>, drop: CdkDropList<DayCell>): boolean =>
+    drop.data.isAvailable || this.developmentMode();
 
   onDrop(event: CdkDragDrop<DayCell, DayCell, DragItem>, row: EmployeeRow, day: DayCell): void {
     if (event.previousContainer === event.container) {
       return;
     }
 
-    if (!day.isAvailable) {
+    if (!day.isAvailable && !this.developmentMode()) {
       this.error.set(`${row.name} is not available on ${day.dayLabel}.`);
       return;
     }

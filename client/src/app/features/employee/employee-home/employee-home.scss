@@ -3,6 +3,43 @@
   margin: 0 auto;
 }
 
+.today-schedule-card {
+  max-width: 480px;
+  margin: 16px auto 0;
+}
+
+.today-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.today-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.today-employee {
+  font-weight: 600;
+}
+
+.today-shift {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.today-time {
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+}
+
 .form {
   display: flex;
   flex-direction: column;

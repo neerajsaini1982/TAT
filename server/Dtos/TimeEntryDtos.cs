@@ -9,6 +9,8 @@ public record TimeEntryDto(
     DateTime? BreakEndAt,
     DateTime? LunchStartAt,
     DateTime? LunchEndAt,
+    DateTime? Break2StartAt,
+    DateTime? Break2EndAt,
     DateTime? ClockOutAt);
 
 public record ClockInRequest(int ShiftAssignmentId);

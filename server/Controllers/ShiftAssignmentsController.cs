@@ -38,6 +38,34 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
         return Ok(assignments.Select(ToDto));
     }
 
+    // Shown on the employee login screen, before anyone has signed in — so
+    // it's deliberately public and returns only what's safe to show on a
+    // shared/kiosk screen (first name + last initial, no account ids).
+    [HttpGet("today")]
+    [AllowAnonymous]
+    public ActionResult<IEnumerable<TodayScheduleEntryDto>> GetToday([FromQuery] string locationCode)
+    {
+        var location = db.Locations.SingleOrDefault(l => l.LocationCode == locationCode);
+        if (location is null)
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var assignments = db.ShiftAssignments
+            .Include(a => a.Shift)
+            .Include(a => a.Account)
+            .Where(a => a.Shift!.LocationId == location.Id && a.Date == today && a.IsPublished)
+            .OrderBy(a => a.Shift!.StartTime)
+            .ToList();
+
+        return Ok(assignments.Select(a => new TodayScheduleEntryDto(
+            a.Shift!.Name,
+            a.Shift.StartTime,
+            a.Shift.EndTime,
+            $"{a.Account!.FirstName} {a.Account.LastName[..1]}.")));
+    }
+
     // Bulk-marks every assignment in a location/week as published so it
     // starts showing up in GetMine for the employees on it. Until this is
     // called, the admin schedule grid is a draft/preview only.
@@ -107,7 +135,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
             return BadRequest("Only employees, leads, and admins can be scheduled.");
         }
 
-        if (!IsAvailable(account.Id, request.Date))
+        if (!IsDevelopmentMode(shift.LocationId) && !IsAvailable(account.Id, request.Date))
         {
             return BadRequest("This employee is not available on this date.");
         }
@@ -157,7 +185,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
             return BadRequest("Only employees, leads, and admins can be scheduled.");
         }
 
-        if (!IsAvailable(account.Id, request.Date))
+        if (!IsDevelopmentMode(assignment.Shift!.LocationId) && !IsAvailable(account.Id, request.Date))
         {
             return BadRequest("This employee is not available on this date.");
         }
@@ -209,12 +237,21 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
 
     // An employee who hasn't said they're available that day (including
     // never having submitted anything for that week) can't be assigned a
-    // shift there.
+    // shift there — unless the location has Development Mode on, which
+    // waives this check entirely (see IsDevelopmentMode).
     private bool IsAvailable(int accountId, DateOnly date) =>
         db.Availabilities
             .Where(a => a.AccountId == accountId)
             .SelectMany(a => a.Days)
             .Any(d => d.Date == date && d.IsAvailable);
+
+    // Lets an admin assign shifts regardless of submitted availability,
+    // for locations that opt into it via LocationSettings.
+    private bool IsDevelopmentMode(int locationId) =>
+        db.LocationSettings
+            .Where(s => s.LocationId == locationId)
+            .Select(s => (bool?)s.DevelopmentMode)
+            .SingleOrDefault() ?? false;
 
     private bool CanAccess(string? locationCode) =>
         User.IsInRole(nameof(AccountRole.Sa)) || (locationCode is not null && locationCode == CallerLocationCode());

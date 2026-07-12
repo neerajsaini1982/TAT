@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,12 +7,15 @@ import { Observable, catchError, forkJoin, of } from 'rxjs';
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
 import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
 import { LocationSettingsApi } from '../../../core/location-settings-api';
+import { employeeColor } from '../../../core/employee-colors';
 import { addDays, dayOfWeekLabel, formatDate, mondayOf, parseDate, toMmDdYyyy } from '../../../core/week-utils';
 
-type PunchStatus = 'not-started' | 'working' | 'on-break' | 'on-lunch' | 'clocked-out';
+type PunchStatus = 'not-started' | 'working' | 'on-break' | 'on-lunch' | 'on-break2' | 'clocked-out';
 
 interface DayShift {
   assignment: ShiftAssignmentDto;
+  employeeName: string;
+  isMine: boolean;
   earliestClockInLabel: string;
   canClockIn: boolean;
   entry: TimeEntryDto | null;
@@ -55,6 +58,9 @@ function statusOf(entry: TimeEntryDto | null): PunchStatus {
   if (entry.lunchStartAt && !entry.lunchEndAt) {
     return 'on-lunch';
   }
+  if (entry.break2StartAt && !entry.break2EndAt) {
+    return 'on-break2';
+  }
   return 'working';
 }
 
@@ -69,16 +75,27 @@ function workedHours(entry: TimeEntryDto): number {
   if (entry.lunchStartAt && entry.lunchEndAt) {
     ms -= msBetween(entry.lunchStartAt, entry.lunchEndAt);
   }
+  if (entry.break2StartAt && entry.break2EndAt) {
+    ms -= msBetween(entry.break2StartAt, entry.break2EndAt);
+  }
   return round2(ms / 3_600_000);
 }
 
-// Shown on the Employee/Admin/Lead home page right after login. Reuses the
-// same "mine" endpoint as the full schedule page, just narrowed down to the
-// Monday-Sunday of the current week (and, since that endpoint only returns
-// today onward, effectively "what's left of this week"). Card styling
-// mirrors EmployeeSchedulePage's day cards for a consistent look. Today's
-// card additionally walks each shift through Clock In -> (Break | Lunch)* ->
-// Clock Out, gated by the location's ClockInWindowMinutes setting.
+// Shown on the Employee/Admin/Lead home page right after login. In the
+// default 'mine' scope it's just the caller's own upcoming shifts (used on
+// the Employee home page). In 'location' scope (Admin/Lead home page) it
+// shows every account's shifts for the location, each labeled with the
+// employee's name since more than one person can be working the same day —
+// but punch actions and the punch timeline only ever apply to the caller's
+// own shift, since punching is self-service and there's no admin visibility
+// into other employees' time entries.
+// Narrowed down to the Monday-Sunday of the current week, today onward
+// (i.e. "what's left of this week"). Card styling mirrors
+// EmployeeSchedulePage's day cards for a consistent look. Today's card
+// additionally walks the caller's own shift through Clock In -> Break ->
+// Lunch -> (a second Break, once Lunch has ended) -> Clock Out, shown in
+// that chronological order, gated by the location's ClockInWindowMinutes
+// setting.
 @Component({
   selector: 'app-current-week-schedule',
   imports: [MatButtonModule, MatCardModule, MatIconModule],
@@ -86,6 +103,9 @@ function workedHours(entry: TimeEntryDto): number {
   styleUrl: './current-week-schedule.scss',
 })
 export class CurrentWeekSchedule implements OnInit {
+  @Input() scope: 'mine' | 'location' = 'mine';
+  @Input() locationCode: string | null = null;
+
   private readonly api = inject(ShiftAssignmentsApi);
   private readonly timeEntriesApi = inject(TimeEntriesApi);
   private readonly settingsApi = inject(LocationSettingsApi);
@@ -93,6 +113,8 @@ export class CurrentWeekSchedule implements OnInit {
   protected readonly loading = signal(true);
   protected readonly days = signal<DayGroup[]>([]);
   protected readonly busyShiftId = signal<number | null>(null);
+  protected readonly showEmployeeNames = computed(() => this.scope === 'location');
+  protected readonly employeeColor = employeeColor;
   protected readonly totalHours = computed(() =>
     round2(this.days().reduce((sum, d) => sum + d.hours, 0)),
   );
@@ -101,21 +123,24 @@ export class CurrentWeekSchedule implements OnInit {
     const today = formatDate(new Date());
     const weekStart = formatDate(mondayOf(new Date()));
     const weekEnd = formatDate(addDays(mondayOf(new Date()), 6));
+    const isLocationScope = this.scope === 'location' && this.locationCode;
 
     forkJoin({
-      assignments: this.api.getMine(),
+      mine: this.api.getMine(),
+      assignments: isLocationScope ? this.api.getForWeek(weekStart, this.locationCode!) : this.api.getMine(),
       settings: this.settingsApi
         .getMine()
         .pipe(catchError(() => of({ clockInWindowMinutes: DEFAULT_CLOCK_IN_WINDOW_MINUTES }))),
       entries: this.timeEntriesApi.getMine(today).pipe(catchError(() => of([]))),
     }).subscribe({
-      next: ({ assignments, settings, entries }) => {
+      next: ({ mine, assignments, settings, entries }) => {
         const entryByShiftId = new Map(entries.map((e) => [e.shiftAssignmentId, e]));
+        const mineIds = new Set(mine.map((a) => a.id));
         const now = new Date();
 
         const byDate = new Map<string, ShiftAssignmentDto[]>();
         for (const a of assignments) {
-          if (a.date < weekStart || a.date > weekEnd) {
+          if (a.date < weekStart || a.date > weekEnd || a.date < today) {
             continue;
           }
           byDate.set(a.date, [...(byDate.get(a.date) ?? []), a]);
@@ -127,13 +152,16 @@ export class CurrentWeekSchedule implements OnInit {
             .map(([date, assignmentsForDay]) => {
               const isToday = date === today;
               const shifts: DayShift[] = assignmentsForDay.map((assignment) => {
+                const isMine = mineIds.has(assignment.id);
                 const earliestClockInAt = combineDateAndTime(assignment.date, assignment.shiftStartTime);
                 earliestClockInAt.setMinutes(earliestClockInAt.getMinutes() - settings.clockInWindowMinutes);
-                const entry = entryByShiftId.get(assignment.id) ?? null;
+                const entry = isMine ? (entryByShiftId.get(assignment.id) ?? null) : null;
                 return {
                   assignment,
+                  employeeName: `${assignment.accountFirstName} ${assignment.accountLastName}`,
+                  isMine,
                   earliestClockInLabel: formatHHmm(earliestClockInAt),
-                  canClockIn: isToday && !entry && now >= earliestClockInAt,
+                  canClockIn: isToday && isMine && !entry && now >= earliestClockInAt,
                   entry,
                   status: statusOf(entry),
                 };
@@ -163,8 +191,24 @@ export class CurrentWeekSchedule implements OnInit {
     return formatHHmm(new Date(iso));
   }
 
+  minutesBetween(startIso: string, endIso: string): number {
+    return Math.round((new Date(endIso).getTime() - new Date(startIso).getTime()) / 60_000);
+  }
+
   hoursWorked(entry: TimeEntryDto): number {
     return workedHours(entry);
+  }
+
+  isOnBreak(entry: TimeEntryDto): boolean {
+    return !!entry.breakStartAt && !entry.breakEndAt;
+  }
+
+  isOnLunch(entry: TimeEntryDto): boolean {
+    return !!entry.lunchStartAt && !entry.lunchEndAt;
+  }
+
+  isOnBreak2(entry: TimeEntryDto): boolean {
+    return !!entry.break2StartAt && !entry.break2EndAt;
   }
 
   clockIn(shift: DayShift): void {
@@ -195,6 +239,18 @@ export class CurrentWeekSchedule implements OnInit {
   lunchEnd(shift: DayShift): void {
     if (shift.entry) {
       this.run(shift.assignment.id, this.timeEntriesApi.lunchEnd(shift.entry.id));
+    }
+  }
+
+  break2Start(shift: DayShift): void {
+    if (shift.entry) {
+      this.run(shift.assignment.id, this.timeEntriesApi.break2Start(shift.entry.id));
+    }
+  }
+
+  break2End(shift: DayShift): void {
+    if (shift.entry) {
+      this.run(shift.assignment.id, this.timeEntriesApi.break2End(shift.entry.id));
     }
   }
 

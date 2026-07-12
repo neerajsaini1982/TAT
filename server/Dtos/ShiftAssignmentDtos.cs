@@ -20,3 +20,11 @@ public record CreateShiftAssignmentRequest(int ShiftId, int AccountId, DateOnly 
 public record MoveShiftAssignmentRequest(int AccountId, DateOnly Date);
 
 public record PublishScheduleRequest(string? LocationCode, DateOnly WeekStartDate);
+
+// Shown on the (unauthenticated) employee login screen, so it can't expose
+// anything beyond first name + last initial.
+public record TodayScheduleEntryDto(
+    string ShiftName,
+    TimeOnly ShiftStartTime,
+    TimeOnly ShiftEndTime,
+    string EmployeeName);

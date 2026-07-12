@@ -13,8 +13,31 @@
         @if (error()) {
           <p class="error">{{ error() }}</p>
         }
-        <button mat-flat-button color="primary" type="submit" [disabled]="loading()">Continue</button>
+        <button mat-flat-button color="primary" type="submit" [disabled]="loading()">Login</button>
       </form>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card class="today-schedule-card">
+    <mat-card-header>
+      <mat-card-title>Today's Schedule</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      @if (todayScheduleLoading()) {
+        <p>Loading…</p>
+      } @else if (todaySchedule().length === 0) {
+        <p>No shifts scheduled for today.</p>
+      } @else {
+        <div class="today-list">
+          @for (entry of todaySchedule(); track entry.employeeName + entry.shiftName + entry.shiftStartTime) {
+            <div class="today-row">
+              <span class="today-employee">{{ entry.employeeName }}</span>
+              <span class="today-shift">{{ entry.shiftName }}</span>
+              <span class="today-time">{{ shiftTime(entry) }}</span>
+            </div>
+          }
+        </div>
+      }
     </mat-card-content>
   </mat-card>
 } @else {

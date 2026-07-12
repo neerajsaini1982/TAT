@@ -28,6 +28,13 @@ export interface MoveShiftAssignmentRequest {
   date: string;
 }
 
+export interface TodayScheduleEntryDto {
+  shiftName: string;
+  shiftStartTime: string;
+  shiftEndTime: string;
+  employeeName: string;
+}
+
 @Service()
 export class ShiftAssignmentsApi {
   private readonly http = inject(HttpClient);
@@ -35,6 +42,11 @@ export class ShiftAssignmentsApi {
 
   getMine() {
     return this.http.get<ShiftAssignmentDto[]>(`${this.base}/mine`);
+  }
+
+  getToday(locationCode: string) {
+    const params = new URLSearchParams({ locationCode });
+    return this.http.get<TodayScheduleEntryDto[]>(`${this.base}/today?${params.toString()}`);
   }
 
   getForWeek(weekStartDate: string, locationCode?: string) {
