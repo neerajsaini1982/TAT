@@ -317,6 +317,16 @@ export class AdminSchedulePage implements OnInit {
     return !!entry && entry.clockOutAt === null;
   }
 
+  // Chip status at a glance: currently on the clock, already clocked out,
+  // or not punched in yet (the chip's default look covers that last case).
+  isClockedIn(assignment: ShiftAssignmentDto): boolean {
+    return this.canClockOut(assignment);
+  }
+
+  isClockedOut(assignment: ShiftAssignmentDto): boolean {
+    return this.entryFor(assignment)?.clockOutAt != null;
+  }
+
   markAbsent(assignment: ShiftAssignmentDto): void {
     this.dialog
       .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
