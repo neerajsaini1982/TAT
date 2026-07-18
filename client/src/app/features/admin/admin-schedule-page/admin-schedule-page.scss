@@ -147,6 +147,57 @@
     border-left: 4px solid var(--employee-color, var(--mat-sys-outline));
     color: var(--mat-sys-on-surface-variant);
   }
+
+  &.absent {
+    opacity: 0.6;
+
+    .chip-name,
+    .chip-time {
+      text-decoration: line-through;
+    }
+  }
+}
+
+.attendance-badge {
+  display: inline-block;
+  margin-top: 2px;
+  margin-right: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.6;
+
+  &.absent {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+
+  &.warn {
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+  }
+}
+
+.chip-actions {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+
+  button {
+    // Compact override of Material's default 40px touch target — these sit
+    // inside a small drag chip, not a toolbar.
+    width: 22px;
+    height: 22px;
+    padding: 0;
+
+    mat-icon {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+      line-height: 15px;
+    }
+  }
 }
 
 .chip-name {

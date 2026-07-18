@@ -37,7 +37,11 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         }
 
         var settings = GetOrCreateSettings(location.Id);
-        return Ok(new EmployeeLocationSettingsDto(settings.ClockInWindowMinutes));
+        return Ok(new EmployeeLocationSettingsDto(
+            settings.ClockInWindowMinutes,
+            settings.LateClockInGraceMinutes,
+            settings.BreakLimitMinutes,
+            settings.LunchLimitMinutes));
     }
 
     [HttpPut]
@@ -56,6 +60,9 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         settings.TimeZone = request.TimeZone;
         settings.AvailabilityDays = request.AvailabilityDays;
         settings.ClockInWindowMinutes = request.ClockInWindowMinutes;
+        settings.LateClockInGraceMinutes = request.LateClockInGraceMinutes;
+        settings.BreakLimitMinutes = request.BreakLimitMinutes;
+        settings.LunchLimitMinutes = request.LunchLimitMinutes;
         settings.DevelopmentMode = request.DevelopmentMode;
         settings.SmtpHost = request.SmtpHost;
         settings.SmtpPort = request.SmtpPort;
@@ -110,6 +117,9 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         s.TimeZone,
         s.AvailabilityDays,
         s.ClockInWindowMinutes,
+        s.LateClockInGraceMinutes,
+        s.BreakLimitMinutes,
+        s.LunchLimitMinutes,
         s.DevelopmentMode,
         s.SmtpHost,
         s.SmtpPort,

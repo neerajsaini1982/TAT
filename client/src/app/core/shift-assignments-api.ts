@@ -15,6 +15,8 @@ export interface ShiftAssignmentDto {
   accountLastName: string;
   date: string;
   isPublished: boolean;
+  isAbsent: boolean;
+  absenceNote: string | null;
 }
 
 export interface CreateShiftAssignmentRequest {
@@ -26,6 +28,11 @@ export interface CreateShiftAssignmentRequest {
 export interface MoveShiftAssignmentRequest {
   accountId: number;
   date: string;
+}
+
+export interface MarkAbsentRequest {
+  isAbsent: boolean;
+  note: string | null;
 }
 
 export interface TodayScheduleEntryDto {
@@ -67,6 +74,10 @@ export class ShiftAssignmentsApi {
 
   delete(id: number) {
     return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
+  markAbsent(id: number, request: MarkAbsentRequest) {
+    return this.http.put<ShiftAssignmentDto>(`${this.base}/${id}/absent`, request);
   }
 
   publish(weekStartDate: string, locationCode?: string) {

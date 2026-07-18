@@ -15,6 +15,8 @@ export interface TimeEntryDto {
   break2StartAt: string | null;
   break2EndAt: string | null;
   clockOutAt: string | null;
+  clockedOutByAccountId: number | null;
+  note: string | null;
 }
 
 @Service()
@@ -24,6 +26,14 @@ export class TimeEntriesApi {
 
   getMine(date: string) {
     return this.http.get<TimeEntryDto[]>(`${this.base}/mine?date=${encodeURIComponent(date)}`);
+  }
+
+  // Lead/Admin only: every entry for a location/date, so the admin
+  // schedule grid can see who's clocked in without being limited to the
+  // caller's own entries (see TimeEntriesController.GetForLocation).
+  getForLocation(locationCode: string, date: string) {
+    const params = new URLSearchParams({ locationCode, date });
+    return this.http.get<TimeEntryDto[]>(`${this.base}?${params.toString()}`);
   }
 
   clockIn(shiftAssignmentId: number) {
@@ -56,5 +66,11 @@ export class TimeEntriesApi {
 
   clockOut(id: number) {
     return this.http.post<TimeEntryDto>(`${this.base}/${id}/clock-out`, {});
+  }
+
+  // Lead/Admin only: closes someone else's entry out with a required note
+  // explaining why (left early, etc.) — see TimeEntriesController.AdminClockOut.
+  adminClockOut(id: number, note: string) {
+    return this.http.post<TimeEntryDto>(`${this.base}/${id}/admin-clock-out`, { note });
   }
 }

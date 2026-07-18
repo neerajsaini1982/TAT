@@ -1,4 +1,5 @@
-import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, Input, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,7 +8,9 @@ import { Observable, catchError, forkJoin, of } from 'rxjs';
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
 import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
 import { LocationSettingsApi } from '../../../core/location-settings-api';
+import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { employeeColor } from '../../../core/employee-colors';
+import { isBreak2OverLimit, isBreakOverLimit, isLateClockIn, isLunchOverLimit } from '../../../core/attendance-flags';
 import { addDays, dayOfWeekLabel, formatDate, mondayOf, parseDate, toMmDdYyyy } from '../../../core/week-utils';
 
 type PunchStatus = 'not-started' | 'working' | 'on-break' | 'on-lunch' | 'on-break2' | 'clocked-out';
@@ -32,7 +35,12 @@ interface DayGroup {
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
-const DEFAULT_CLOCK_IN_WINDOW_MINUTES = 15;
+const DEFAULT_SETTINGS = {
+  clockInWindowMinutes: 15,
+  lateClockInGraceMinutes: 5,
+  breakLimitMinutes: 15,
+  lunchLimitMinutes: 30,
+};
 
 function combineDateAndTime(dateIso: string, time: string): Date {
   const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
@@ -109,6 +117,8 @@ export class CurrentWeekSchedule implements OnInit {
   private readonly api = inject(ShiftAssignmentsApi);
   private readonly timeEntriesApi = inject(TimeEntriesApi);
   private readonly settingsApi = inject(LocationSettingsApi);
+  private readonly realtime = inject(ScheduleRealtime);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loading = signal(true);
   protected readonly days = signal<DayGroup[]>([]);
@@ -119,7 +129,24 @@ export class CurrentWeekSchedule implements OnInit {
     round2(this.days().reduce((sum, d) => sum + d.hours, 0)),
   );
 
+  // Attendance thresholds for badging the caller's own shift(s) as
+  // Late/Long Break/Long Lunch — see LocationSettings and attendance-flags.ts.
+  private lateClockInGraceMinutes = DEFAULT_SETTINGS.lateClockInGraceMinutes;
+  private breakLimitMinutes = DEFAULT_SETTINGS.breakLimitMinutes;
+  private lunchLimitMinutes = DEFAULT_SETTINGS.lunchLimitMinutes;
+
   ngOnInit(): void {
+    this.load();
+
+    if (this.locationCode) {
+      this.realtime
+        .connect(this.locationCode)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => this.load());
+    }
+  }
+
+  private load(): void {
     const today = formatDate(new Date());
     const weekStart = formatDate(mondayOf(new Date()));
     const weekEnd = formatDate(addDays(mondayOf(new Date()), 6));
@@ -128,12 +155,14 @@ export class CurrentWeekSchedule implements OnInit {
     forkJoin({
       mine: this.api.getMine(),
       assignments: isLocationScope ? this.api.getForWeek(weekStart, this.locationCode!) : this.api.getMine(),
-      settings: this.settingsApi
-        .getMine()
-        .pipe(catchError(() => of({ clockInWindowMinutes: DEFAULT_CLOCK_IN_WINDOW_MINUTES }))),
+      settings: this.settingsApi.getMine().pipe(catchError(() => of(DEFAULT_SETTINGS))),
       entries: this.timeEntriesApi.getMine(today).pipe(catchError(() => of([]))),
     }).subscribe({
       next: ({ mine, assignments, settings, entries }) => {
+        this.lateClockInGraceMinutes = settings.lateClockInGraceMinutes;
+        this.breakLimitMinutes = settings.breakLimitMinutes;
+        this.lunchLimitMinutes = settings.lunchLimitMinutes;
+
         const entryByShiftId = new Map(entries.map((e) => [e.shiftAssignmentId, e]));
         const mineIds = new Set(mine.map((a) => a.id));
         const now = new Date();
@@ -209,6 +238,21 @@ export class CurrentWeekSchedule implements OnInit {
 
   isOnBreak2(entry: TimeEntryDto): boolean {
     return !!entry.break2StartAt && !entry.break2EndAt;
+  }
+
+  // Badges below only ever apply to the caller's own shift: entry is null
+  // for teammates' shifts in location scope (see load()), so these are
+  // naturally false there without an extra isMine check.
+  isLate(shift: DayShift): boolean {
+    return !!shift.entry && isLateClockIn(shift.entry, shift.assignment, this.lateClockInGraceMinutes);
+  }
+
+  isBreakOver(entry: TimeEntryDto): boolean {
+    return isBreakOverLimit(entry, this.breakLimitMinutes, new Date()) || isBreak2OverLimit(entry, this.breakLimitMinutes, new Date());
+  }
+
+  isLunchOver(entry: TimeEntryDto): boolean {
+    return isLunchOverLimit(entry, this.lunchLimitMinutes, new Date());
   }
 
   clockIn(shift: DayShift): void {

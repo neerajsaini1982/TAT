@@ -1,16 +1,22 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog } from '@angular/material/dialog';
 import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 
 import { AvailabilityApi } from '../../../core/availability-api';
 import { ShiftDto, ShiftsApi } from '../../../core/shifts-api';
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
 import { LocationSettingsApi } from '../../../core/location-settings-api';
+import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
+import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { employeeColor } from '../../../core/employee-colors';
+import { isBreak2OverLimit, isBreakOverLimit, isLateClockIn, isLunchOverLimit } from '../../../core/attendance-flags';
 import { addDays, formatDate, formatWeekRange, mondayOf } from '../../../core/week-utils';
+import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
 
 interface DayCell {
   date: string;
@@ -49,8 +55,14 @@ export class AdminSchedulePage implements OnInit {
   private readonly shiftsApi = inject(ShiftsApi);
   private readonly assignmentsApi = inject(ShiftAssignmentsApi);
   private readonly settingsApi = inject(LocationSettingsApi);
+  private readonly timeEntriesApi = inject(TimeEntriesApi);
+  private readonly realtime = inject(ScheduleRealtime);
+  private readonly dialog = inject(MatDialog);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
+
+  private readonly todayIso = formatDate(new Date());
 
   protected readonly dayHeaders = DAY_HEADERS;
   protected readonly weekStart = signal(mondayOf(new Date()));
@@ -63,6 +75,15 @@ export class AdminSchedulePage implements OnInit {
   // see LocationSettings.DevelopmentMode and the server-side enforcement in
   // ShiftAssignmentsController.
   protected readonly developmentMode = signal(false);
+  // Attendance thresholds used to badge today's chips as Late/Long
+  // Break/Long Lunch — see LocationSettings and core/attendance-flags.ts.
+  protected readonly lateClockInGraceMinutes = signal(5);
+  protected readonly breakLimitMinutes = signal(15);
+  protected readonly lunchLimitMinutes = signal(30);
+  // Today's punches only — a TimeEntry can only ever exist for today's date
+  // (see TimeEntriesController.ClockIn), so there's nothing to fetch for
+  // other days in the visible week.
+  private readonly entriesByAssignmentId = signal<Map<number, TimeEntryDto>>(new Map());
   protected readonly employeeColor = employeeColor;
 
   protected readonly dailyTotals = computed(() =>
@@ -83,9 +104,18 @@ export class AdminSchedulePage implements OnInit {
 
   ngOnInit(): void {
     this.settingsApi.get(this.locationCode).subscribe({
-      next: (settings) => this.developmentMode.set(settings.developmentMode),
+      next: (settings) => {
+        this.developmentMode.set(settings.developmentMode);
+        this.lateClockInGraceMinutes.set(settings.lateClockInGraceMinutes);
+        this.breakLimitMinutes.set(settings.breakLimitMinutes);
+        this.lunchLimitMinutes.set(settings.lunchLimitMinutes);
+      },
       error: () => this.developmentMode.set(false),
     });
+    this.realtime
+      .connect(this.locationCode)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.load());
     this.load();
   }
 
@@ -98,9 +128,11 @@ export class AdminSchedulePage implements OnInit {
       roster: this.availabilityApi.getForLocation(weekIso, this.locationCode),
       assignments: this.assignmentsApi.getForWeek(weekIso, this.locationCode),
       shifts: this.shiftsApi.getAll(this.locationCode),
+      entries: this.timeEntriesApi.getForLocation(this.locationCode, this.todayIso).pipe(catchError(() => of([]))),
     }).subscribe({
-      next: ({ roster, assignments, shifts }) => {
+      next: ({ roster, assignments, shifts, entries }) => {
         this.shifts.set(shifts.filter((s) => s.isActive));
+        this.entriesByAssignmentId.set(new Map(entries.map((e) => [e.shiftAssignmentId, e])));
 
         const assignmentsByKey = new Map<string, ShiftAssignmentDto[]>();
         for (const a of assignments) {
@@ -250,5 +282,93 @@ export class AdminSchedulePage implements OnInit {
 
   shiftTime(shift: ShiftDto): string {
     return `${shift.startTime.slice(0, 5)}–${shift.endTime.slice(0, 5)}`;
+  }
+
+  // A TimeEntry can only ever exist for today's date (see
+  // TimeEntriesController.ClockIn), so this is null for every other day.
+  entryFor(assignment: ShiftAssignmentDto): TimeEntryDto | null {
+    return this.entriesByAssignmentId().get(assignment.id) ?? null;
+  }
+
+  isLate(assignment: ShiftAssignmentDto): boolean {
+    const entry = this.entryFor(assignment);
+    return !!entry && isLateClockIn(entry, assignment, this.lateClockInGraceMinutes());
+  }
+
+  isBreakOver(assignment: ShiftAssignmentDto): boolean {
+    const entry = this.entryFor(assignment);
+    return !!entry && isBreakOverLimit(entry, this.breakLimitMinutes(), new Date());
+  }
+
+  isLunchOver(assignment: ShiftAssignmentDto): boolean {
+    const entry = this.entryFor(assignment);
+    return !!entry && isLunchOverLimit(entry, this.lunchLimitMinutes(), new Date());
+  }
+
+  isBreak2Over(assignment: ShiftAssignmentDto): boolean {
+    const entry = this.entryFor(assignment);
+    return !!entry && isBreak2OverLimit(entry, this.breakLimitMinutes(), new Date());
+  }
+
+  // A currently-clocked-in employee — clocked-out ones don't need the
+  // override, and someone who never clocked in gets Mark Absent instead.
+  canClockOut(assignment: ShiftAssignmentDto): boolean {
+    const entry = this.entryFor(assignment);
+    return !!entry && entry.clockOutAt === null;
+  }
+
+  markAbsent(assignment: ShiftAssignmentDto): void {
+    this.dialog
+      .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
+        data: {
+          title: `Mark ${assignment.accountFirstName} ${assignment.accountLastName} absent`,
+          label: 'Reason',
+          noteRequired: true,
+          confirmLabel: 'Mark Absent',
+        },
+      })
+      .afterClosed()
+      .subscribe((note) => {
+        if (!note) {
+          return;
+        }
+        this.assignmentsApi.markAbsent(assignment.id, { isAbsent: true, note }).subscribe({
+          next: () => this.load(),
+          error: (err) => this.error.set(err?.error ?? 'Failed to mark absent.'),
+        });
+      });
+  }
+
+  clearAbsent(assignment: ShiftAssignmentDto): void {
+    this.assignmentsApi.markAbsent(assignment.id, { isAbsent: false, note: null }).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(err?.error ?? 'Failed to clear absence.'),
+    });
+  }
+
+  clockOutWithNote(assignment: ShiftAssignmentDto): void {
+    const entry = this.entryFor(assignment);
+    if (!entry) {
+      return;
+    }
+    this.dialog
+      .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
+        data: {
+          title: `Clock out ${assignment.accountFirstName} ${assignment.accountLastName}`,
+          label: 'Reason (e.g. left early)',
+          noteRequired: true,
+          confirmLabel: 'Clock Out',
+        },
+      })
+      .afterClosed()
+      .subscribe((note) => {
+        if (!note) {
+          return;
+        }
+        this.timeEntriesApi.adminClockOut(entry.id, note).subscribe({
+          next: () => this.load(),
+          error: (err) => this.error.set(err?.error ?? 'Failed to clock out.'),
+        });
+      });
   }
 }

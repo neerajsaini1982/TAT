@@ -1,10 +1,12 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
+import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { dayOfWeekLabel, toMmDdYyyy } from '../../../core/week-utils';
 
 interface DayGroup {
@@ -25,6 +27,8 @@ const round2 = (n: number): number => Math.round(n * 100) / 100;
 })
 export class EmployeeSchedulePage implements OnInit {
   private readonly api = inject(ShiftAssignmentsApi);
+  private readonly realtime = inject(ScheduleRealtime);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
@@ -39,6 +43,10 @@ export class EmployeeSchedulePage implements OnInit {
 
   ngOnInit(): void {
     this.load();
+    this.realtime
+      .connect(this.locationCode)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.load());
   }
 
   load(): void {

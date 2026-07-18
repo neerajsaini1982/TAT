@@ -39,6 +39,9 @@
             <mat-icon class="shift-icon">work</mat-icon>
             <span class="shift-name">{{ shift.shiftName }}</span>
             <span class="shift-time">{{ shiftTime(shift) }}</span>
+            @if (shift.isAbsent) {
+              <span class="attendance-badge absent" [title]="shift.absenceNote ?? ''">Absent</span>
+            }
           </div>
         }
       </mat-card-content>

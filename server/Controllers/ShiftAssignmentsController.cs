@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Dtos;
+using Server.Hubs;
 using Server.Models;
 using Server.Security;
 
@@ -11,12 +12,13 @@ namespace Server.Controllers;
 
 // Converts an employee's submitted availability into an actual schedule by
 // assigning them to a Shift template on a specific date. Managing
-// assignments is Admin/Sa-only (see the per-action policy below); any
-// authenticated account can read back its own via GetMine.
+// assignments is Admin/Sa-only (see the per-action policy below, except
+// MarkAbsent which Leads can also do); any authenticated account can read
+// back its own via GetMine.
 [ApiController]
 [Route("api/shift-assignments")]
 [Authorize]
-public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
+public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notifier) : ControllerBase
 {
     // Self-service: whoever is logged in sees only their own upcoming
     // schedule, so an Employee/Lead/Admin can answer "when am I working
@@ -71,7 +73,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
     // called, the admin schedule grid is a draft/preview only.
     [HttpPost("publish")]
     [Authorize(Policy = "AdminOrAbove")]
-    public IActionResult Publish(PublishScheduleRequest request)
+    public async Task<IActionResult> Publish(PublishScheduleRequest request)
     {
         var location = ResolveLocation(request.LocationCode);
         if (location is null)
@@ -93,6 +95,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
         }
 
         db.SaveChanges();
+        await notifier.NotifyLocationChanged(location.LocationCode);
         return NoContent();
     }
 
@@ -121,7 +124,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
 
     [HttpPost]
     [Authorize(Policy = "AdminOrAbove")]
-    public ActionResult<ShiftAssignmentDto> Create(CreateShiftAssignmentRequest request)
+    public async Task<ActionResult<ShiftAssignmentDto>> Create(CreateShiftAssignmentRequest request)
     {
         var shift = db.Shifts.Include(s => s.Location).SingleOrDefault(s => s.Id == request.ShiftId);
         var account = db.Accounts.Find(request.AccountId);
@@ -159,12 +162,13 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
 
         assignment.Shift = shift;
         assignment.Account = account;
+        await notifier.NotifyLocationChanged(shift.Location!.LocationCode);
         return Ok(ToDto(assignment));
     }
 
     [HttpPut("{id:int}/move")]
     [Authorize(Policy = "AdminOrAbove")]
-    public ActionResult<ShiftAssignmentDto> Move(int id, MoveShiftAssignmentRequest request)
+    public async Task<ActionResult<ShiftAssignmentDto>> Move(int id, MoveShiftAssignmentRequest request)
     {
         var assignment = db.ShiftAssignments
             .Include(a => a.Shift).ThenInclude(s => s!.Location)
@@ -202,12 +206,13 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
         db.SaveChanges();
 
         assignment.Account = account;
+        await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
         return Ok(ToDto(assignment));
     }
 
     [HttpDelete("{id:int}")]
     [Authorize(Policy = "AdminOrAbove")]
-    public IActionResult Delete(int id)
+    public async Task<IActionResult> Delete(int id)
     {
         var assignment = db.ShiftAssignments
             .Include(a => a.Shift).ThenInclude(s => s!.Location)
@@ -217,9 +222,46 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
             return NotFound();
         }
 
+        var locationCode = assignment.Shift!.Location!.LocationCode;
         db.ShiftAssignments.Remove(assignment);
         db.SaveChanges();
+        await notifier.NotifyLocationChanged(locationCode);
         return NoContent();
+    }
+
+    // Lets a Lead/Admin mark an employee absent for a shift they didn't
+    // show up for (or clear a mistaken mark). Blocked once a TimeEntry
+    // exists — at that point the employee did clock in, so the relevant
+    // action is AdminClockOut (see TimeEntriesController) instead.
+    [HttpPut("{id:int}/absent")]
+    [Authorize(Policy = "LeadOrAbove")]
+    public async Task<ActionResult<ShiftAssignmentDto>> MarkAbsent(int id, MarkAbsentRequest request)
+    {
+        var assignment = db.ShiftAssignments
+            .Include(a => a.Shift).ThenInclude(s => s!.Location)
+            .Include(a => a.Account)
+            .SingleOrDefault(a => a.Id == id);
+        if (assignment is null || !CanAccess(assignment.Shift?.Location?.LocationCode))
+        {
+            return NotFound();
+        }
+
+        if (request.IsAbsent && string.IsNullOrWhiteSpace(request.Note))
+        {
+            return BadRequest("A note is required when marking an employee absent.");
+        }
+
+        if (request.IsAbsent && db.TimeEntries.Any(t => t.ShiftAssignmentId == assignment.Id))
+        {
+            return Conflict("This employee already clocked in for this shift.");
+        }
+
+        assignment.IsAbsent = request.IsAbsent;
+        assignment.AbsenceNote = request.IsAbsent ? request.Note : null;
+        db.SaveChanges();
+
+        await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
+        return Ok(ToDto(assignment));
     }
 
     private Location? ResolveLocation(string? locationCode)
@@ -285,5 +327,7 @@ public class ShiftAssignmentsController(AppDbContext db) : ControllerBase
         a.Account!.FirstName,
         a.Account.LastName,
         a.Date,
-        a.IsPublished);
+        a.IsPublished,
+        a.IsAbsent,
+        a.AbsenceNote);
 }

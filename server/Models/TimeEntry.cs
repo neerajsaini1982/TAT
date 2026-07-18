@@ -24,4 +24,12 @@ public class TimeEntry
     public DateTime? Break2StartAt { get; set; }
     public DateTime? Break2EndAt { get; set; }
     public DateTime? ClockOutAt { get; set; }
+
+    // Set when a Lead/Admin closes this entry out on the employee's behalf
+    // (see TimeEntriesController.AdminClockOut) instead of the employee
+    // clocking themselves out — e.g. they left early. Null for a normal
+    // self clock-out. Note carries the reason and is required in that case.
+    public int? ClockedOutByAccountId { get; set; }
+    public Account? ClockedOutByAccount { get; set; }
+    public string? Note { get; set; }
 }

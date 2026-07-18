@@ -1,4 +1,5 @@
-import { Component, OnInit, inject, isDevMode, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, isDevMode, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -12,6 +13,7 @@ import { AccountsApi } from '../../../core/accounts-api';
 import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/current-week-schedule';
 import { ShiftAssignmentsApi, TodayScheduleEntryDto } from '../../../core/shift-assignments-api';
+import { ScheduleRealtime } from '../../../core/schedule-realtime';
 
 @Component({
   selector: 'app-employee-home',
@@ -31,6 +33,8 @@ export class EmployeeHome implements OnInit {
   protected readonly auth = inject(Auth);
   private readonly accountsApi = inject(AccountsApi);
   private readonly shiftAssignmentsApi = inject(ShiftAssignmentsApi);
+  private readonly realtime = inject(ScheduleRealtime);
+  private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
@@ -48,6 +52,16 @@ export class EmployeeHome implements OnInit {
   }
 
   ngOnInit(): void {
+    this.loadTodaySchedule();
+    // Keeps the kiosk pre-login screen current if an admin transfers a
+    // shift or marks someone absent while it's sitting open.
+    this.realtime
+      .connect(this.locationCode)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.loadTodaySchedule());
+  }
+
+  private loadTodaySchedule(): void {
     this.shiftAssignmentsApi.getToday(this.locationCode).subscribe({
       next: (entries) => {
         this.todaySchedule.set(entries);
