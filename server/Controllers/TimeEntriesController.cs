@@ -4,20 +4,24 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Dtos;
+using Server.Hubs;
 using Server.Models;
+using Server.Security;
 
 namespace Server.Controllers;
 
-// Punch-clock entries. Self-service only: an account clocks itself in for
-// one of its own published shifts, within a per-location window
-// (LocationSettings.ClockInWindowMinutes) before that shift's start time,
-// then moves through at most one Break, one Lunch, and (for longer shifts)
-// a second Break after Lunch has ended — taken sequentially, one at a time
-// — before clocking out.
+// Punch-clock entries. Self-service only for the employee's own punches: an
+// account clocks itself in for one of its own published shifts, within a
+// per-location window (LocationSettings.ClockInWindowMinutes) before that
+// shift's start time, then moves through at most one Break, one Lunch, and
+// (for longer shifts) a second Break after Lunch has ended — taken
+// sequentially, one at a time — before clocking out. Leads/Admins get one
+// override on top of that: AdminClockOut, for closing out an entry the
+// employee didn't (see its doc comment).
 [ApiController]
 [Route("api/time-entries")]
 [Authorize]
-public class TimeEntriesController(AppDbContext db) : ControllerBase
+public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) : ControllerBase
 {
     // The caller's entries for a given date, so the client can render the
     // right buttons (Clock In / Break / Lunch / Clock Out) for shifts
@@ -28,6 +32,31 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
         var accountId = CallerAccountId();
         var entries = db.TimeEntries
             .Where(t => t.AccountId == accountId && t.ShiftAssignment!.Date == date)
+            .ToList();
+
+        return Ok(entries.Select(ToDto));
+    }
+
+    // Every entry for a location/date, so the admin schedule grid can see
+    // who's clocked in, on break, etc. — GetMine only ever shows the
+    // caller's own entries.
+    [HttpGet]
+    [Authorize(Policy = "LeadOrAbove")]
+    public ActionResult<IEnumerable<TimeEntryDto>> GetForLocation([FromQuery] string locationCode, [FromQuery] DateOnly date)
+    {
+        if (!CanAccess(locationCode))
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        var location = db.Locations.SingleOrDefault(l => l.LocationCode == locationCode);
+        if (location is null)
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        var entries = db.TimeEntries
+            .Where(t => t.ShiftAssignment!.Date == date && t.ShiftAssignment.Shift!.LocationId == location.Id)
             .ToList();
 
         return Ok(entries.Select(ToDto));
@@ -77,6 +106,11 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
         };
 
         db.TimeEntries.Add(entry);
+
+        // Showing up supersedes an earlier absence mark.
+        assignment.IsAbsent = false;
+        assignment.AbsenceNote = null;
+
         db.SaveChanges();
 
         return Ok(ToDto(entry));
@@ -208,6 +242,41 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
         return null;
     });
 
+    // Lets a Lead/Admin close out someone else's entry directly — e.g. they
+    // left early, or forgot to clock out. Unlike the self clock-out above,
+    // this skips the break/lunch-must-be-closed guard: it's exactly the
+    // override for someone who left without going through the normal flow.
+    [HttpPost("{id:int}/admin-clock-out")]
+    [Authorize(Policy = "LeadOrAbove")]
+    public async Task<ActionResult<TimeEntryDto>> AdminClockOut(int id, AdminClockOutRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Note))
+        {
+            return BadRequest("A note is required to clock someone out.");
+        }
+
+        var entry = db.TimeEntries
+            .Include(t => t.ShiftAssignment).ThenInclude(a => a!.Shift).ThenInclude(s => s!.Location)
+            .SingleOrDefault(t => t.Id == id);
+        if (entry is null || !CanAccess(entry.ShiftAssignment?.Shift?.Location?.LocationCode))
+        {
+            return NotFound();
+        }
+
+        if (entry.ClockOutAt is not null)
+        {
+            return BadRequest("Already clocked out.");
+        }
+
+        entry.ClockOutAt = DateTime.UtcNow;
+        entry.Note = request.Note;
+        entry.ClockedOutByAccountId = CallerAccountId();
+        db.SaveChanges();
+
+        await notifier.NotifyLocationChanged(entry.ShiftAssignment!.Shift!.Location!.LocationCode);
+        return Ok(ToDto(entry));
+    }
+
     // Applies a state-transition function to the caller's own entry, saving
     // and returning the updated DTO on success, or the returned message as a
     // 400 when the transition isn't valid from the entry's current state.
@@ -235,6 +304,12 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
 
     private static bool IsOnBreak2(TimeEntry t) => t.Break2StartAt is not null && t.Break2EndAt is null;
 
+    private bool CanAccess(string? locationCode) =>
+        User.IsInRole(nameof(AccountRole.Sa)) || (locationCode is not null && locationCode == CallerLocationCode());
+
+    private string? CallerLocationCode() =>
+        User.FindFirst(TokenService.LocationCodeClaimType)?.Value;
+
     private int CallerAccountId() =>
         int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -249,5 +324,7 @@ public class TimeEntriesController(AppDbContext db) : ControllerBase
         t.LunchEndAt,
         t.Break2StartAt,
         t.Break2EndAt,
-        t.ClockOutAt);
+        t.ClockOutAt,
+        t.ClockedOutByAccountId,
+        t.Note);
 }

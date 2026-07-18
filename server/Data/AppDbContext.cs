@@ -133,6 +133,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(t => t.ShiftAssignmentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasOne(t => t.ClockedOutByAccount)
+                .WithMany()
+                .HasForeignKey(t => t.ClockedOutByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // One clock-in per shift assignment.
             entity.HasIndex(t => t.ShiftAssignmentId).IsUnique();
         });

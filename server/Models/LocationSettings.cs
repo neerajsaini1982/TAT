@@ -38,6 +38,16 @@ public class LocationSettings
     // button becomes enabled for that shift (see TimeEntriesController).
     public int ClockInWindowMinutes { get; set; } = 15;
 
+    // Attendance thresholds used to auto-flag (not block) punches that run
+    // past what's expected — see TimeEntriesController/attendance-flags.ts.
+    // A clock-in more than this many minutes after the shift's scheduled
+    // start is flagged late.
+    public int LateClockInGraceMinutes { get; set; } = 5;
+    // A Break (or second Break) longer than this many minutes is flagged.
+    public int BreakLimitMinutes { get; set; } = 15;
+    // A Lunch longer than this many minutes is flagged.
+    public int LunchLimitMinutes { get; set; } = 30;
+
     // When on, exposes extra diagnostics/test affordances for this location.
     public bool DevelopmentMode { get; set; } = false;
 

@@ -8,6 +8,9 @@ public record LocationSettingsDto(
     string TimeZone,
     int AvailabilityDays,
     int ClockInWindowMinutes,
+    int LateClockInGraceMinutes,
+    int BreakLimitMinutes,
+    int LunchLimitMinutes,
     bool DevelopmentMode,
     string? SmtpHost,
     int? SmtpPort,
@@ -25,6 +28,9 @@ public record UpdateLocationSettingsRequest(
     string TimeZone,
     int AvailabilityDays,
     int ClockInWindowMinutes,
+    int LateClockInGraceMinutes,
+    int BreakLimitMinutes,
+    int LunchLimitMinutes,
     bool DevelopmentMode,
     string? SmtpHost,
     int? SmtpPort,
@@ -37,5 +43,10 @@ public record UpdateLocationSettingsRequest(
     string? SmtpFromName);
 
 // Minimal subset any signed-in account (not just Admin/Sa) can read, so an
-// Employee's client can compute when its own Clock In buttons unlock.
-public record EmployeeLocationSettingsDto(int ClockInWindowMinutes);
+// Employee's client can compute when its own Clock In buttons unlock and
+// whether its own punches should render as late/over-limit.
+public record EmployeeLocationSettingsDto(
+    int ClockInWindowMinutes,
+    int LateClockInGraceMinutes,
+    int BreakLimitMinutes,
+    int LunchLimitMinutes);

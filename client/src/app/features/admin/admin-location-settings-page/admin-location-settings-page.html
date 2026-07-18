@@ -71,6 +71,42 @@
             name="clockInWindowMinutes"
           />
         </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Late Clock-In Grace Period (minutes)</mat-label>
+          <input
+            matInput
+            type="number"
+            min="0"
+            max="120"
+            [(ngModel)]="form.lateClockInGraceMinutes"
+            name="lateClockInGraceMinutes"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Break Limit (minutes)</mat-label>
+          <input
+            matInput
+            type="number"
+            min="0"
+            max="240"
+            [(ngModel)]="form.breakLimitMinutes"
+            name="breakLimitMinutes"
+          />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Lunch Limit (minutes)</mat-label>
+          <input
+            matInput
+            type="number"
+            min="0"
+            max="240"
+            [(ngModel)]="form.lunchLimitMinutes"
+            name="lunchLimitMinutes"
+          />
+        </mat-form-field>
       </mat-card-content>
     </mat-card>
 

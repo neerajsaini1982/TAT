@@ -77,6 +77,9 @@ interface FormModel {
   timeZone: string;
   availabilityDays: number;
   clockInWindowMinutes: number;
+  lateClockInGraceMinutes: number;
+  breakLimitMinutes: number;
+  lunchLimitMinutes: number;
   developmentMode: boolean;
   smtpHost: string;
   smtpPort: number | null;
@@ -93,6 +96,9 @@ const emptyForm = (): FormModel => ({
   timeZone: 'America/Los_Angeles',
   availabilityDays: 7,
   clockInWindowMinutes: 15,
+  lateClockInGraceMinutes: 5,
+  breakLimitMinutes: 15,
+  lunchLimitMinutes: 30,
   developmentMode: false,
   smtpHost: '',
   smtpPort: null,
@@ -168,6 +174,9 @@ export class AdminLocationSettingsPage implements OnInit {
       timeZone: settings.timeZone,
       availabilityDays: settings.availabilityDays,
       clockInWindowMinutes: settings.clockInWindowMinutes,
+      lateClockInGraceMinutes: settings.lateClockInGraceMinutes,
+      breakLimitMinutes: settings.breakLimitMinutes,
+      lunchLimitMinutes: settings.lunchLimitMinutes,
       developmentMode: settings.developmentMode,
       smtpHost: settings.smtpHost ?? '',
       smtpPort: settings.smtpPort,
@@ -191,6 +200,9 @@ export class AdminLocationSettingsPage implements OnInit {
           timeZone: this.form.timeZone,
           availabilityDays: this.form.availabilityDays,
           clockInWindowMinutes: this.form.clockInWindowMinutes,
+          lateClockInGraceMinutes: this.form.lateClockInGraceMinutes,
+          breakLimitMinutes: this.form.breakLimitMinutes,
+          lunchLimitMinutes: this.form.lunchLimitMinutes,
           developmentMode: this.form.developmentMode,
           smtpHost: this.form.smtpHost || null,
           smtpPort: this.form.smtpPort,

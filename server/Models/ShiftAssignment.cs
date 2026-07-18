@@ -18,4 +18,11 @@ public class ShiftAssignment
     // an assignment (via GetMine) until it's published.
     public bool IsPublished { get; set; }
     public DateTime? PublishedAt { get; set; }
+
+    // Set by a Lead/Admin when the employee didn't show up (see
+    // ShiftAssignmentsController.MarkAbsent). Only valid while no TimeEntry
+    // exists yet for this assignment; clocking in clears both fields since
+    // the employee showing up supersedes an earlier absence mark.
+    public bool IsAbsent { get; set; }
+    public string? AbsenceNote { get; set; }
 }

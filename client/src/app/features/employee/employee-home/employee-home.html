@@ -30,10 +30,15 @@
       } @else {
         <div class="today-list">
           @for (entry of todaySchedule(); track entry.employeeName + entry.shiftName + entry.shiftStartTime) {
-            <div class="today-row">
+            <div class="today-row" [class.clocked-in]="entry.isClockedIn" [class.clocked-out]="entry.isClockedOut">
               <span class="today-employee">{{ entry.employeeName }}</span>
               <span class="today-shift">{{ entry.shiftName }}</span>
               <span class="today-time">{{ shiftTime(entry) }}</span>
+              @if (entry.isClockedIn) {
+                <span class="punch-status in"><mat-icon>login</mat-icon>In</span>
+              } @else if (entry.isClockedOut) {
+                <span class="punch-status out"><mat-icon>check_circle</mat-icon>Out</span>
+              }
             </div>
           }
         </div>
@@ -62,7 +67,7 @@
       }
 
       <h2 class="section-title">This Week's Schedule</h2>
-      <app-current-week-schedule />
+      <app-current-week-schedule [locationCode]="locationCode" />
     </mat-card-content>
   </mat-card>
 }

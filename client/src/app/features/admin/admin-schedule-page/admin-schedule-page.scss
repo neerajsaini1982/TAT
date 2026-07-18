@@ -147,6 +147,101 @@
     border-left: 4px solid var(--employee-color, var(--mat-sys-outline));
     color: var(--mat-sys-on-surface-variant);
   }
+
+  &.absent {
+    opacity: 0.6;
+
+    .chip-name,
+    .chip-time {
+      text-decoration: line-through;
+    }
+  }
+
+  // Punch status is the loudest signal on the grid — a tinted tile reads
+  // faster at a glance than the text/icon actions alone. Absent/draft
+  // chips never carry a TimeEntry (see isClockedIn/isClockedOut), so these
+  // never combine with the states above.
+  &.clocked-in {
+    background: color-mix(in srgb, #2e7d32 22%, var(--mat-sys-surface));
+  }
+
+  &.clocked-out {
+    background: color-mix(in srgb, var(--mat-sys-on-surface-variant) 16%, var(--mat-sys-surface));
+  }
+}
+
+.punch-status {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
+  margin-right: 4px;
+  padding: 1px 6px 1px 4px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.6;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+
+  mat-icon {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+    line-height: 12px;
+  }
+
+  &.in {
+    background: #2e7d32;
+    color: #fff;
+  }
+
+  &.out {
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.attendance-badge {
+  display: inline-block;
+  margin-top: 2px;
+  margin-right: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.6;
+
+  &.absent {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+
+  &.warn {
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+  }
+}
+
+.chip-actions {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+
+  button {
+    // Compact override of Material's default 40px touch target — these sit
+    // inside a small drag chip, not a toolbar.
+    width: 22px;
+    height: 22px;
+    padding: 0;
+
+    mat-icon {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+      line-height: 15px;
+    }
+  }
 }
 
 .chip-name {

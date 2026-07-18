@@ -97,12 +97,52 @@
                   <div
                     class="chip assignment-chip"
                     [class.draft]="!a.isPublished"
+                    [class.absent]="a.isAbsent"
+                    [class.clocked-in]="isClockedIn(a)"
+                    [class.clocked-out]="isClockedOut(a)"
                     [style.--employee-color]="employeeColor(a.accountId)"
                     cdkDrag
                     [cdkDragData]="{ kind: 'assignment', assignment: a }"
                   >
                     <span class="chip-name">{{ a.shiftName }}</span>
                     <span class="chip-time">{{ a.shiftStartTime.slice(0, 5) }}–{{ a.shiftEndTime.slice(0, 5) }}</span>
+
+                    @if (isClockedIn(a)) {
+                      <span class="punch-status in"><mat-icon>login</mat-icon>In</span>
+                    } @else if (isClockedOut(a)) {
+                      <span class="punch-status out"><mat-icon>check_circle</mat-icon>Out</span>
+                    }
+
+                    @if (a.isAbsent) {
+                      <span class="attendance-badge absent" [title]="a.absenceNote ?? ''">Absent</span>
+                    }
+                    @if (isLate(a)) {
+                      <span class="attendance-badge warn">Late</span>
+                    }
+                    @if (isBreakOver(a) || isBreak2Over(a)) {
+                      <span class="attendance-badge warn">Long Break</span>
+                    }
+                    @if (isLunchOver(a)) {
+                      <span class="attendance-badge warn">Long Lunch</span>
+                    }
+
+                    <div class="chip-actions">
+                      @if (a.isAbsent) {
+                        <button type="button" mat-icon-button (click)="clearAbsent(a)" title="Clear absent">
+                          <mat-icon>how_to_reg</mat-icon>
+                        </button>
+                      } @else {
+                        <button type="button" mat-icon-button (click)="markAbsent(a)" title="Mark absent">
+                          <mat-icon>person_off</mat-icon>
+                        </button>
+                      }
+                      @if (canClockOut(a)) {
+                        <button type="button" mat-icon-button (click)="clockOutWithNote(a)" title="Clock out with note">
+                          <mat-icon>logout</mat-icon>
+                        </button>
+                      }
+                    </div>
+
                     <button type="button" class="chip-remove" (click)="removeAssignment(a)" aria-label="Remove shift">×</button>
                   </div>
                 }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Server.Data;
+using Server.Hubs;
 using Server.Models;
 using Server.Security;
 
@@ -20,7 +21,10 @@ builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(AngularDevClient, policy =>
-        policy.WithOrigins("http://localhost:4200", "http://127.0.0.1:4200")
+        // :4300 is the client-verify config in .claude/launch.json, used to
+        // run a second local session side by side with :4200 for manual
+        // testing (e.g. two roles at once).
+        policy.WithOrigins("http://localhost:4200", "http://127.0.0.1:4200", "http://localhost:4300", "http://127.0.0.1:4300")
               .AllowAnyHeader()
               .AllowAnyMethod());
 });
@@ -29,6 +33,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
 
 builder.Services.AddScoped<TokenService>();
+
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IScheduleNotifier, ScheduleNotifier>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -49,7 +56,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("SaOnly", policy => policy.RequireRole(nameof(AccountRole.Sa)))
-    .AddPolicy("AdminOrAbove", policy => policy.RequireRole(nameof(AccountRole.Sa), nameof(AccountRole.Admin)));
+    .AddPolicy("AdminOrAbove", policy => policy.RequireRole(nameof(AccountRole.Sa), nameof(AccountRole.Admin)))
+    .AddPolicy("LeadOrAbove", policy => policy.RequireRole(nameof(AccountRole.Sa), nameof(AccountRole.Admin), nameof(AccountRole.Lead)));
 
 var app = builder.Build();
 
@@ -73,5 +81,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ScheduleHub>("/hubs/schedule");
 
 app.Run();

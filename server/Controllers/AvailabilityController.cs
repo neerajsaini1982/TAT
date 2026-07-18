@@ -127,7 +127,11 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
             accountsQuery = accountsQuery.Where(a => a.Location != null && a.Location.LocationCode == callerLocationCode);
         }
 
-        var accounts = accountsQuery.OrderBy(a => a.Username).ToList();
+        // This roster spans a whole week (not one shift), so there's no
+        // single start time to order by — falls back to the alphabetical
+        // half of the "start time, then first name" rule used everywhere
+        // shifts are listed (see ShiftAssignmentsController).
+        var accounts = accountsQuery.OrderBy(a => a.FirstName).ThenBy(a => a.LastName).ToList();
         var accountIds = accounts.Select(a => a.Id).ToList();
 
         var availabilities = db.Availabilities

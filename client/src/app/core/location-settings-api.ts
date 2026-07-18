@@ -12,6 +12,9 @@ export interface LocationSettingsDto {
   timeZone: string;
   availabilityDays: number;
   clockInWindowMinutes: number;
+  lateClockInGraceMinutes: number;
+  breakLimitMinutes: number;
+  lunchLimitMinutes: number;
   developmentMode: boolean;
   smtpHost: string | null;
   smtpPort: number | null;
@@ -28,6 +31,9 @@ export interface UpdateLocationSettingsRequest {
   timeZone: string;
   availabilityDays: number;
   clockInWindowMinutes: number;
+  lateClockInGraceMinutes: number;
+  breakLimitMinutes: number;
+  lunchLimitMinutes: number;
   developmentMode: boolean;
   smtpHost: string | null;
   smtpPort: number | null;
@@ -41,6 +47,9 @@ export interface UpdateLocationSettingsRequest {
 // Minimal subset any signed-in account can read (see LocationSettingsController.GetMine).
 export interface EmployeeLocationSettingsDto {
   clockInWindowMinutes: number;
+  lateClockInGraceMinutes: number;
+  breakLimitMinutes: number;
+  lunchLimitMinutes: number;
 }
 
 @Service()

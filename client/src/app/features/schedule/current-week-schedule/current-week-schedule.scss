@@ -123,6 +123,33 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.attendance-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+
+  &.absent {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+
+  &.warn {
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+  }
+}
+
+.admin-clockout-note {
+  font-size: 12px;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .punch-action {
   display: flex;
   align-items: center;
