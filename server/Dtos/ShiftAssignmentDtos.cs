@@ -28,9 +28,12 @@ public record MarkAbsentRequest(bool IsAbsent, string? Note);
 public record PublishScheduleRequest(string? LocationCode, DateOnly WeekStartDate);
 
 // Shown on the (unauthenticated) employee login screen, so it can't expose
-// anything beyond first name + last initial.
+// anything beyond first name + last initial. IsClockedIn/IsClockedOut are
+// the only punch details surfaced here — no timestamps, no notes.
 public record TodayScheduleEntryDto(
     string ShiftName,
     TimeOnly ShiftStartTime,
     TimeOnly ShiftEndTime,
-    string EmployeeName);
+    string EmployeeName,
+    bool IsClockedIn,
+    bool IsClockedOut);

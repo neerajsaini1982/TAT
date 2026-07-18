@@ -61,11 +61,21 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .OrderBy(a => a.Shift!.StartTime)
             .ToList();
 
-        return Ok(assignments.Select(a => new TodayScheduleEntryDto(
-            a.Shift!.Name,
-            a.Shift.StartTime,
-            a.Shift.EndTime,
-            $"{a.Account!.FirstName} {a.Account.LastName[..1]}.")));
+        var entryByAssignmentId = db.TimeEntries
+            .Where(t => assignments.Select(a => a.Id).Contains(t.ShiftAssignmentId))
+            .ToDictionary(t => t.ShiftAssignmentId);
+
+        return Ok(assignments.Select(a =>
+        {
+            entryByAssignmentId.TryGetValue(a.Id, out var entry);
+            return new TodayScheduleEntryDto(
+                a.Shift!.Name,
+                a.Shift.StartTime,
+                a.Shift.EndTime,
+                $"{a.Account!.FirstName} {a.Account.LastName[..1]}.",
+                entry is not null && entry.ClockOutAt is null,
+                entry is not null && entry.ClockOutAt is not null);
+        }));
     }
 
     // Bulk-marks every assignment in a location/week as published so it

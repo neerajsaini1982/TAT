@@ -40,6 +40,8 @@ export interface TodayScheduleEntryDto {
   shiftStartTime: string;
   shiftEndTime: string;
   employeeName: string;
+  isClockedIn: boolean;
+  isClockedOut: boolean;
 }
 
 @Service()
