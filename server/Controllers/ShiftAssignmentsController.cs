@@ -35,6 +35,8 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .Where(a => a.AccountId == accountId && a.Date >= today && a.IsPublished)
             .OrderBy(a => a.Date)
             .ThenBy(a => a.Shift!.StartTime)
+            .ThenBy(a => a.Account!.FirstName)
+            .ThenBy(a => a.Account!.LastName)
             .ToList();
 
         return Ok(assignments.Select(ToDto));
@@ -54,11 +56,17 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         }
 
         var today = DateOnly.FromDateTime(DateTime.Now);
+        // Employees are always ordered by shift start time; ties (more than
+        // one employee starting at the same time) break alphabetically by
+        // first name, then last name. Applies everywhere multiple
+        // employees are listed together — see also GetForWeek below.
         var assignments = db.ShiftAssignments
             .Include(a => a.Shift)
             .Include(a => a.Account)
             .Where(a => a.Shift!.LocationId == location.Id && a.Date == today && a.IsPublished)
             .OrderBy(a => a.Shift!.StartTime)
+            .ThenBy(a => a.Account!.FirstName)
+            .ThenBy(a => a.Account!.LastName)
             .ToList();
 
         var entryByAssignmentId = db.TimeEntries
@@ -127,6 +135,8 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .Where(a => a.Shift!.LocationId == location.Id && a.Date >= weekStartDate && a.Date <= weekEndDate)
             .OrderBy(a => a.Date)
             .ThenBy(a => a.Shift!.StartTime)
+            .ThenBy(a => a.Account!.FirstName)
+            .ThenBy(a => a.Account!.LastName)
             .ToList();
 
         return Ok(assignments.Select(ToDto));
