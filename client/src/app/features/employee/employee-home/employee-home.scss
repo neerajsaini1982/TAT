@@ -8,17 +8,23 @@
   margin: 16px auto 0;
 }
 
+// Grid (not flex) so every row shares the same column widths — with flex,
+// each row's items size to that row's own content, so e.g. the time column
+// drifts left/right depending on how long that row's employee/shift text
+// happens to be. subgrid lets each .today-row keep its own background/
+// border while still lining up with .today-list's column tracks.
 .today-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  column-gap: 12px;
+  row-gap: 4px;
 }
 
 .today-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: subgrid;
+  grid-column: 1 / -1;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
   padding: 8px 10px;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   border-radius: 6px;
@@ -42,6 +48,7 @@
 .punch-status {
   display: flex;
   align-items: center;
+  justify-self: end;
   gap: 2px;
   padding: 1px 8px 1px 6px;
   border-radius: 999px;
@@ -80,6 +87,7 @@
 .today-time {
   color: var(--mat-sys-on-surface-variant);
   white-space: nowrap;
+  justify-self: end;
 }
 
 .form {
