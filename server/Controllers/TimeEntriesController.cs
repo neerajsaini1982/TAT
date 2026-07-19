@@ -323,6 +323,8 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
         entry.ClockOutAt = request.ClockOutAt;
         entry.Note = request.Note;
         entry.ClockedOutByAccountId = request.ClockOutAt is not null ? CallerAccountId() : null;
+        entry.EditedByAccountId = CallerAccountId();
+        entry.EditedAt = DateTime.UtcNow;
 
         // A recorded clock-in supersedes an earlier absence mark, same as a
         // normal self clock-in.
@@ -421,5 +423,7 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
         t.Break2EndAt,
         t.ClockOutAt,
         t.ClockedOutByAccountId,
-        t.Note);
+        t.Note,
+        t.EditedByAccountId,
+        t.EditedAt);
 }

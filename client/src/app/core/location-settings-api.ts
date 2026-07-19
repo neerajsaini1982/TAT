@@ -46,6 +46,8 @@ export interface UpdateLocationSettingsRequest {
 
 // Minimal subset any signed-in account can read (see LocationSettingsController.GetMine).
 export interface EmployeeLocationSettingsDto {
+  timeFormat: TimeFormat;
+  timeZone: string;
   clockInWindowMinutes: number;
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;

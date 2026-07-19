@@ -17,6 +17,8 @@ export interface TimeEntryDto {
   clockOutAt: string | null;
   clockedOutByAccountId: number | null;
   note: string | null;
+  editedByAccountId: number | null;
+  editedAt: string | null;
 }
 
 export interface AdminEditTimeEntryRequest {

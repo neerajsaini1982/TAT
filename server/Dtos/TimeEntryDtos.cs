@@ -13,7 +13,9 @@ public record TimeEntryDto(
     DateTime? Break2EndAt,
     DateTime? ClockOutAt,
     int? ClockedOutByAccountId,
-    string? Note);
+    string? Note,
+    int? EditedByAccountId,
+    DateTime? EditedAt);
 
 public record ClockInRequest(int ShiftAssignmentId);
 

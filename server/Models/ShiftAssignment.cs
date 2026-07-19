@@ -25,4 +25,11 @@ public class ShiftAssignment
     // the employee showing up supersedes an earlier absence mark.
     public bool IsAbsent { get; set; }
     public string? AbsenceNote { get; set; }
+
+    // Who clicked Mark/Clear Absent and when — kept independent of IsAbsent
+    // itself (which flips back to false on clear) so there's always a
+    // record of the most recent action here for reporting.
+    public int? AbsentMarkedByAccountId { get; set; }
+    public Account? AbsentMarkedByAccount { get; set; }
+    public DateTime? AbsentMarkedAt { get; set; }
 }

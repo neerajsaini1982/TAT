@@ -94,6 +94,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(a => a.AccountId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasOne(a => a.AbsentMarkedByAccount)
+                .WithMany()
+                .HasForeignKey(a => a.AbsentMarkedByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Same employee can't be assigned to the same shift twice on the same day.
             entity.HasIndex(a => new { a.ShiftId, a.AccountId, a.Date }).IsUnique();
         });
@@ -136,6 +141,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             entity.HasOne(t => t.ClockedOutByAccount)
                 .WithMany()
                 .HasForeignKey(t => t.ClockedOutByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(t => t.EditedByAccount)
+                .WithMany()
+                .HasForeignKey(t => t.EditedByAccountId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             // One clock-in per shift assignment.

@@ -9,6 +9,8 @@ export interface ShiftAssignmentDto {
   shiftName: string;
   shiftStartTime: string;
   shiftEndTime: string;
+  isBreakRequired: boolean;
+  isLunchRequired: boolean;
   hours: number;
   accountId: number;
   accountFirstName: string;
@@ -17,6 +19,8 @@ export interface ShiftAssignmentDto {
   isPublished: boolean;
   isAbsent: boolean;
   absenceNote: string | null;
+  absentMarkedByAccountId: number | null;
+  absentMarkedAt: string | null;
 }
 
 export interface CreateShiftAssignmentRequest {
@@ -35,15 +39,6 @@ export interface MarkAbsentRequest {
   note: string | null;
 }
 
-export interface TodayScheduleEntryDto {
-  shiftName: string;
-  shiftStartTime: string;
-  shiftEndTime: string;
-  employeeName: string;
-  isClockedIn: boolean;
-  isClockedOut: boolean;
-}
-
 @Service()
 export class ShiftAssignmentsApi {
   private readonly http = inject(HttpClient);
@@ -51,11 +46,6 @@ export class ShiftAssignmentsApi {
 
   getMine() {
     return this.http.get<ShiftAssignmentDto[]>(`${this.base}/mine`);
-  }
-
-  getToday(locationCode: string) {
-    const params = new URLSearchParams({ locationCode });
-    return this.http.get<TodayScheduleEntryDto[]>(`${this.base}/today?${params.toString()}`);
   }
 
   getForWeek(weekStartDate: string, locationCode?: string) {

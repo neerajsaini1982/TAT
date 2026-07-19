@@ -42,50 +42,6 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         return Ok(assignments.Select(ToDto));
     }
 
-    // Shown on the employee login screen, before anyone has signed in — so
-    // it's deliberately public and returns only what's safe to show on a
-    // shared/kiosk screen (first name + last initial, no account ids).
-    [HttpGet("today")]
-    [AllowAnonymous]
-    public ActionResult<IEnumerable<TodayScheduleEntryDto>> GetToday([FromQuery] string locationCode)
-    {
-        var location = db.Locations.SingleOrDefault(l => l.LocationCode == locationCode);
-        if (location is null)
-        {
-            return BadRequest("A valid locationCode is required.");
-        }
-
-        var today = DateOnly.FromDateTime(DateTime.Now);
-        // Employees are always ordered by shift start time; ties (more than
-        // one employee starting at the same time) break alphabetically by
-        // first name, then last name. Applies everywhere multiple
-        // employees are listed together — see also GetForWeek below.
-        var assignments = db.ShiftAssignments
-            .Include(a => a.Shift)
-            .Include(a => a.Account)
-            .Where(a => a.Shift!.LocationId == location.Id && a.Date == today && a.IsPublished)
-            .OrderBy(a => a.Shift!.StartTime)
-            .ThenBy(a => a.Account!.FirstName)
-            .ThenBy(a => a.Account!.LastName)
-            .ToList();
-
-        var entryByAssignmentId = db.TimeEntries
-            .Where(t => assignments.Select(a => a.Id).Contains(t.ShiftAssignmentId))
-            .ToDictionary(t => t.ShiftAssignmentId);
-
-        return Ok(assignments.Select(a =>
-        {
-            entryByAssignmentId.TryGetValue(a.Id, out var entry);
-            return new TodayScheduleEntryDto(
-                a.Shift!.Name,
-                a.Shift.StartTime,
-                a.Shift.EndTime,
-                $"{a.Account!.FirstName} {a.Account.LastName[..1]}.",
-                entry is not null && entry.ClockOutAt is null,
-                entry is not null && entry.ClockOutAt is not null);
-        }));
-    }
-
     // Bulk-marks every assignment in a location/week as published so it
     // starts showing up in GetMine for the employees on it. Until this is
     // called, the admin schedule grid is a draft/preview only.
@@ -278,6 +234,8 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
 
         assignment.IsAbsent = request.IsAbsent;
         assignment.AbsenceNote = request.IsAbsent ? request.Note : null;
+        assignment.AbsentMarkedByAccountId = CallerAccountId();
+        assignment.AbsentMarkedAt = DateTime.UtcNow;
         db.SaveChanges();
 
         await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
@@ -342,6 +300,8 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         a.Shift!.Name,
         a.Shift.StartTime,
         a.Shift.EndTime,
+        a.Shift.IsBreakRequired,
+        a.Shift.IsLunchRequired,
         ComputeHours(a.Shift.StartTime, a.Shift.EndTime),
         a.AccountId,
         a.Account!.FirstName,
@@ -349,5 +309,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         a.Date,
         a.IsPublished,
         a.IsAbsent,
-        a.AbsenceNote);
+        a.AbsenceNote,
+        a.AbsentMarkedByAccountId,
+        a.AbsentMarkedAt);
 }
