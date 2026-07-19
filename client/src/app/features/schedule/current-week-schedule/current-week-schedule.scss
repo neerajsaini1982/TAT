@@ -123,6 +123,28 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.error {
+  color: var(--mat-sys-error);
+  text-align: center;
+  max-width: 640px;
+  margin: 0 auto 16px;
+}
+
+// Compact override of Material's default 40px touch target — sits inline
+// in a shift row alongside small text/badges, not a toolbar.
+.absent-toggle {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    line-height: 18px;
+  }
+}
+
 .attendance-badge {
   display: inline-block;
   padding: 2px 8px;

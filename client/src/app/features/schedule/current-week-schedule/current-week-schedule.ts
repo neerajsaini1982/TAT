@@ -2,6 +2,7 @@ import { Component, DestroyRef, Input, OnInit, computed, inject, signal } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable, catchError, forkJoin, of } from 'rxjs';
 
@@ -12,6 +13,7 @@ import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { employeeColor } from '../../../core/employee-colors';
 import { isBreak2OverLimit, isBreakOverLimit, isLateClockIn, isLunchOverLimit } from '../../../core/attendance-flags';
 import { addDays, dayOfWeekLabel, formatDate, mondayOf, parseDate, toMmDdYyyy } from '../../../core/week-utils';
+import { NoteDialog, NoteDialogData } from '../../admin/note-dialog/note-dialog';
 
 type PunchStatus = 'not-started' | 'working' | 'on-break' | 'on-lunch' | 'on-break2' | 'clocked-out';
 
@@ -119,10 +121,13 @@ export class CurrentWeekSchedule implements OnInit {
   private readonly settingsApi = inject(LocationSettingsApi);
   private readonly realtime = inject(ScheduleRealtime);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly loading = signal(true);
   protected readonly days = signal<DayGroup[]>([]);
   protected readonly busyShiftId = signal<number | null>(null);
+  protected readonly markingId = signal<number | null>(null);
+  protected readonly error = signal<string | null>(null);
   protected readonly showEmployeeNames = computed(() => this.scope === 'location');
   protected readonly employeeColor = employeeColor;
   protected readonly totalHours = computed(() =>
@@ -332,5 +337,53 @@ export class CurrentWeekSchedule implements OnInit {
         ),
       })),
     );
+  }
+
+  // Location-scope only (Admin/Lead home page) — lets an admin mark a
+  // teammate absent right from today's schedule instead of having to open
+  // the full weekly grid at admin/schedule. Reuses the same NoteDialog and
+  // ShiftAssignmentsApi.markAbsent() the grid already uses, so both screens
+  // stay backed by the same server rule (409 if a TimeEntry already exists).
+  markAbsent(shift: DayShift): void {
+    this.dialog
+      .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
+        data: {
+          title: `Mark ${shift.employeeName} absent`,
+          label: 'Reason',
+          noteRequired: true,
+          confirmLabel: 'Mark Absent',
+        },
+      })
+      .afterClosed()
+      .subscribe((note) => {
+        if (!note) {
+          return;
+        }
+        this.markingId.set(shift.assignment.id);
+        this.api.markAbsent(shift.assignment.id, { isAbsent: true, note }).subscribe({
+          next: () => {
+            this.markingId.set(null);
+            this.load();
+          },
+          error: (err) => {
+            this.markingId.set(null);
+            this.error.set(err?.error ?? 'Failed to mark absent.');
+          },
+        });
+      });
+  }
+
+  clearAbsent(shift: DayShift): void {
+    this.markingId.set(shift.assignment.id);
+    this.api.markAbsent(shift.assignment.id, { isAbsent: false, note: null }).subscribe({
+      next: () => {
+        this.markingId.set(null);
+        this.load();
+      },
+      error: (err) => {
+        this.markingId.set(null);
+        this.error.set(err?.error ?? 'Failed to clear absence.');
+      },
+    });
   }
 }

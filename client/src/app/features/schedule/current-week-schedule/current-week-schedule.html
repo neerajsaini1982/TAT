@@ -12,6 +12,10 @@
   </div>
 }
 
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
 <div class="days">
   @for (day of days(); track day.date) {
     <mat-card class="day-card" [class.today]="day.isToday">
@@ -40,6 +44,31 @@
             }
             @if (isLate(shift)) {
               <span class="attendance-badge warn">Late</span>
+            }
+            @if (showEmployeeNames()) {
+              @if (shift.assignment.isAbsent) {
+                <button
+                  type="button"
+                  mat-icon-button
+                  class="absent-toggle"
+                  (click)="clearAbsent(shift)"
+                  [disabled]="markingId() === shift.assignment.id"
+                  title="Clear absent"
+                >
+                  <mat-icon>how_to_reg</mat-icon>
+                </button>
+              } @else {
+                <button
+                  type="button"
+                  mat-icon-button
+                  class="absent-toggle"
+                  (click)="markAbsent(shift)"
+                  [disabled]="markingId() === shift.assignment.id"
+                  title="Mark absent"
+                >
+                  <mat-icon>person_off</mat-icon>
+                </button>
+              }
             }
             @if (day.isToday && !shift.entry && shift.isMine) {
               <div class="punch-action">
