@@ -48,3 +48,9 @@
 table {
   width: 100%;
 }
+
+.mat-column-serial {
+  width: 40px;
+  color: var(--mat-sys-on-surface-variant);
+  text-align: right;
+}

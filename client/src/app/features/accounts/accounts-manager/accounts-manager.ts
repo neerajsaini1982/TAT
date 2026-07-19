@@ -92,8 +92,8 @@ export class AccountsManager implements OnInit {
   });
 
   get columns(): string[] {
-    const base = ['username', 'firstName', 'lastName', 'role', 'userCode', 'isActive', 'actions'];
-    return this.lockedLocationCode ? base : ['locationCode', ...base];
+    const base = ['serial', 'username', 'firstName', 'lastName', 'role', 'userCode', 'isActive', 'actions'];
+    return this.lockedLocationCode ? base : ['serial', 'locationCode', ...base.slice(1)];
   }
 
   ngOnInit(): void {

@@ -84,6 +84,11 @@
 }
 
 <table mat-table [dataSource]="filteredAccounts()" class="mat-elevation-z1">
+  <ng-container matColumnDef="serial">
+    <th mat-header-cell *matHeaderCellDef>#</th>
+    <td mat-cell *matCellDef="let a; let i = index">{{ i + 1 }}</td>
+  </ng-container>
+
   <ng-container matColumnDef="locationCode">
     <th mat-header-cell *matHeaderCellDef>Location</th>
     <td mat-cell *matCellDef="let a">{{ a.locationCode }}</td>
