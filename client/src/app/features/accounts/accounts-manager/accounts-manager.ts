@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -71,6 +71,25 @@ export class AccountsManager implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly resettingId = signal<number | null>(null);
   protected form: FormModel = emptyForm();
+
+  // Hides terminated/inactive employees by default — a location can pick up
+  // 100+ inactive rows from an ADP import, and most day-to-day account work
+  // (scheduling, resets) only ever cares about who's currently active.
+  protected readonly showInactive = signal(false);
+  protected readonly searchTerm = signal('');
+
+  protected readonly filteredAccounts = computed(() => {
+    const term = this.searchTerm().trim().toLowerCase();
+    return this.accounts().filter((a) => {
+      if (!this.showInactive() && !a.isActive) {
+        return false;
+      }
+      if (!term) {
+        return true;
+      }
+      return a.firstName.toLowerCase().includes(term) || a.lastName.toLowerCase().includes(term);
+    });
+  });
 
   get columns(): string[] {
     const base = ['username', 'firstName', 'lastName', 'role', 'userCode', 'isActive', 'actions'];

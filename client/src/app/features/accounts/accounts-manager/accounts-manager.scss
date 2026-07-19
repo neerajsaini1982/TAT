@@ -9,8 +9,18 @@
   min-width: 220px;
 }
 
+.search-filter {
+  min-width: 200px;
+}
+
 .spacer {
   flex: 1 1 auto;
+}
+
+.result-count {
+  margin: -8px 0 12px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
 }
 
 .form-card {
