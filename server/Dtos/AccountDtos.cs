@@ -12,7 +12,18 @@ public record AccountDto(
     string Role,
     bool IsActive,
     string? UserCode,
-    string? LocationCode);
+    string? LocationCode,
+    // Populated by the ADP employee-directory import (see
+    // EmployeeImportController); null for accounts created by hand.
+    string? BirthDate,
+    string? JobTitle,
+    string? Address1,
+    string? Address2,
+    string? City,
+    string? State,
+    string? Zipcode,
+    string? Supervisor,
+    string? AdpStatus);
 
 public record CreateAccountRequest(
     // Required unless Role is Employee — employees log in with a UserCode

@@ -15,6 +15,17 @@ export interface AccountDto {
   isActive: boolean;
   userCode: string | null;
   locationCode: string | null;
+  // Populated by the ADP employee-directory import (see employee-import-api.ts);
+  // null for accounts created by hand.
+  birthDate: string | null;
+  jobTitle: string | null;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  state: string | null;
+  zipcode: string | null;
+  supervisor: string | null;
+  adpStatus: string | null;
 }
 
 export interface CreateAccountRequest {

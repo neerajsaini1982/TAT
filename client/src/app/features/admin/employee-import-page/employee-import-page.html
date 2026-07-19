@@ -1,0 +1,133 @@
+<div class="header">
+  <a mat-icon-button [routerLink]="['/', locationCode, 'admin', 'accounts']" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>Upload Employees — {{ locationCode }}</h2>
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (phase() === 'pick') {
+  <mat-card class="picker-card">
+    <mat-card-content>
+      <p class="hint">
+        Upload an ADP "Employee Directory" export (.xlsx). Every row is parsed and shown to you before anything is
+        created — an employee already in the system (matched by name and birth date) is never modified, only new
+        ones are added.
+      </p>
+      <input type="file" accept=".xlsx" (change)="onFileSelected($event)" />
+      @if (loading()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      <button mat-flat-button color="primary" (click)="runPreview()" [disabled]="loading()">Preview</button>
+    </mat-card-content>
+  </mat-card>
+}
+
+@if (phase() === 'reviewing') {
+  <div class="summary">
+    <span>{{ totalRows() }} rows in file</span>
+    <span class="new">{{ newCount() }} new</span>
+    <span class="skipped">{{ skippedCount() }} already exist / duplicate</span>
+  </div>
+
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>
+            <input
+              type="checkbox"
+              [checked]="allSelectableChecked()"
+              (change)="toggleAll($any($event.target).checked)"
+              aria-label="Select all new employees"
+            />
+          </th>
+          <th>Name</th>
+          <th>Birth Date</th>
+          <th>Status</th>
+          <th>Job Title</th>
+          <th>Address</th>
+          <th>Phone</th>
+          <th>Supervisor</th>
+          <th>Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track $index) {
+          <tr [class.skip-row]="!row.willCreate">
+            <td>
+              <input
+                type="checkbox"
+                [checked]="row.selected"
+                [disabled]="!row.willCreate"
+                (change)="toggleRow(row, $any($event.target).checked)"
+                [attr.aria-label]="'Include ' + row.firstName + ' ' + row.lastName"
+              />
+            </td>
+            <td>{{ row.firstName }} {{ row.lastName }}</td>
+            <td>{{ row.birthDate ?? '—' }}</td>
+            <td>{{ row.adpStatus ?? '—' }}</td>
+            <td>{{ row.jobTitle ?? '—' }}</td>
+            <td>{{ address(row) }}</td>
+            <td>{{ row.phone ?? '—' }}</td>
+            <td>{{ row.supervisor ?? '—' }}</td>
+            <td class="note">{{ row.skipReason ?? '' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="actions">
+    <button mat-button (click)="startOver()">Start Over</button>
+    <button mat-flat-button color="primary" (click)="runCommit()" [disabled]="selectedCount() === 0 || committing()">
+      Import {{ selectedCount() }} Employee{{ selectedCount() === 1 ? '' : 's' }}
+    </button>
+  </div>
+  @if (committing()) {
+    <mat-progress-bar mode="indeterminate" />
+  }
+}
+
+@if (phase() === 'done' && commitResult()) {
+  <mat-card class="result-card">
+    <mat-card-content>
+      <p class="result-summary">
+        Created {{ commitResult()!.createdCount }} employee{{ commitResult()!.createdCount === 1 ? '' : 's' }}.
+        @if (commitResult()!.skippedCount > 0) {
+          {{ commitResult()!.skippedCount }} were skipped (already existed by the time this ran).
+        }
+      </p>
+      <p class="hint">Write down or share these codes — employees use them to clock in.</p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>User Code</th>
+              <th>Active</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (a of commitResult()!.created; track a.id) {
+              <tr>
+                <td>{{ a.firstName }} {{ a.lastName }}</td>
+                <td class="code">{{ a.userCode }}</td>
+                <td>{{ a.isActive ? 'Yes' : 'No' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button mat-button (click)="startOver()">Upload Another File</button>
+        <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin', 'accounts']">
+          Back to Manage Accounts
+        </a>
+      </div>
+    </mat-card-content>
+  </mat-card>
+}

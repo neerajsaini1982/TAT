@@ -1,4 +1,5 @@
 import { Component, Input, OnInit, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -41,6 +42,7 @@ const emptyForm = (): FormModel => ({
 @Component({
   selector: 'app-accounts-manager',
   imports: [
+    RouterLink,
     FormsModule,
     MatTableModule,
     MatButtonModule,

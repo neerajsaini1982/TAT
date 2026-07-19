@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -81,7 +80,7 @@ public class AccountsController(AppDbContext db) : ControllerBase
         // so they don't need a username or password of their own.
         if (request.Role == AccountRole.Employee)
         {
-            username = GenerateUniqueUsername(request.FirstName, request.LastName);
+            username = AccountProvisioning.GenerateUniqueUsername(db, request.FirstName, request.LastName);
             passwordHash = PasswordHasher.Hash(Guid.NewGuid().ToString("N"));
         }
         else
@@ -111,7 +110,7 @@ public class AccountsController(AppDbContext db) : ControllerBase
             Role = request.Role,
             IsActive = true,
             LocationId = location?.Id,
-            UserCode = location is null ? null : GenerateUniqueUserCode(location.Id),
+            UserCode = location is null ? null : AccountProvisioning.GenerateUniqueUserCode(db, location.Id),
         };
 
         db.Accounts.Add(account);
@@ -137,7 +136,7 @@ public class AccountsController(AppDbContext db) : ControllerBase
             return BadRequest("This account has no location and therefore no user code.");
         }
 
-        account.UserCode = GenerateUniqueUserCode(account.LocationId.Value);
+        account.UserCode = AccountProvisioning.GenerateUniqueUserCode(db, account.LocationId.Value);
         db.SaveChanges();
 
         return Ok(ToDto(account));
@@ -156,7 +155,7 @@ public class AccountsController(AppDbContext db) : ControllerBase
             return BadRequest("This account has no user code to reset.");
         }
 
-        account.UserCode = GenerateUniqueUserCode(account.LocationId.Value);
+        account.UserCode = AccountProvisioning.GenerateUniqueUserCode(db, account.LocationId.Value);
         db.SaveChanges();
 
         return Ok(ToDto(account));
@@ -204,37 +203,6 @@ public class AccountsController(AppDbContext db) : ControllerBase
     private string? CallerLocationCode() =>
         User.FindFirst(TokenService.LocationCodeClaimType)?.Value;
 
-    private string GenerateUniqueUserCode(int locationId)
-    {
-        string code;
-        do
-        {
-            code = Random.Shared.Next(0, 1_000_000).ToString("D6");
-        } while (db.Accounts.Any(a => a.LocationId == locationId && a.UserCode == code));
-
-        return code;
-    }
-
-    // Employees don't pick a username, but Account.Username is still globally
-    // unique, so derive one from their name and disambiguate if needed.
-    private string GenerateUniqueUsername(string firstName, string lastName)
-    {
-        var baseName = Regex.Replace($"{firstName}.{lastName}".ToLowerInvariant(), "[^a-z0-9.]", "").Trim('.');
-        if (string.IsNullOrEmpty(baseName))
-        {
-            baseName = "employee";
-        }
-
-        var username = baseName;
-        var suffix = 1;
-        while (db.Accounts.Any(a => a.Username == username))
-        {
-            username = $"{baseName}{++suffix}";
-        }
-
-        return username;
-    }
-
     private static AccountDto ToDto(Account a) => new(
         a.Id,
         a.Username,
@@ -245,5 +213,14 @@ public class AccountsController(AppDbContext db) : ControllerBase
         a.Role.ToString(),
         a.IsActive,
         a.UserCode,
-        a.Location?.LocationCode);
+        a.Location?.LocationCode,
+        a.BirthDate,
+        a.JobTitle,
+        a.Address1,
+        a.Address2,
+        a.City,
+        a.State,
+        a.Zipcode,
+        a.Supervisor,
+        a.AdpStatus);
 }

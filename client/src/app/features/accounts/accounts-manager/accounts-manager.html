@@ -11,6 +11,9 @@
     </mat-form-field>
   }
   <span class="spacer"></span>
+  @if (lockedLocationCode) {
+    <a mat-stroked-button [routerLink]="['/', lockedLocationCode, 'admin', 'accounts', 'import']">Upload Employees</a>
+  }
   <button mat-flat-button color="primary" (click)="startCreate()">Add Account</button>
 </div>
 
