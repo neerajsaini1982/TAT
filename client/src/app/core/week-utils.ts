@@ -78,6 +78,20 @@ export const toMmDdYyyy = (isoDate: string): string => {
 export const toInputTime = (apiTime: string | null): string => (apiTime ? apiTime.slice(0, 5) : '09:00');
 export const toApiTime = (inputTime: string): string => (inputTime.length === 5 ? `${inputTime}:00` : inputTime);
 
+// Combines a yyyy-MM-dd date with an "HH:mm" time into a local-time Date —
+// used both to compute clock-in windows and to turn an admin-entered punch
+// time back into a UTC instant before sending it to the API.
+export function combineDateAndTime(dateIso: string, time: string): Date {
+  const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
+  const date = parseDate(dateIso);
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+export function formatHHmm(date: Date): string {
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
 export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }

@@ -1,0 +1,20 @@
+.content {
+  width: 420px;
+  max-width: 90vw;
+}
+
+.time-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+
+.time-grid mat-form-field,
+.note-field {
+  width: 100%;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 0 0 8px;
+}

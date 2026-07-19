@@ -12,7 +12,15 @@ import { LocationSettingsApi } from '../../../core/location-settings-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { employeeColor } from '../../../core/employee-colors';
 import { isBreak2OverLimit, isBreakOverLimit, isLateClockIn, isLunchOverLimit } from '../../../core/attendance-flags';
-import { addDays, dayOfWeekLabel, formatDate, mondayOf, parseDate, toMmDdYyyy } from '../../../core/week-utils';
+import {
+  addDays,
+  combineDateAndTime,
+  dayOfWeekLabel,
+  formatDate,
+  formatHHmm,
+  mondayOf,
+  toMmDdYyyy,
+} from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../../admin/note-dialog/note-dialog';
 
 type PunchStatus = 'not-started' | 'working' | 'on-break' | 'on-lunch' | 'on-break2' | 'clocked-out';
@@ -43,17 +51,6 @@ const DEFAULT_SETTINGS = {
   breakLimitMinutes: 15,
   lunchLimitMinutes: 30,
 };
-
-function combineDateAndTime(dateIso: string, time: string): Date {
-  const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
-  const date = parseDate(dateIso);
-  date.setHours(hours, minutes, 0, 0);
-  return date;
-}
-
-function formatHHmm(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
 
 function statusOf(entry: TimeEntryDto | null): PunchStatus {
   if (!entry) {

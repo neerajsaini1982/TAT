@@ -277,6 +277,101 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
         return Ok(ToDto(entry));
     }
 
+    // Lets a Lead/Admin set every punch on a shift's TimeEntry directly,
+    // instead of just closing it out (see AdminClockOut above) — e.g. the
+    // employee clocked in but their break times are wrong, or they forgot
+    // to clock in at all and the admin is filling in the whole shift after
+    // the fact. Upserts by ShiftAssignmentId: creates the entry if none
+    // exists yet, otherwise overwrites every punch on the existing one.
+    [HttpPut("by-assignment/{shiftAssignmentId:int}/admin-edit")]
+    [Authorize(Policy = "LeadOrAbove")]
+    public async Task<ActionResult<TimeEntryDto>> AdminEditTimes(int shiftAssignmentId, AdminEditTimeEntryRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Note))
+        {
+            return BadRequest("A note is required to edit punch times.");
+        }
+
+        var validationError = ValidatePunchOrder(request);
+        if (validationError is not null)
+        {
+            return BadRequest(validationError);
+        }
+
+        var assignment = db.ShiftAssignments
+            .Include(a => a.Shift).ThenInclude(s => s!.Location)
+            .SingleOrDefault(a => a.Id == shiftAssignmentId);
+        if (assignment is null || !CanAccess(assignment.Shift?.Location?.LocationCode))
+        {
+            return NotFound();
+        }
+
+        var entry = db.TimeEntries.SingleOrDefault(t => t.ShiftAssignmentId == shiftAssignmentId);
+        if (entry is null)
+        {
+            entry = new TimeEntry { AccountId = assignment.AccountId, ShiftAssignmentId = assignment.Id };
+            db.TimeEntries.Add(entry);
+        }
+
+        entry.ClockInAt = request.ClockInAt;
+        entry.BreakStartAt = request.BreakStartAt;
+        entry.BreakEndAt = request.BreakEndAt;
+        entry.LunchStartAt = request.LunchStartAt;
+        entry.LunchEndAt = request.LunchEndAt;
+        entry.Break2StartAt = request.Break2StartAt;
+        entry.Break2EndAt = request.Break2EndAt;
+        entry.ClockOutAt = request.ClockOutAt;
+        entry.Note = request.Note;
+        entry.ClockedOutByAccountId = request.ClockOutAt is not null ? CallerAccountId() : null;
+
+        // A recorded clock-in supersedes an earlier absence mark, same as a
+        // normal self clock-in.
+        assignment.IsAbsent = false;
+        assignment.AbsenceNote = null;
+
+        db.SaveChanges();
+
+        await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
+        return Ok(ToDto(entry));
+    }
+
+    // Sanity-checks pair ordering only (an end time needs its matching start
+    // time, and can't be before it) — deliberately not checked against the
+    // shift's scheduled window, since correcting exactly that mismatch is
+    // often the reason for the edit.
+    private static string? ValidatePunchOrder(AdminEditTimeEntryRequest r)
+    {
+        if (r.BreakEndAt is not null && r.BreakStartAt is null)
+        {
+            return "Break end requires a break start.";
+        }
+        if (r.LunchEndAt is not null && r.LunchStartAt is null)
+        {
+            return "Lunch end requires a lunch start.";
+        }
+        if (r.Break2EndAt is not null && r.Break2StartAt is null)
+        {
+            return "Second break end requires a second break start.";
+        }
+        if (r.BreakStartAt is not null && r.BreakEndAt is not null && r.BreakEndAt < r.BreakStartAt)
+        {
+            return "Break end can't be before break start.";
+        }
+        if (r.LunchStartAt is not null && r.LunchEndAt is not null && r.LunchEndAt < r.LunchStartAt)
+        {
+            return "Lunch end can't be before lunch start.";
+        }
+        if (r.Break2StartAt is not null && r.Break2EndAt is not null && r.Break2EndAt < r.Break2StartAt)
+        {
+            return "Second break end can't be before second break start.";
+        }
+        if (r.ClockOutAt is not null && r.ClockOutAt < r.ClockInAt)
+        {
+            return "Clock out can't be before clock in.";
+        }
+        return null;
+    }
+
     // Applies a state-transition function to the caller's own entry, saving
     // and returning the updated DTO on success, or the returned message as a
     // 400 when the transition isn't valid from the entry's current state.

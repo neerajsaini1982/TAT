@@ -142,6 +142,11 @@
                           <mat-icon>logout</mat-icon>
                         </button>
                       }
+                      @if (a.date === todayIso) {
+                        <button type="button" mat-icon-button (click)="editTimes(a)" title="Edit punch times">
+                          <mat-icon>schedule</mat-icon>
+                        </button>
+                      }
                     </div>
 
                     <button type="button" class="chip-remove" (click)="removeAssignment(a)" aria-label="Remove shift">×</button>
