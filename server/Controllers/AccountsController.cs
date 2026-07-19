@@ -6,12 +6,13 @@ using Server.Data;
 using Server.Dtos;
 using Server.Models;
 using Server.Security;
+using Server.Services;
 
 namespace Server.Controllers;
 
 [ApiController]
 [Route("api/accounts")]
-public class AccountsController(AppDbContext db) : ControllerBase
+public class AccountsController(AppDbContext db, IEmailSender emailSender) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = "AdminOrAbove")]
@@ -161,6 +162,69 @@ public class AccountsController(AppDbContext db) : ControllerBase
         return Ok(ToDto(account));
     }
 
+    // Emails an Employee their login link and user code, using the
+    // LoginCredentials template (custom if the location has saved one, else
+    // the built-in default) and this location's SMTP settings. The login
+    // link itself is computed by the caller (it already knows its own
+    // origin) rather than the server guessing its hostname.
+    [HttpPost("{id:int}/send-credentials")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public async Task<IActionResult> SendCredentials(int id, SendCredentialsRequest request)
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == id);
+        if (account is null || !CanAccess(account))
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(account.Email))
+        {
+            return BadRequest("This employee has no email address on file.");
+        }
+
+        if (account.LocationId is null || string.IsNullOrEmpty(account.UserCode))
+        {
+            return BadRequest("This account has no user code to send.");
+        }
+
+        var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == account.LocationId);
+        if (settings is null)
+        {
+            return BadRequest("SMTP is not configured for this location. Set it up under Settings first.");
+        }
+
+        var template = db.EmailTemplates.SingleOrDefault(
+            t => t.LocationId == account.LocationId && t.Key == EmailTemplateKeys.LoginCredentials)
+            ?? EmailTemplateCatalog.Default(EmailTemplateKeys.LoginCredentials);
+
+        var placeholders = new Dictionary<string, string>
+        {
+            ["{{employeeName}}"] = $"{account.FirstName} {account.LastName}",
+            ["{{locationName}}"] = account.Location?.Name ?? string.Empty,
+            ["{{userCode}}"] = account.UserCode,
+            ["{{loginLink}}"] = request.LoginLink,
+        };
+
+        try
+        {
+            await emailSender.SendAsync(
+                settings,
+                account.Email,
+                Render(template.Subject, placeholders),
+                Render(template.BodyHtml, placeholders));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, "Failed to send email. Check the SMTP settings and try again.");
+        }
+
+        return NoContent();
+    }
+
     [HttpPut("{id:int}")]
     [Authorize(Policy = "AdminOrAbove")]
     public ActionResult<AccountDto> Update(int id, UpdateAccountRequest request)
@@ -202,6 +266,16 @@ public class AccountsController(AppDbContext db) : ControllerBase
 
     private string? CallerLocationCode() =>
         User.FindFirst(TokenService.LocationCodeClaimType)?.Value;
+
+    private static string Render(string template, Dictionary<string, string> placeholders)
+    {
+        foreach (var (token, value) in placeholders)
+        {
+            template = template.Replace(token, value);
+        }
+
+        return template;
+    }
 
     private static AccountDto ToDto(Account a) => new(
         a.Id,

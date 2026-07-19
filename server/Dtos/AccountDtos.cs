@@ -45,3 +45,7 @@ public record UpdateAccountRequest(
     string Email,
     string Phone,
     bool IsActive);
+
+// LoginLink is built client-side (it already knows its own origin) and
+// passed through rather than the server guessing its hostname.
+public record SendCredentialsRequest(string LoginLink);

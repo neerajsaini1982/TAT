@@ -78,4 +78,10 @@ export class AccountsApi {
   resetMyCode() {
     return this.http.post<AccountDto>(`${this.base}/mine/reset-code`, {});
   }
+
+  // Emails the employee their login link and user code (LoginCredentials
+  // template). loginLink is built by the caller from window.location.origin.
+  sendCredentials(id: number, loginLink: string) {
+    return this.http.post<void>(`${this.base}/${id}/send-credentials`, { loginLink });
+  }
 }

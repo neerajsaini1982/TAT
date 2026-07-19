@@ -136,6 +136,23 @@
     <td mat-cell *matCellDef="let a">{{ a.isActive ? 'Yes' : 'No' }}</td>
   </ng-container>
 
+  <ng-container matColumnDef="credentials">
+    <th mat-header-cell *matHeaderCellDef></th>
+    <td mat-cell *matCellDef="let a">
+      @if (a.role === 'Employee') {
+        <button
+          mat-stroked-button
+          class="send-credentials-btn"
+          (click)="sendCredentials(a)"
+          [disabled]="!canSendCredentials(a) || sendingId() === a.id"
+          [title]="a.email ? 'Email this employee their login link and user code' : 'No email address on file'"
+        >
+          {{ sendingId() === a.id ? 'Sending…' : 'Send Login Credentials' }}
+        </button>
+      }
+    </td>
+  </ng-container>
+
   <ng-container matColumnDef="actions">
     <th mat-header-cell *matHeaderCellDef></th>
     <td mat-cell *matCellDef="let a">

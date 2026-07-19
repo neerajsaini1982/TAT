@@ -54,3 +54,14 @@ table {
   color: var(--mat-sys-on-surface-variant);
   text-align: right;
 }
+
+// Keep "Send Login Credentials" on one line rather than wrapping inside the
+// button — the table already has plenty of narrower columns to absorb the
+// extra width.
+.mat-column-credentials {
+  white-space: nowrap;
+}
+
+.send-credentials-btn {
+  white-space: nowrap;
+}

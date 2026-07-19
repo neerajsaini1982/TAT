@@ -70,6 +70,7 @@ export class AccountsManager implements OnInit {
   protected readonly showForm = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly resettingId = signal<number | null>(null);
+  protected readonly sendingId = signal<number | null>(null);
   protected form: FormModel = emptyForm();
 
   // Hides terminated/inactive employees by default — a location can pick up
@@ -92,7 +93,7 @@ export class AccountsManager implements OnInit {
   });
 
   get columns(): string[] {
-    const base = ['serial', 'username', 'firstName', 'lastName', 'role', 'userCode', 'isActive', 'actions'];
+    const base = ['serial', 'username', 'firstName', 'lastName', 'role', 'userCode', 'isActive', 'credentials', 'actions'];
     return this.lockedLocationCode ? base : ['serial', 'locationCode', ...base.slice(1)];
   }
 
@@ -223,6 +224,30 @@ export class AccountsManager implements OnInit {
       error: (err) => {
         this.resettingId.set(null);
         alert(err?.error ?? 'Failed to reset user code.');
+      },
+    });
+  }
+
+  canSendCredentials(account: AccountDto): boolean {
+    return account.role === 'Employee' && !!account.email && !!account.userCode;
+  }
+
+  sendCredentials(account: AccountDto): void {
+    if (!this.canSendCredentials(account)) {
+      return;
+    }
+    const locationCode = this.lockedLocationCode ?? account.locationCode;
+    const loginLink = `${window.location.origin}/${locationCode}/employee`;
+
+    this.sendingId.set(account.id);
+    this.accountsApi.sendCredentials(account.id, loginLink).subscribe({
+      next: () => {
+        this.sendingId.set(null);
+        alert(`Login credentials sent to ${account.firstName} ${account.lastName}.`);
+      },
+      error: (err) => {
+        this.sendingId.set(null);
+        alert(err?.error ?? 'Failed to send login credentials.');
       },
     });
   }
