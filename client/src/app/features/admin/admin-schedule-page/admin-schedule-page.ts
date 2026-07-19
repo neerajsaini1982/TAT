@@ -91,6 +91,9 @@ export class AdminSchedulePage implements OnInit {
       this.rows().reduce((sum, row) => sum + row.days[i].assignments.reduce((s, a) => s + a.hours, 0), 0),
     ),
   );
+  protected readonly weekTotalHours = computed(() =>
+    Math.round(this.dailyTotals().reduce((sum, hours) => sum + hours, 0) * 100) / 100,
+  );
 
   // The whole week is a draft/preview, invisible to employees, until the
   // admin posts it. Any create/move against a published week reverts to

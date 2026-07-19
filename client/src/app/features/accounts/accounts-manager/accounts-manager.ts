@@ -93,7 +93,7 @@ export class AccountsManager implements OnInit {
   });
 
   get columns(): string[] {
-    const base = ['serial', 'username', 'firstName', 'lastName', 'role', 'userCode', 'isActive', 'credentials', 'actions'];
+    const base = ['serial', 'username', 'firstName', 'lastName', 'role', 'userCode', 'isActive', 'actions'];
     return this.lockedLocationCode ? base : ['serial', 'locationCode', ...base.slice(1)];
   }
 
