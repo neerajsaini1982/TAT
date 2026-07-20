@@ -194,7 +194,12 @@ export class CurrentWeekSchedule implements OnInit {
                 dateLabel: toMmDdYyyy(date),
                 isToday,
                 shifts,
-                hours: round2(assignmentsForDay.reduce((sum, s) => sum + s.hours, 0)),
+                // Actual worked hours (matches the per-row "H Hrs M Mins"
+                // label), not scheduled shift length — a shift that's still
+                // clocked in, never started, or absent contributes 0 here.
+                hours: round2(
+                  shifts.reduce((sum, s) => (s.entry?.clockOutAt ? sum + workedMinutes(s.entry) / 60 : sum), 0),
+                ),
               };
             }),
         );
