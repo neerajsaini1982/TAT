@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
@@ -22,6 +23,7 @@ import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-f
 import { addDays, combineDateAndTime, formatDate, formatWeekRange, mondayOf } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
+import { ScheduleDayView } from '../schedule-day-view/schedule-day-view';
 
 interface DayCell {
   date: string;
@@ -55,6 +57,7 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     RouterLink,
     FormsModule,
     MatButtonModule,
+    MatButtonToggleModule,
     MatCheckboxModule,
     MatFormFieldModule,
     MatIconModule,
@@ -62,6 +65,7 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     CdkDropListGroup,
     CdkDropList,
     CdkDrag,
+    ScheduleDayView,
   ],
   templateUrl: './admin-schedule-page.html',
   styleUrl: './admin-schedule-page.scss',
@@ -113,6 +117,32 @@ export class AdminSchedulePage implements OnInit {
       dateLabel: addDays(start, i).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
     }));
   });
+
+  // Week grid vs. a single day's Google-Calendar-style timeline (see
+  // ScheduleDayView) — the latter is for spotting coverage gaps (is
+  // someone opening/closing, are there enough shifts) at a glance, rather
+  // than reading times out of the grid's chips one by one.
+  protected readonly viewMode = signal<'week' | 'day'>('week');
+  // Index into DAY_HEADERS/dayColumns (0 = Monday). Defaults to today if
+  // today falls in the visible week, otherwise Monday; deliberately not
+  // recomputed on previous/next-week navigation so flipping weeks keeps
+  // you on the same day-of-week you were looking at.
+  protected readonly selectedDayIndex = signal(this.defaultDayIndex());
+
+  protected readonly selectedDayAssignments = computed(() => {
+    const dayIndex = this.selectedDayIndex();
+    return this.rows().flatMap((row) => row.days[dayIndex]?.assignments ?? []);
+  });
+
+  private defaultDayIndex(): number {
+    const start = mondayOf(new Date());
+    for (let i = 0; i < 7; i++) {
+      if (formatDate(addDays(start, i)) === this.todayIso) {
+        return i;
+      }
+    }
+    return 0;
+  }
 
   // Filters affect which rows are displayed, not the Daily Total / Total
   // Hrs figures below — those stay the full location's schedule regardless

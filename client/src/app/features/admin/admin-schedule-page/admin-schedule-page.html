@@ -13,6 +13,16 @@
   <button mat-icon-button (click)="nextWeek()" aria-label="Next week">
     <mat-icon>chevron_right</mat-icon>
   </button>
+
+  <mat-button-toggle-group
+    class="view-toggle"
+    [value]="viewMode()"
+    (change)="viewMode.set($event.value)"
+    aria-label="View mode"
+  >
+    <mat-button-toggle value="week">Week</mat-button-toggle>
+    <mat-button-toggle value="day">Day</mat-button-toggle>
+  </mat-button-toggle-group>
 </div>
 
 <div class="publish-bar">
@@ -48,6 +58,24 @@
     Development Mode is on — shifts can be assigned regardless of submitted availability.
   </p>
 }
+
+@if (viewMode() === 'day') {
+  <div class="day-tabs">
+    @for (col of dayColumns(); track col.label; let i = $index) {
+      <button
+        type="button"
+        class="day-tab"
+        [class.active]="selectedDayIndex() === i"
+        (click)="selectedDayIndex.set(i)"
+      >
+        <span class="day-tab-label">{{ col.label }}</span>
+        <span class="day-tab-date">{{ col.dateLabel }}</span>
+      </button>
+    }
+  </div>
+
+  <app-schedule-day-view [assignments]="selectedDayAssignments()" />
+} @else {
 
 <div cdkDropListGroup class="schedule">
   <div class="palette">
@@ -219,3 +247,4 @@
     }
   </div>
 </div>
+}

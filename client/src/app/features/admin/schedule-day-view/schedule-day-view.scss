@@ -1,0 +1,111 @@
+// Kept in sync with HOUR_HEIGHT_PX in schedule-day-view.ts — the hour rows
+// here are plain stacked blocks (their height is what defines an hour's
+// pixel span), while event cards are positioned against that same scale
+// via absolute top/height computed in the component.
+$hour-height: 60px;
+
+.day-view {
+  display: flex;
+  max-height: 70vh;
+  overflow: auto;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+}
+
+.time-axis {
+  flex: 0 0 64px;
+  border-right: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.hour-row {
+  height: $hour-height;
+  box-sizing: border-box;
+  padding: 2px 8px 0 0;
+  text-align: right;
+}
+
+.hour-label {
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+  transform: translateY(-50%);
+  display: inline-block;
+}
+
+.timeline {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 480px;
+}
+
+.hour-gridline {
+  height: $hour-height;
+  box-sizing: border-box;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+.event-card {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+
+  &.draft {
+    opacity: 0.75;
+    border: 1px dashed rgba(255, 255, 255, 0.8);
+  }
+
+  &.absent {
+    opacity: 0.5;
+
+    .event-title,
+    .event-shift {
+      text-decoration: line-through;
+    }
+  }
+}
+
+.event-title {
+  font-weight: 700;
+}
+
+.event-shift {
+  opacity: 0.9;
+}
+
+.event-time {
+  opacity: 0.9;
+}
+
+.event-badge {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.empty-note {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}

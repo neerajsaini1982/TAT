@@ -1,0 +1,39 @@
+<div class="day-view">
+  <div class="time-axis">
+    @for (hour of hours(); track hour) {
+      <div class="hour-row">
+        <span class="hour-label">{{ hourLabel(hour) }}</span>
+      </div>
+    }
+  </div>
+
+  <div class="timeline" [style.height.px]="totalHeightPx()">
+    @for (hour of hours(); track hour) {
+      <div class="hour-gridline"></div>
+    }
+
+    @for (laidOut of laidOutEvents(); track laidOut.event.id) {
+      @let style = eventStyle(laidOut);
+      <div
+        class="event-card"
+        [style]="style"
+        [style.background]="employeeColor(laidOut.event.accountId)"
+        [class.draft]="!laidOut.event.isPublished"
+        [class.absent]="laidOut.event.isAbsent"
+      >
+        <span class="event-title">{{ laidOut.event.accountFirstName }} {{ laidOut.event.accountLastName }}</span>
+        <span class="event-shift">{{ laidOut.event.shiftName }}</span>
+        <span class="event-time">{{ timeRangeLabel(laidOut.event) }}</span>
+        @if (laidOut.event.isAbsent) {
+          <span class="event-badge">Absent</span>
+        } @else if (!laidOut.event.isPublished) {
+          <span class="event-badge">Draft</span>
+        }
+      </div>
+    }
+
+    @if (assignments().length === 0) {
+      <p class="empty-note">No shifts scheduled for this day.</p>
+    }
+  </div>
+</div>
