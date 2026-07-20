@@ -13,6 +13,16 @@
   <button mat-icon-button (click)="nextWeek()" aria-label="Next week">
     <mat-icon>chevron_right</mat-icon>
   </button>
+
+  <mat-button-toggle-group
+    class="view-toggle"
+    [value]="viewMode()"
+    (change)="viewMode.set($event.value)"
+    aria-label="View mode"
+  >
+    <mat-button-toggle value="week">Week</mat-button-toggle>
+    <mat-button-toggle value="day">Day</mat-button-toggle>
+  </mat-button-toggle-group>
 </div>
 
 <div class="publish-bar">
@@ -49,14 +59,42 @@
   </p>
 }
 
+@if (viewMode() === 'day') {
+  <div class="day-tabs">
+    @for (col of dayColumns(); track col.label; let i = $index) {
+      <button
+        type="button"
+        class="day-tab"
+        [class.active]="selectedDayIndex() === i"
+        (click)="selectedDayIndex.set(i)"
+      >
+        <span class="day-tab-label">{{ col.label }}</span>
+        <span class="day-tab-date">{{ col.dateLabel }}</span>
+      </button>
+    }
+  </div>
+
+  <app-schedule-day-view
+    [assignments]="selectedDayAssignments()"
+    (markAbsent)="markAbsent($event)"
+    (clearAbsent)="clearAbsent($event)"
+    (editTimes)="editTimesForDay($event)"
+  />
+} @else {
+
 <div cdkDropListGroup class="schedule">
   <div class="palette">
     <span class="palette-label">Drag a shift onto a cell to assign it:</span>
     <div cdkDropList id="palette" class="palette-list">
-      @for (shift of shifts(); track shift.id) {
-        <div class="chip template-chip" cdkDrag [cdkDragData]="{ kind: 'template', shift: shift }">
-          <span class="chip-name">{{ shift.name }}</span>
-          <span class="chip-time">{{ shiftTime(shift) }}</span>
+      @for (group of groupedShifts(); track group.startTime) {
+        <div class="palette-row">
+          <span class="palette-row-time">{{ group.startTime.slice(0, 5) }}</span>
+          @for (shift of group.shifts; track shift.id) {
+            <div class="chip template-chip" cdkDrag [cdkDragData]="{ kind: 'template', shift: shift }">
+              <span class="chip-name">{{ shift.name }}</span>
+              <span class="chip-time">{{ shiftTime(shift) }}</span>
+            </div>
+          }
         </div>
       }
       @if (shifts().length === 0) {
@@ -65,19 +103,38 @@
     </div>
   </div>
 
-  <div class="table-scroll">
-    <table>
-      <thead>
+  <div class="filters-bar">
+    <mat-form-field appearance="outline" class="employee-search">
+      <mat-label>Search employees</mat-label>
+      <input matInput [ngModel]="employeeSearch()" (ngModelChange)="employeeSearch.set($event)" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+    <mat-checkbox [ngModel]="showOnlyScheduled()" (ngModelChange)="showOnlyScheduled.set($event)">
+      Show only scheduled employees
+    </mat-checkbox>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-scroll" #bodyScroll (scroll)="onBodyScroll(bodyScroll)">
+      <table>
+        <colgroup>
+          <col class="col-employee" />
+          @for (col of dayColumns(); track col.label) {
+            <col class="col-day" />
+          }
+          <col class="col-total" />
+        </colgroup>
+        <thead>
         <tr>
           <th class="employee-col">Employee</th>
-          @for (label of dayHeaders; track label) {
-            <th>{{ label }}</th>
+          @for (col of dayColumns(); track col.label) {
+            <th>{{ col.label }} <span class="day-date">{{ col.dateLabel }}</span></th>
           }
           <th class="total-col">Total Hrs</th>
         </tr>
       </thead>
       <tbody>
-        @for (row of rows(); track row.accountId) {
+        @for (row of visibleRows(); track row.accountId) {
           <tr>
             <td class="employee-col" [style.--employee-color]="employeeColor(row.accountId)">
               <span class="employee-dot"></span>{{ row.name }}
@@ -157,23 +214,47 @@
             <td class="total-col">{{ row.totalHours }}</td>
           </tr>
         }
-        @if (rows().length === 0) {
+        @if (visibleRows().length === 0) {
           <tr>
-            <td [attr.colspan]="dayHeaders.length + 2">No employees at this location yet.</td>
+            <td [attr.colspan]="dayHeaders.length + 2">
+              {{ rows().length === 0 ? 'No employees at this location yet.' : 'No employees match your filters.' }}
+            </td>
           </tr>
         }
       </tbody>
-      @if (rows().length > 0) {
-        <tfoot>
-          <tr>
-            <td class="employee-col">Daily Total</td>
-            @for (total of dailyTotals(); track $index) {
-              <td>{{ total }}</td>
+      </table>
+    </div>
+
+    @if (rows().length > 0) {
+      <!-- A separate table below the scrolling body, rather than a <tfoot> inside
+           it: a <tfoot> is always the table's last row, so it never has room to
+           detach and "stick" — position:sticky has nothing to push it away from.
+           Keeping the Daily Total row outside .table-scroll entirely means it's
+           never subject to that box's vertical scrolling in the first place, and
+           stays visible without a sticky offset. Its own scrollLeft is mirrored
+           from the body via onBodyScroll so columns still line up when scrolled
+           horizontally; the colgroup on both tables keeps column widths identical. -->
+      <div class="table-footer-scroll" #footerScroll>
+        <table>
+          <colgroup>
+            <col class="col-employee" />
+            @for (col of dayColumns(); track col.label) {
+              <col class="col-day" />
             }
-            <td class="total-col"></td>
-          </tr>
-        </tfoot>
-      }
-    </table>
+            <col class="col-total" />
+          </colgroup>
+          <tfoot>
+            <tr>
+              <td class="employee-col">Daily Total</td>
+              @for (total of dailyTotals(); track $index) {
+                <td>{{ total }}</td>
+              }
+              <td class="total-col">{{ weekTotalHours() }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
   </div>
 </div>
+}

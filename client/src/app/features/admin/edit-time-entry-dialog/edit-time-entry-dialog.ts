@@ -65,10 +65,20 @@ export class EditTimeEntryDialog {
     const entry = data.entry;
     this.clockInAt = toInput(entry?.clockInAt ?? null) || formatHHmm(new Date());
     this.clockOutAt = toInput(entry?.clockOutAt ?? null);
-    this.segments = (entry?.segments ?? [])
-      .slice()
-      .sort((a, b) => a.startAt.localeCompare(b.startAt))
-      .map((s) => ({ kind: s.kind, start: toInput(s.startAt), end: toInput(s.endAt) }));
+    // Nobody's punched in yet, so there's nothing actually recorded to
+    // default to — start from what was scheduled instead of an empty list,
+    // since that's almost always what actually happens. Once real
+    // clock/segment data exists, it takes over as the source of truth and
+    // scheduledBreaks goes back to being just the reference line above.
+    this.segments = entry
+      ? entry.segments
+          .slice()
+          .sort((a, b) => a.startAt.localeCompare(b.startAt))
+          .map((s) => ({ kind: s.kind, start: toInput(s.startAt), end: toInput(s.endAt) }))
+      : data.scheduledBreaks
+          .slice()
+          .sort((a, b) => a.startTime.localeCompare(b.startTime))
+          .map((b) => ({ kind: b.kind, start: b.startTime.slice(0, 5), end: b.endTime.slice(0, 5) }));
   }
 
   addSegment(kind: BreakKind): void {

@@ -1,0 +1,137 @@
+// Row/gridline heights come from the component (hourHeightPx, an inline
+// style binding) rather than a fixed value here — the whole timeline is
+// scaled to a constant total height (TIMELINE_HEIGHT_PX) regardless of how
+// many hours the day spans, so the full day is always visible in this one
+// section with no internal scrolling.
+.day-view {
+  display: flex;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  // Horizontal only — a busy day can still need to scroll sideways to see
+  // every overlapping-shift column, but the vertical span is always scaled
+  // to fit (see hourHeightPx), so there's never a vertical scrollbar here.
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.time-axis {
+  flex: 0 0 64px;
+  border-right: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.hour-row {
+  box-sizing: border-box;
+  padding: 2px 8px 0 0;
+  text-align: right;
+}
+
+.hour-label {
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+  transform: translateY(-50%);
+  display: inline-block;
+}
+
+.timeline {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 480px;
+}
+
+.hour-gridline {
+  box-sizing: border-box;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+.event-card {
+  // Also the containing block for .event-menu-trigger's absolute
+  // positioning — top/left/width/height here come from eventStyle()'s
+  // [style] binding, positioning the card itself within .timeline.
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 6px;
+  padding: 6px 30px 6px 10px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.3;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+
+  &.draft {
+    opacity: 0.75;
+    border: 1px dashed rgba(255, 255, 255, 0.8);
+  }
+
+  &.absent {
+    opacity: 0.5;
+
+    .event-title,
+    .event-shift {
+      text-decoration: line-through;
+    }
+  }
+}
+
+// Placeholder for future per-shift actions beyond Mark/Clear Absent — kept
+// as its own menu (rather than inline buttons) since the card is already
+// tight on space at this font size.
+.event-menu-trigger {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: #fff;
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+  }
+}
+
+.event-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.event-shift {
+  font-weight: 500;
+  opacity: 0.95;
+}
+
+.event-time {
+  opacity: 0.95;
+}
+
+.event-badge {
+  align-self: flex-start;
+  margin-top: 3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.empty-note {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}

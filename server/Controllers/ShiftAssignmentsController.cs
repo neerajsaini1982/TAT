@@ -207,9 +207,11 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     }
 
     // Lets a Lead/Admin mark an employee absent for a shift they didn't
-    // show up for (or clear a mistaken mark). Blocked once a TimeEntry
-    // exists — at that point the employee did clock in, so the relevant
-    // action is AdminClockOut (see TimeEntriesController) instead.
+    // show up for (or clear a mistaken mark). Marking someone absent who
+    // did clock in wipes that TimeEntry (and its segments, via cascade
+    // delete) rather than being blocked by it — absent means the shift
+    // didn't happen, so a stray punch (e.g. clocked in then never showed
+    // up again) shouldn't be left dangling behind it.
     [HttpPut("{id:int}/absent")]
     [Authorize(Policy = "LeadOrAbove")]
     public async Task<ActionResult<ShiftAssignmentDto>> MarkAbsent(int id, MarkAbsentRequest request)
@@ -229,9 +231,13 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             return BadRequest("A note is required when marking an employee absent.");
         }
 
-        if (request.IsAbsent && db.TimeEntries.Any(t => t.ShiftAssignmentId == assignment.Id))
+        if (request.IsAbsent)
         {
-            return Conflict("This employee already clocked in for this shift.");
+            var existingEntry = db.TimeEntries.SingleOrDefault(t => t.ShiftAssignmentId == assignment.Id);
+            if (existingEntry is not null)
+            {
+                db.TimeEntries.Remove(existingEntry);
+            }
         }
 
         assignment.IsAbsent = request.IsAbsent;
@@ -284,13 +290,33 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     private int CallerAccountId() =>
         int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    private static double ComputeHours(TimeOnly start, TimeOnly end)
+    // Lunch is unpaid, so it comes out of the shift's clock span; Break is
+    // paid and stays in — same convention current-week-schedule.ts uses for
+    // actual worked hours (see workedMinutes there), applied here to the
+    // *scheduled* span instead of clocked-in/out times.
+    private static double ComputeHours(TimeOnly start, TimeOnly end, IEnumerable<ScheduledBreak> scheduledBreaks)
     {
         var span = end - start;
         if (span < TimeSpan.Zero)
         {
             // Overnight shift (e.g. 22:00-06:00) crosses midnight.
             span += TimeSpan.FromDays(1);
+        }
+
+        foreach (var b in scheduledBreaks)
+        {
+            if (b.Kind != BreakKind.Lunch)
+            {
+                continue;
+            }
+
+            var lunchSpan = b.EndTime - b.StartTime;
+            if (lunchSpan < TimeSpan.Zero)
+            {
+                lunchSpan += TimeSpan.FromDays(1);
+            }
+
+            span -= lunchSpan;
         }
 
         return Math.Round(span.TotalHours, 2);
@@ -306,7 +332,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .OrderBy(b => b.StartTime)
             .Select(b => new ScheduledBreakDto(b.Kind, b.StartTime, b.EndTime))
             .ToList(),
-        ComputeHours(a.Shift.StartTime, a.Shift.EndTime),
+        ComputeHours(a.Shift.StartTime, a.Shift.EndTime, a.Shift.ScheduledBreaks),
         a.AccountId,
         a.Account!.FirstName,
         a.Account.LastName,

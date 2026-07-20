@@ -31,6 +31,7 @@
   justify-content: center;
   gap: 8px;
   margin-bottom: 16px;
+  position: relative;
 
   .week-label {
     min-width: 160px;
@@ -38,6 +39,50 @@
     font-weight: 500;
     font-size: 17px;
   }
+}
+
+.view-toggle {
+  position: absolute;
+  right: 0;
+}
+
+.day-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.day-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 64px;
+  padding: 6px 10px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  cursor: pointer;
+  font: inherit;
+
+  &.active {
+    background: var(--mat-sys-primary);
+    border-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+  }
+}
+
+.day-tab-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.day-tab-date {
+  font-size: 13px;
 }
 
 .error {
@@ -104,23 +149,55 @@
 
 .palette {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  flex-wrap: wrap;
   margin-bottom: 16px;
+}
+
+.filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.employee-search {
+  min-width: 220px;
 }
 
 .palette-label {
   font-size: 13px;
   color: var(--mat-sys-on-surface-variant);
   white-space: nowrap;
+  // Lines the label up with the first row of chips instead of the whole
+  // (now multi-row) palette-list block, now that .palette is top-aligned.
+  padding-top: 8px;
 }
 
 .palette-list {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 40px;
+  flex: 1 1 auto;
+}
+
+// One row per distinct start time — shifts starting at the same time sit
+// on the same line, earlier start times above later ones (see
+// groupedShifts in admin-schedule-page.ts).
+.palette-row {
+  display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  min-height: 40px;
+}
+
+.palette-row-time {
+  min-width: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .palette-empty {
@@ -304,8 +381,25 @@
 
 table {
   border-collapse: collapse;
+  table-layout: fixed;
   width: 100%;
   min-width: 900px;
+}
+
+// Fixed layout + a matching colgroup on both the body table and the footer
+// table (see .table-footer-scroll below) is what keeps their columns the
+// same width — with two separate <table> elements, browsers can't infer
+// that from shared content the way they would within a single table.
+.col-employee {
+  width: 140px;
+}
+
+.col-day {
+  width: 110px;
+}
+
+.col-total {
+  width: 70px;
 }
 
 th,
@@ -333,7 +427,6 @@ th {
   position: sticky;
   left: 0;
   z-index: 1;
-  min-width: 140px;
   white-space: nowrap;
   font-weight: 500;
   background: var(--mat-sys-surface);
@@ -341,6 +434,16 @@ th {
 
 th.employee-col {
   z-index: 3;
+}
+
+// Sits directly below .table-scroll, outside it, so the Daily Total row is
+// always on-screen without needing to track vertical scroll — see the
+// template comment by table-footer-scroll for why sticky doesn't work here.
+// Horizontal scroll still has to be mirrored in from the body (onBodyScroll),
+// so this container's own scrolling is JS-driven, not user-facing.
+.table-footer-scroll {
+  overflow: hidden;
+  border-top: 2px solid var(--mat-sys-outline-variant);
 }
 
 tfoot .employee-col {
@@ -361,13 +464,16 @@ tfoot .employee-col {
 }
 
 .total-col {
-  min-width: 70px;
   text-align: center;
   font-weight: 600;
 }
 
+.day-date {
+  font-weight: 400;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .day-cell {
-  min-width: 110px;
   min-height: 64px;
 
   &.unavailable {

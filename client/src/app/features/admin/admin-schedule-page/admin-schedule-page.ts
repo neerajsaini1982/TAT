@@ -1,8 +1,13 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
 import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -18,6 +23,7 @@ import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-f
 import { addDays, combineDateAndTime, formatDate, formatWeekRange, mondayOf } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
+import { ScheduleDayView } from '../schedule-day-view/schedule-day-view';
 
 interface DayCell {
   date: string;
@@ -47,7 +53,20 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 @Component({
   selector: 'app-admin-schedule-page',
-  imports: [RouterLink, MatButtonModule, MatIconModule, CdkDropListGroup, CdkDropList, CdkDrag],
+  imports: [
+    RouterLink,
+    FormsModule,
+    MatButtonModule,
+    MatButtonToggleModule,
+    MatCheckboxModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    CdkDropListGroup,
+    CdkDropList,
+    CdkDrag,
+    ScheduleDayView,
+  ],
   templateUrl: './admin-schedule-page.html',
   styleUrl: './admin-schedule-page.scss',
 })
@@ -90,6 +109,78 @@ export class AdminSchedulePage implements OnInit {
   private readonly entriesByAssignmentId = signal<Map<number, TimeEntryDto>>(new Map());
   protected readonly employeeColor = employeeColor;
 
+  // Shift templates grouped into rows by start time — shifts that all
+  // start at the same time land on one line, the next-earliest start time
+  // on the line below, and so on. Makes it much faster to find "the 11am
+  // shift" while dragging than scanning one big unordered wrapped list.
+  protected readonly groupedShifts = computed(() => {
+    const byStartTime = new Map<string, ShiftDto[]>();
+    for (const shift of this.shifts()) {
+      const group = byStartTime.get(shift.startTime);
+      if (group) {
+        group.push(shift);
+      } else {
+        byStartTime.set(shift.startTime, [shift]);
+      }
+    }
+    return [...byStartTime.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([startTime, shiftsAtTime]) => ({
+        startTime,
+        shifts: [...shiftsAtTime].sort((a, b) => a.endTime.localeCompare(b.endTime)),
+      }));
+  });
+
+  // Header labels paired with each column's actual calendar date, e.g. "Mon" + "Jul 20".
+  protected readonly dayColumns = computed(() => {
+    const start = this.weekStart();
+    return DAY_HEADERS.map((label, i) => ({
+      label,
+      dateLabel: addDays(start, i).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    }));
+  });
+
+  // Week grid vs. a single day's Google-Calendar-style timeline (see
+  // ScheduleDayView) — the latter is for spotting coverage gaps (is
+  // someone opening/closing, are there enough shifts) at a glance, rather
+  // than reading times out of the grid's chips one by one.
+  protected readonly viewMode = signal<'week' | 'day'>('week');
+  // Index into DAY_HEADERS/dayColumns (0 = Monday). Defaults to today if
+  // today falls in the visible week, otherwise Monday; deliberately not
+  // recomputed on previous/next-week navigation so flipping weeks keeps
+  // you on the same day-of-week you were looking at.
+  protected readonly selectedDayIndex = signal(this.defaultDayIndex());
+
+  protected readonly selectedDayAssignments = computed(() => {
+    const dayIndex = this.selectedDayIndex();
+    return this.rows().flatMap((row) => row.days[dayIndex]?.assignments ?? []);
+  });
+
+  private defaultDayIndex(): number {
+    const start = mondayOf(new Date());
+    for (let i = 0; i < 7; i++) {
+      if (formatDate(addDays(start, i)) === this.todayIso) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  // Filters affect which rows are displayed, not the Daily Total / Total
+  // Hrs figures below — those stay the full location's schedule regardless
+  // of what's currently filtered into view.
+  protected readonly employeeSearch = signal('');
+  protected readonly showOnlyScheduled = signal(false);
+
+  protected readonly visibleRows = computed(() => {
+    const query = this.employeeSearch().trim().toLowerCase();
+    const onlyScheduled = this.showOnlyScheduled();
+    return this.rows().filter(
+      (row) =>
+        (!query || row.name.toLowerCase().includes(query)) && (!onlyScheduled || row.totalHours > 0),
+    );
+  });
+
   protected readonly dailyTotals = computed(() =>
     DAY_HEADERS.map((_, i) =>
       this.rows().reduce((sum, row) => sum + row.days[i].assignments.reduce((s, a) => s + a.hours, 0), 0),
@@ -108,6 +199,19 @@ export class AdminSchedulePage implements OnInit {
     () => this.hasAssignments() && this.allAssignments().every((a) => a.isPublished),
   );
   protected readonly publishing = signal(false);
+
+  // The Daily Total row lives in its own table below .table-scroll (see the
+  // template comment there) so it stays visible while the body scrolls
+  // vertically. It still needs to track the body's horizontal scroll so its
+  // columns stay lined up underneath the body's.
+  private readonly footerScroll = viewChild<ElementRef<HTMLDivElement>>('footerScroll');
+
+  onBodyScroll(body: HTMLDivElement): void {
+    const footer = this.footerScroll()?.nativeElement;
+    if (footer) {
+      footer.scrollLeft = body.scrollLeft;
+    }
+  }
 
   ngOnInit(): void {
     this.settingsApi.get(this.locationCode).subscribe({
@@ -391,7 +495,26 @@ export class AdminSchedulePage implements OnInit {
   // that case, and the dialog starts blank apart from a default Clock In
   // of "now").
   editTimes(assignment: ShiftAssignmentDto): void {
-    const entry = this.entryFor(assignment);
+    this.openEditTimesDialog(assignment, this.entryFor(assignment));
+  }
+
+  // Same dialog as editTimes, but for the Day view's "Time Punches" menu
+  // item, which can point at any day in the week — not just today, so it
+  // can't reuse entriesByAssignmentId (that Map is only ever populated for
+  // todayIso, see load()). There's no server-side restriction to today
+  // for AdminEditTimes, so this just fetches that specific day's entries
+  // fresh instead of maintaining a second cache for the rest of the week.
+  editTimesForDay(assignment: ShiftAssignmentDto): void {
+    this.timeEntriesApi.getForLocation(this.locationCode, assignment.date).subscribe({
+      next: (entries) => {
+        const entry = entries.find((e) => e.shiftAssignmentId === assignment.id) ?? null;
+        this.openEditTimesDialog(assignment, entry);
+      },
+      error: () => this.openEditTimesDialog(assignment, null),
+    });
+  }
+
+  private openEditTimesDialog(assignment: ShiftAssignmentDto, entry: TimeEntryDto | null): void {
     this.dialog
       .open<EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult>(EditTimeEntryDialog, {
         data: {
