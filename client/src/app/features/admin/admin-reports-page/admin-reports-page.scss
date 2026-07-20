@@ -32,12 +32,17 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+// table-layout: fixed makes every column width below exact rather than a
+// content-based suggestion — the nested day-table (below) mirrors these
+// same widths so its columns line up under the matching parent column.
 .hours-report-table {
   width: 100%;
+  table-layout: fixed;
 
   th,
   td {
     padding: 12px 16px;
+    box-sizing: border-box;
   }
 
   // Header labels ("Net Worked Time", etc.) are short phrases — keep them
@@ -68,7 +73,11 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+// Fixed (rather than content-sized) so expand + employeeId + fullName add
+// up to a known pixel offset — see .detail-cell below, which indents the
+// nested table by exactly that sum to line its columns up with these.
 .mat-column-fullName {
+  width: 220px;
   font-weight: 500;
 }
 
@@ -78,13 +87,18 @@
   width: auto;
 }
 
+// Indented by expand (56px) + employeeId (120px) so the nested table's
+// Date column starts exactly under the parent row's Full Name column —
+// see the day-table widths below, which mirror the parent's column widths
+// from that point on so every column lines up.
 .detail-cell {
-  padding: 0 16px 20px 72px !important;
+  padding: 0 16px 20px 176px !important;
   background: var(--mat-sys-surface-container-low);
 }
 
 .day-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
 
   th,
@@ -92,6 +106,7 @@
     padding: 8px 16px;
     text-align: left;
     font-size: 13px;
+    box-sizing: border-box;
   }
 
   thead th {
@@ -101,14 +116,18 @@
   }
 }
 
+// Matches .mat-column-fullName's width so this column sits directly under
+// Full Name in the parent row.
 .day-date-col {
-  width: 170px;
+  width: 220px;
   white-space: nowrap;
   color: var(--mat-sys-on-surface-variant);
 }
 
+// Matches the parent row's workedTime/breakTime/lunchTime/netWorkedTime
+// column width so these line up one-for-one with their parent column.
 .day-numeric-col {
-  width: 120px;
+  width: 150px;
   white-space: nowrap;
   text-align: right;
 }

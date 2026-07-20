@@ -17,9 +17,11 @@ namespace Server.Controllers;
 public class ReportsController(AppDbContext db) : ControllerBase
 {
     // Top level: one row per employee with totals across the range. Days is
-    // the drill-down — one row per date the employee had a shift assignment,
-    // whether worked, absent, or still open. Employees with no assignment in
-    // range don't appear at all (nothing to report).
+    // the drill-down — one row per date the employee had a published shift
+    // assignment, whether worked, absent, or still open. Employees with no
+    // assignment in range don't appear at all (nothing to report), and a
+    // draft (not-yet-posted) assignment doesn't count as "scheduled" either
+    // — same rule as what employees themselves see (GetMine).
     [HttpGet("hours")]
     public ActionResult<IEnumerable<EmployeeHoursReportDto>> GetHoursReport(
         [FromQuery] string? locationCode, [FromQuery] DateOnly startDate, [FromQuery] DateOnly endDate)
@@ -41,7 +43,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
 
         var assignments = db.ShiftAssignments
             .Include(a => a.Account)
-            .Where(a => a.Shift!.LocationId == location.Id && a.Date >= startDate && a.Date <= endDate)
+            .Where(a => a.Shift!.LocationId == location.Id && a.Date >= startDate && a.Date <= endDate && a.IsPublished)
             .ToList();
 
         var assignmentIds = assignments.Select(a => a.Id).ToList();

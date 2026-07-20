@@ -9,7 +9,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTable, MatTableModule } from '@angular/material/table';
 
 import { EmployeeHoursReportDto, ReportsApi } from '../../../core/reports-api';
-import { formatDurationMinutes } from '../../../core/duration-format';
+import { formatDurationOrDash } from '../../../core/duration-format';
 import { addDays, dayOfWeekLabel, formatDate, toMmDdYyyy } from '../../../core/week-utils';
 
 @Component({
@@ -104,7 +104,7 @@ export class AdminReportsPage implements OnInit {
   }
 
   formatDuration(minutes: number): string {
-    return formatDurationMinutes(minutes);
+    return formatDurationOrDash(minutes);
   }
 
   dayLabel(isoDate: string): string {
