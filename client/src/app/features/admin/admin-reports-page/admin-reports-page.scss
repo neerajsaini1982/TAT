@@ -1,5 +1,15 @@
+// The app shell centers every route in a 960px .content column (see
+// app.scss) — fine for forms, but it squeezes this table into a box
+// narrower than most screens for no reason. Break out to the full viewport
+// width instead, same technique as admin-schedule-page.scss.
 :host {
   display: block;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  box-sizing: border-box;
+  padding: 24px;
 }
 
 .filters-card {
@@ -24,10 +34,53 @@
 
 .hours-report-table {
   width: 100%;
+
+  th,
+  td {
+    padding: 12px 16px;
+  }
+
+  // Header labels ("Net Worked Time", etc.) are short phrases — keep them
+  // on one line now that there's room, same as the duration values below.
+  th {
+    white-space: nowrap;
+  }
+}
+
+// Duration columns are short and fixed-shape ("4h 30m") — right-align and
+// pin a width so they line up in a neat column instead of each cell sizing
+// to its own content.
+.mat-column-workedTime,
+.mat-column-breakTime,
+.mat-column-lunchTime,
+.mat-column-netWorkedTime {
+  width: 150px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.mat-column-expand {
+  width: 56px;
+}
+
+.mat-column-employeeId {
+  width: 120px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.mat-column-fullName {
+  font-weight: 500;
+}
+
+// Notes is the least predictable column in width — let it absorb whatever
+// space the fixed-width columns to its left don't use.
+.mat-column-notes {
+  width: auto;
 }
 
 .detail-cell {
-  padding: 0 16px 16px !important;
+  padding: 0 16px 20px 72px !important;
+  background: var(--mat-sys-surface-container-low);
 }
 
 .day-table {
@@ -36,15 +89,36 @@
 
   th,
   td {
-    padding: 6px 12px;
+    padding: 8px 16px;
     text-align: left;
     font-size: 13px;
   }
 
   thead th {
     color: var(--mat-sys-on-surface-variant);
+    font-weight: 500;
     border-bottom: 1px solid var(--mat-sys-outline-variant);
   }
+}
+
+.day-date-col {
+  width: 170px;
+  white-space: nowrap;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.day-numeric-col {
+  width: 120px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+// The "Absent — reason" cell spans what would otherwise be the four numeric
+// columns — it reads as a sentence, not a number, so it stays left-aligned
+// and free to wrap unlike its siblings.
+.day-absent-col {
+  text-align: left;
+  white-space: normal;
 }
 
 .absent-row td {
@@ -56,6 +130,8 @@
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+  text-align: left;
+  white-space: normal;
 }
 
 .flag {

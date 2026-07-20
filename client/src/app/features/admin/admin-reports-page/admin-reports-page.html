@@ -80,27 +80,27 @@
         <table class="day-table">
           <thead>
             <tr>
-              <th>Date</th>
-              <th>Time Worked</th>
-              <th>Break Time</th>
-              <th>Lunch Time</th>
-              <th>Net Worked Time</th>
+              <th class="day-date-col">Date</th>
+              <th class="day-numeric-col">Time Worked</th>
+              <th class="day-numeric-col">Break Time</th>
+              <th class="day-numeric-col">Lunch Time</th>
+              <th class="day-numeric-col">Net Worked Time</th>
               <th>Notes</th>
             </tr>
           </thead>
           <tbody>
             @for (day of emp.days; track day.date) {
               <tr [class.absent-row]="day.isAbsent">
-                <td>{{ dayLabel(day.date) }}</td>
+                <td class="day-date-col">{{ dayLabel(day.date) }}</td>
                 @if (day.isAbsent) {
-                  <td colspan="4">
+                  <td colspan="4" class="day-absent-col">
                     Absent
                     @if (day.absenceNote) {
                       — {{ day.absenceNote }}
                     }
                   </td>
                 } @else {
-                  <td>
+                  <td class="day-numeric-col">
                     @if (day.workedMinutes !== null) {
                       {{ formatDuration(day.workedMinutes) }}
                     } @else if (day.stillClockedIn) {
@@ -109,9 +109,9 @@
                       —
                     }
                   </td>
-                  <td [class.flag]="day.hasLongBreak">{{ formatDuration(day.breakMinutes) }}</td>
-                  <td [class.flag]="day.hasLongLunch">{{ formatDuration(day.lunchMinutes) }}</td>
-                  <td>{{ day.netWorkedMinutes !== null ? formatDuration(day.netWorkedMinutes) : '—' }}</td>
+                  <td class="day-numeric-col" [class.flag]="day.hasLongBreak">{{ formatDuration(day.breakMinutes) }}</td>
+                  <td class="day-numeric-col" [class.flag]="day.hasLongLunch">{{ formatDuration(day.lunchMinutes) }}</td>
+                  <td class="day-numeric-col">{{ day.netWorkedMinutes !== null ? formatDuration(day.netWorkedMinutes) : '—' }}</td>
                 }
                 <td class="notes-cell">
                   @if (day.hasLongBreak) {
