@@ -417,7 +417,12 @@ export class CurrentWeekSchedule implements OnInit {
   editTimes(shift: DayShift): void {
     this.dialog
       .open<EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult>(EditTimeEntryDialog, {
-        data: { employeeName: shift.employeeName, entry: shift.entry },
+        data: {
+          employeeName: shift.employeeName,
+          entry: shift.entry,
+          isBreakRequired: shift.assignment.isBreakRequired,
+          isLunchRequired: shift.assignment.isLunchRequired,
+        },
       })
       .afterClosed()
       .subscribe((result) => {

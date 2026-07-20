@@ -400,6 +400,8 @@ export class AdminSchedulePage implements OnInit {
         data: {
           employeeName: `${assignment.accountFirstName} ${assignment.accountLastName}`,
           entry,
+          isBreakRequired: assignment.isBreakRequired,
+          isLunchRequired: assignment.isLunchRequired,
         },
       })
       .afterClosed()

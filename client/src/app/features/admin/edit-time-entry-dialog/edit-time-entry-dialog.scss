@@ -14,6 +14,16 @@
   width: 100%;
 }
 
+// The "not required for this shift" hints span both columns, right under
+// the pair of fields they explain (Break/Lunch/2nd Break).
+.not-required-hint {
+  grid-column: 1 / -1;
+  margin: -8px 0 4px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .error {
   color: var(--mat-sys-error);
   margin: 0 0 8px;

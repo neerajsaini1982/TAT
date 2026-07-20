@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 
 import { TimeEntryDto } from '../../../core/time-entries-api';
@@ -11,7 +12,25 @@ import { formatHHmm } from '../../../core/week-utils';
 export interface EditTimeEntryDialogData {
   employeeName: string;
   entry: TimeEntryDto | null;
+  // Drives the "not required for this shift" hints below — a shift that
+  // doesn't require a break/lunch can still end up with a stray punch on
+  // it (e.g. an earlier admin edit, or the requirement changing after the
+  // employee already clocked in), so the field itself stays editable/
+  // clearable either way rather than being disabled outright.
+  isBreakRequired: boolean;
+  isLunchRequired: boolean;
 }
+
+// The fields it makes sense to blank out with the Clear button — everything
+// except Clock In, which is the one field Save requires non-empty.
+type ClearableField =
+  | 'clockOutAt'
+  | 'breakStartAt'
+  | 'breakEndAt'
+  | 'lunchStartAt'
+  | 'lunchEndAt'
+  | 'break2StartAt'
+  | 'break2EndAt';
 
 export interface EditTimeEntryResult {
   clockInAt: string;
@@ -34,7 +53,7 @@ const toInput = (iso: string | null): string => (iso ? formatHHmm(new Date(iso))
 // required-note convention as NoteDialog (see AdminEditTimeEntryRequest).
 @Component({
   selector: 'app-edit-time-entry-dialog',
-  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
   templateUrl: './edit-time-entry-dialog.html',
   styleUrl: './edit-time-entry-dialog.scss',
 })
@@ -111,5 +130,9 @@ export class EditTimeEntryDialog {
 
   cancel(): void {
     this.dialogRef.close();
+  }
+
+  clear(field: ClearableField): void {
+    this[field] = '';
   }
 }
