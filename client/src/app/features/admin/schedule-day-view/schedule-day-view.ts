@@ -25,12 +25,13 @@ const FALLBACK_END_HOUR = 17;
 export class ScheduleDayView {
   readonly assignments = input<ShiftAssignmentDto[]>([]);
 
-  // Per-card settings menu — Mark Absent is the first entry today, with more
+  // Per-card settings menu — Mark Absent and Time Punches today, with more
   // expected to land here later (see the menu in the template), so each
   // action is its own output rather than baking the note-dialog/API calls
   // into this presentational component.
   readonly markAbsent = output<ShiftAssignmentDto>();
   readonly clearAbsent = output<ShiftAssignmentDto>();
+  readonly editTimes = output<ShiftAssignmentDto>();
 
   protected readonly employeeColor = employeeColor;
 

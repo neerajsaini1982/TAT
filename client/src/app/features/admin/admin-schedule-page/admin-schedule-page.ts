@@ -495,7 +495,26 @@ export class AdminSchedulePage implements OnInit {
   // that case, and the dialog starts blank apart from a default Clock In
   // of "now").
   editTimes(assignment: ShiftAssignmentDto): void {
-    const entry = this.entryFor(assignment);
+    this.openEditTimesDialog(assignment, this.entryFor(assignment));
+  }
+
+  // Same dialog as editTimes, but for the Day view's "Time Punches" menu
+  // item, which can point at any day in the week — not just today, so it
+  // can't reuse entriesByAssignmentId (that Map is only ever populated for
+  // todayIso, see load()). There's no server-side restriction to today
+  // for AdminEditTimes, so this just fetches that specific day's entries
+  // fresh instead of maintaining a second cache for the rest of the week.
+  editTimesForDay(assignment: ShiftAssignmentDto): void {
+    this.timeEntriesApi.getForLocation(this.locationCode, assignment.date).subscribe({
+      next: (entries) => {
+        const entry = entries.find((e) => e.shiftAssignmentId === assignment.id) ?? null;
+        this.openEditTimesDialog(assignment, entry);
+      },
+      error: () => this.openEditTimesDialog(assignment, null),
+    });
+  }
+
+  private openEditTimesDialog(assignment: ShiftAssignmentDto, entry: TimeEntryDto | null): void {
     this.dialog
       .open<EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult>(EditTimeEntryDialog, {
         data: {

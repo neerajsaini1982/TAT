@@ -36,6 +36,7 @@
           } @else {
             <button type="button" mat-menu-item (click)="markAbsent.emit(laidOut.event)">Mark Absent</button>
           }
+          <button type="button" mat-menu-item (click)="editTimes.emit(laidOut.event)">Time Punches</button>
         </mat-menu>
 
         <span class="event-title">{{ laidOut.event.accountFirstName }} {{ laidOut.event.accountLastName }}</span>
