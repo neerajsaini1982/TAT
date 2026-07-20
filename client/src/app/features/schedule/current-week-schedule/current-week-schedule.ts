@@ -46,14 +46,16 @@ const DEFAULT_SETTINGS = {
   lunchLimitMinutes: 30,
 };
 
-// Net time worked once clocked out: wall time minus every closed segment,
-// in whole minutes (formatted as "H Hrs M Mins" — see hoursWorkedLabel).
+// Net time worked once clocked out, in whole minutes (formatted as
+// "H Hrs M Mins" — see hoursWorkedLabel). Only Lunch segments come out of
+// wall time — Lunch is an unpaid meal period, while a Break is a paid
+// rest break and still counts as worked time.
 function workedMinutes(entry: TimeEntryDto): number {
   const msBetween = (start: string, end: string) => new Date(end).getTime() - new Date(start).getTime();
 
   let ms = msBetween(entry.clockInAt, entry.clockOutAt!);
   for (const segment of entry.segments) {
-    if (segment.endAt) {
+    if (segment.kind === 'Lunch' && segment.endAt) {
       ms -= msBetween(segment.startAt, segment.endAt);
     }
   }
