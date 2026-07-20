@@ -40,9 +40,7 @@
                 }
                 <th>Shift</th>
                 <th>Clock In</th>
-                <th>Break</th>
-                <th>Lunch</th>
-                <th>2nd Break</th>
+                <th>Breaks</th>
                 <th>Clock Out</th>
                 <th>Status</th>
                 @if (showEmployeeNames()) {
@@ -78,65 +76,35 @@
                     }
                   </td>
 
-                  <td class="punch-cell">
-                    @if (!shift.assignment.isBreakRequired) {
-                      -
-                    } @else if (shift.entry?.breakStartAt && shift.entry?.breakEndAt) {
-                      {{ punchTime(shift.entry?.breakStartAt) }} – {{ punchTime(shift.entry?.breakEndAt) }}
-                    } @else if (shift.entry?.breakStartAt) {
-                      {{ punchTime(shift.entry?.breakStartAt) }} –
-                      @if (canBreakEnd(shift)) {
-                        <button type="button" class="punch-btn" mat-stroked-button (click)="breakEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                          End
-                        </button>
-                      }
-                    } @else if (canBreakStart(shift)) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="breakStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Start
-                      </button>
-                    } @else {
-                      -
+                  <td class="punch-cell breaks-cell">
+                    @if (shift.assignment.scheduledBreaks.length > 0) {
+                      <div class="scheduled-line">
+                        @for (b of shift.assignment.scheduledBreaks; track $index) {
+                          <span class="scheduled-chip">{{ b.kind }} {{ scheduledBreakTime(b.startTime, b.endTime) }}</span>
+                        }
+                      </div>
                     }
-                  </td>
-
-                  <td class="punch-cell">
-                    @if (!shift.assignment.isLunchRequired) {
-                      -
-                    } @else if (shift.entry?.lunchStartAt && shift.entry?.lunchEndAt) {
-                      {{ punchTime(shift.entry?.lunchStartAt) }} – {{ punchTime(shift.entry?.lunchEndAt) }}
-                    } @else if (shift.entry?.lunchStartAt) {
-                      {{ punchTime(shift.entry?.lunchStartAt) }} –
-                      @if (canLunchEnd(shift)) {
-                        <button type="button" class="punch-btn" mat-stroked-button (click)="lunchEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                          End
-                        </button>
-                      }
-                    } @else if (canLunchStart(shift)) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="lunchStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Start
-                      </button>
-                    } @else {
-                      -
+                    @for (seg of segmentsFor(shift); track seg.id) {
+                      <div class="segment-line">
+                        {{ seg.kind }}: {{ punchTime(seg.startAt) }}–{{ seg.endAt ? punchTime(seg.endAt) : 'ongoing' }}
+                        @if (shift.isMine && !seg.endAt) {
+                          <button type="button" class="punch-btn" mat-stroked-button (click)="endSegment(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                            End
+                          </button>
+                        }
+                      </div>
                     }
-                  </td>
-
-                  <td class="punch-cell">
-                    @if (!shift.assignment.isBreakRequired) {
-                      -
-                    } @else if (shift.entry?.break2StartAt && shift.entry?.break2EndAt) {
-                      {{ punchTime(shift.entry?.break2StartAt) }} – {{ punchTime(shift.entry?.break2EndAt) }}
-                    } @else if (shift.entry?.break2StartAt) {
-                      {{ punchTime(shift.entry?.break2StartAt) }} –
-                      @if (canBreak2End(shift)) {
-                        <button type="button" class="punch-btn" mat-stroked-button (click)="break2End(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                          End
+                    @if (canStartSegment(shift)) {
+                      <div class="segment-actions">
+                        <button type="button" class="punch-btn" mat-stroked-button (click)="startSegment(shift, 'Break')" [disabled]="busyShiftId() === shift.assignment.id">
+                          + Break
                         </button>
-                      }
-                    } @else if (canBreak2Start(shift)) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="break2Start(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Start
-                      </button>
-                    } @else {
+                        <button type="button" class="punch-btn" mat-stroked-button (click)="startSegment(shift, 'Lunch')" [disabled]="busyShiftId() === shift.assignment.id">
+                          + Lunch
+                        </button>
+                      </div>
+                    }
+                    @if (shift.assignment.scheduledBreaks.length === 0 && segmentsFor(shift).length === 0 && !canStartSegment(shift)) {
                       -
                     }
                   </td>

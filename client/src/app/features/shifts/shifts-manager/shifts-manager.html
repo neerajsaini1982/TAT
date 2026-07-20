@@ -30,8 +30,38 @@
           <mat-label>End Time</mat-label>
           <input matInput type="time" name="endTime" [(ngModel)]="form.endTime" required />
         </mat-form-field>
-        <mat-slide-toggle name="isBreakRequired" [(ngModel)]="form.isBreakRequired">Break Required</mat-slide-toggle>
-        <mat-slide-toggle name="isLunchRequired" [(ngModel)]="form.isLunchRequired">Lunch Required</mat-slide-toggle>
+        <div class="breaks-section">
+          <span class="breaks-label">Scheduled Breaks & Lunches</span>
+          @if (form.scheduledBreaks.length === 0) {
+            <p class="breaks-empty">None yet — add as many as this shift needs.</p>
+          }
+          @for (b of form.scheduledBreaks; track $index) {
+            <div class="break-row">
+              <mat-form-field appearance="outline" class="break-kind">
+                <mat-label>Type</mat-label>
+                <mat-select [(ngModel)]="b.kind" [name]="'breakKind' + $index">
+                  <mat-option value="Break">Break</mat-option>
+                  <mat-option value="Lunch">Lunch</mat-option>
+                </mat-select>
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Start</mat-label>
+                <input matInput type="time" [(ngModel)]="b.start" [name]="'breakStart' + $index" required />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>End</mat-label>
+                <input matInput type="time" [(ngModel)]="b.end" [name]="'breakEnd' + $index" required />
+              </mat-form-field>
+              <button mat-icon-button type="button" (click)="removeBreak($index)" aria-label="Remove">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          }
+          <div class="breaks-actions">
+            <button mat-stroked-button type="button" (click)="addBreak('Break')">+ Add Break</button>
+            <button mat-stroked-button type="button" (click)="addBreak('Lunch')">+ Add Lunch</button>
+          </div>
+        </div>
         @if (editingId() !== null) {
           <mat-slide-toggle name="isActive" [(ngModel)]="form.isActive">Active</mat-slide-toggle>
         }
@@ -68,14 +98,9 @@
     <td mat-cell *matCellDef="let s">{{ toInputTime(s.endTime) }}</td>
   </ng-container>
 
-  <ng-container matColumnDef="isBreakRequired">
-    <th mat-header-cell *matHeaderCellDef>Break</th>
-    <td mat-cell *matCellDef="let s">{{ s.isBreakRequired ? 'Yes' : 'No' }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="isLunchRequired">
-    <th mat-header-cell *matHeaderCellDef>Lunch</th>
-    <td mat-cell *matCellDef="let s">{{ s.isLunchRequired ? 'Yes' : 'No' }}</td>
+  <ng-container matColumnDef="scheduledBreaks">
+    <th mat-header-cell *matHeaderCellDef>Breaks & Lunches</th>
+    <td mat-cell *matCellDef="let s">{{ scheduledBreaksLabel(s.scheduledBreaks) }}</td>
   </ng-container>
 
   <ng-container matColumnDef="isActive">

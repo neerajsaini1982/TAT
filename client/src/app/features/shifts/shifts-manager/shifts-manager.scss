@@ -14,7 +14,7 @@
 }
 
 .form-card {
-  max-width: 480px;
+  max-width: 640px;
   margin-bottom: 16px;
 }
 
@@ -28,6 +28,44 @@
   display: flex;
   gap: 8px;
   margin-top: 8px;
+}
+
+.breaks-section {
+  margin: 8px 0;
+  padding: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+}
+
+.breaks-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 8px;
+}
+
+.breaks-empty {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+  margin: 0 0 8px;
+}
+
+.break-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+
+  .break-kind {
+    min-width: 110px;
+  }
+}
+
+.breaks-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .error {

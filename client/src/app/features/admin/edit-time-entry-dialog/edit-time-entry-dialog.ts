@@ -5,67 +5,56 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 
 import { TimeEntryDto } from '../../../core/time-entries-api';
+import { BreakKind, ScheduledBreakDto } from '../../../core/shifts-api';
 import { formatHHmm } from '../../../core/week-utils';
 
 export interface EditTimeEntryDialogData {
   employeeName: string;
   entry: TimeEntryDto | null;
-  // Drives the "not required for this shift" hints below — a shift that
-  // doesn't require a break/lunch can still end up with a stray punch on
-  // it (e.g. an earlier admin edit, or the requirement changing after the
-  // employee already clocked in), so the field itself stays editable/
-  // clearable either way rather than being disabled outright.
-  isBreakRequired: boolean;
-  isLunchRequired: boolean;
+  // Shown as read-only reference at the top of the dialog so the admin can
+  // see what was scheduled while entering what actually happened.
+  scheduledBreaks: ScheduledBreakDto[];
 }
 
-// The fields it makes sense to blank out with the Clear button — everything
-// except Clock In, which is the one field Save requires non-empty.
-type ClearableField =
-  | 'clockOutAt'
-  | 'breakStartAt'
-  | 'breakEndAt'
-  | 'lunchStartAt'
-  | 'lunchEndAt'
-  | 'break2StartAt'
-  | 'break2EndAt';
+interface SegmentRow {
+  kind: BreakKind;
+  start: string;
+  end: string;
+}
 
 export interface EditTimeEntryResult {
   clockInAt: string;
-  breakStartAt: string | null;
-  breakEndAt: string | null;
-  lunchStartAt: string | null;
-  lunchEndAt: string | null;
-  break2StartAt: string | null;
-  break2EndAt: string | null;
   clockOutAt: string | null;
+  segments: { kind: BreakKind; start: string; end: string | null }[];
   note: string;
 }
 
 const toInput = (iso: string | null): string => (iso ? formatHHmm(new Date(iso)) : '');
 
+const DEFAULT_WINDOW: Record<BreakKind, { start: string; end: string }> = {
+  Break: { start: '10:00', end: '10:15' },
+  Lunch: { start: '12:00', end: '12:30' },
+};
+
 // Lets an admin set every punch on today's TimeEntry directly — correcting
 // a mistake, or filling one in from scratch when the employee never
-// clocked in at all (data.entry is null in that case). Fields are plain
-// <input type="time">; only Clock In is required. Reuses the same
-// required-note convention as NoteDialog (see AdminEditTimeEntryRequest).
+// clocked in at all (data.entry is null in that case). Any number of
+// break/lunch segments, mirroring the same add/remove list editor as
+// ShiftsManager's scheduled breaks. Only Clock In is required. Reuses the
+// same required-note convention as NoteDialog.
 @Component({
   selector: 'app-edit-time-entry-dialog',
-  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule],
+  imports: [FormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSelectModule],
   templateUrl: './edit-time-entry-dialog.html',
   styleUrl: './edit-time-entry-dialog.scss',
 })
 export class EditTimeEntryDialog {
   protected clockInAt: string;
-  protected breakStartAt: string;
-  protected breakEndAt: string;
-  protected lunchStartAt: string;
-  protected lunchEndAt: string;
-  protected break2StartAt: string;
-  protected break2EndAt: string;
   protected clockOutAt: string;
+  protected segments: SegmentRow[];
   protected note = '';
   protected error: string | null = null;
 
@@ -75,13 +64,20 @@ export class EditTimeEntryDialog {
   ) {
     const entry = data.entry;
     this.clockInAt = toInput(entry?.clockInAt ?? null) || formatHHmm(new Date());
-    this.breakStartAt = toInput(entry?.breakStartAt ?? null);
-    this.breakEndAt = toInput(entry?.breakEndAt ?? null);
-    this.lunchStartAt = toInput(entry?.lunchStartAt ?? null);
-    this.lunchEndAt = toInput(entry?.lunchEndAt ?? null);
-    this.break2StartAt = toInput(entry?.break2StartAt ?? null);
-    this.break2EndAt = toInput(entry?.break2EndAt ?? null);
     this.clockOutAt = toInput(entry?.clockOutAt ?? null);
+    this.segments = (entry?.segments ?? [])
+      .slice()
+      .sort((a, b) => a.startAt.localeCompare(b.startAt))
+      .map((s) => ({ kind: s.kind, start: toInput(s.startAt), end: toInput(s.endAt) }));
+  }
+
+  addSegment(kind: BreakKind): void {
+    const { start, end } = DEFAULT_WINDOW[kind];
+    this.segments = [...this.segments, { kind, start, end }];
+  }
+
+  removeSegment(index: number): void {
+    this.segments = this.segments.filter((_, i) => i !== index);
   }
 
   save(): void {
@@ -95,21 +91,29 @@ export class EditTimeEntryDialog {
       return;
     }
 
-    const pairs: [string, string, string][] = [
-      [this.breakStartAt, this.breakEndAt, 'Break'],
-      [this.lunchStartAt, this.lunchEndAt, 'Lunch'],
-      [this.break2StartAt, this.break2EndAt, 'Second break'],
-    ];
-    for (const [start, end, label] of pairs) {
-      if (end && !start) {
-        this.error = `${label} end requires a ${label.toLowerCase()} start.`;
+    for (const s of this.segments) {
+      if (!s.start) {
+        this.error = `${s.kind} needs a start time.`;
         return;
       }
-      if (start && end && end < start) {
-        this.error = `${label} end can't be before ${label.toLowerCase()} start.`;
+      if (s.end && s.end < s.start) {
+        this.error = `${s.kind} end can't be before its start.`;
         return;
       }
     }
+
+    const sorted = [...this.segments].sort((a, b) => a.start.localeCompare(b.start));
+    for (let i = 0; i < sorted.length; i++) {
+      for (let j = i + 1; j < sorted.length; j++) {
+        const aEnd = sorted[i].end || '23:59';
+        const bEnd = sorted[j].end || '23:59';
+        if (sorted[i].start < bEnd && sorted[j].start < aEnd) {
+          this.error = 'Breaks and lunches can’t overlap.';
+          return;
+        }
+      }
+    }
+
     if (this.clockOutAt && this.clockOutAt < this.clockInAt) {
       this.error = "Clock out can't be before clock in.";
       return;
@@ -117,13 +121,8 @@ export class EditTimeEntryDialog {
 
     this.dialogRef.close({
       clockInAt: this.clockInAt,
-      breakStartAt: this.breakStartAt || null,
-      breakEndAt: this.breakEndAt || null,
-      lunchStartAt: this.lunchStartAt || null,
-      lunchEndAt: this.lunchEndAt || null,
-      break2StartAt: this.break2StartAt || null,
-      break2EndAt: this.break2EndAt || null,
       clockOutAt: this.clockOutAt || null,
+      segments: this.segments.map((s) => ({ kind: s.kind, start: s.start, end: s.end || null })),
       note: this.note.trim(),
     });
   }
@@ -132,7 +131,16 @@ export class EditTimeEntryDialog {
     this.dialogRef.close();
   }
 
-  clear(field: ClearableField): void {
-    this[field] = '';
+  clearClockOut(): void {
+    this.clockOutAt = '';
+  }
+
+  get scheduledLabel(): string {
+    if (this.data.scheduledBreaks.length === 0) {
+      return 'None scheduled for this shift.';
+    }
+    return this.data.scheduledBreaks
+      .map((b) => `${b.kind} ${b.startTime.slice(0, 5)}–${b.endTime.slice(0, 5)}`)
+      .join(', ');
   }
 }

@@ -1,6 +1,6 @@
 import { parseDate } from './week-utils';
 import { ShiftAssignmentDto } from './shift-assignments-api';
-import { TimeEntryDto } from './time-entries-api';
+import { TimeEntryDto, TimeEntrySegmentDto } from './time-entries-api';
 
 function combineDateAndTime(dateIso: string, time: string): Date {
   const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
@@ -22,29 +22,20 @@ export function isLateClockIn(
 
 // Measured against `now` while still open, so a break/lunch flags live once
 // it's run long, not only after it's closed out.
-function isSegmentOverLimit(startAt: string | null, endAt: string | null, limitMinutes: number, now: Date): boolean {
-  if (!startAt) {
-    return false;
-  }
-  const start = new Date(startAt);
-  const end = endAt ? new Date(endAt) : now;
+export function isSegmentOverLimit(segment: Pick<TimeEntrySegmentDto, 'startAt' | 'endAt'>, limitMinutes: number, now: Date): boolean {
+  const start = new Date(segment.startAt);
+  const end = segment.endAt ? new Date(segment.endAt) : now;
   return (end.getTime() - start.getTime()) / 60_000 > limitMinutes;
 }
 
-export const isBreakOverLimit = (
-  entry: Pick<TimeEntryDto, 'breakStartAt' | 'breakEndAt'>,
+// Whether any of the entry's segments of the given kind has run long —
+// covers however many breaks/lunches the employee has taken, not just a
+// fixed first/second slot.
+export function isAnySegmentOverLimit(
+  entry: Pick<TimeEntryDto, 'segments'>,
+  kind: TimeEntrySegmentDto['kind'],
   limitMinutes: number,
   now: Date,
-): boolean => isSegmentOverLimit(entry.breakStartAt, entry.breakEndAt, limitMinutes, now);
-
-export const isLunchOverLimit = (
-  entry: Pick<TimeEntryDto, 'lunchStartAt' | 'lunchEndAt'>,
-  limitMinutes: number,
-  now: Date,
-): boolean => isSegmentOverLimit(entry.lunchStartAt, entry.lunchEndAt, limitMinutes, now);
-
-export const isBreak2OverLimit = (
-  entry: Pick<TimeEntryDto, 'break2StartAt' | 'break2EndAt'>,
-  limitMinutes: number,
-  now: Date,
-): boolean => isSegmentOverLimit(entry.break2StartAt, entry.break2EndAt, limitMinutes, now);
+): boolean {
+  return entry.segments.some((s) => s.kind === kind && isSegmentOverLimit(s, limitMinutes, now));
+}
