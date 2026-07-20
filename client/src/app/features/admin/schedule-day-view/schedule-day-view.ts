@@ -71,7 +71,7 @@ export class ScheduleDayView {
     const left = (100 / laidOut.columnCount) * laidOut.column;
     return {
       top: `${top}px`,
-      height: `${Math.max(height, 28)}px`,
+      height: `${Math.max(height, 38)}px`,
       left: `calc(${left}% + 4px)`,
       width: `calc(${width}% - 8px)`,
     };
