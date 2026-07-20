@@ -24,11 +24,11 @@
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Start Time</mat-label>
-          <input matInput type="time" name="startTime" [(ngModel)]="form.startTime" required />
+          <input matInput type="time" name="startTime" [(ngModel)]="form.startTime" [ngModelOptions]="{ updateOn: 'blur' }" required />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>End Time</mat-label>
-          <input matInput type="time" name="endTime" [(ngModel)]="form.endTime" required />
+          <input matInput type="time" name="endTime" [(ngModel)]="form.endTime" [ngModelOptions]="{ updateOn: 'blur' }" required />
         </mat-form-field>
         <div class="breaks-section">
           <span class="breaks-label">Scheduled Breaks & Lunches</span>
@@ -46,11 +46,11 @@
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>Start</mat-label>
-                <input matInput type="time" [(ngModel)]="b.start" [name]="'breakStart' + $index" required />
+                <input matInput type="time" [(ngModel)]="b.start" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'breakStart' + $index" required />
               </mat-form-field>
               <mat-form-field appearance="outline">
                 <mat-label>End</mat-label>
-                <input matInput type="time" [(ngModel)]="b.end" [name]="'breakEnd' + $index" required />
+                <input matInput type="time" [(ngModel)]="b.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'breakEnd' + $index" required />
               </mat-form-field>
               <button mat-icon-button type="button" (click)="removeBreak($index)" aria-label="Remove">
                 <mat-icon>close</mat-icon>

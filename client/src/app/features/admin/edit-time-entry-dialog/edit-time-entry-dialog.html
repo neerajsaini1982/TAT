@@ -5,11 +5,11 @@
   <div class="time-grid">
     <mat-form-field appearance="outline">
       <mat-label>Clock In</mat-label>
-      <input matInput type="time" [(ngModel)]="clockInAt" required />
+      <input matInput type="time" [(ngModel)]="clockInAt" [ngModelOptions]="{ updateOn: 'blur' }" required />
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Clock Out</mat-label>
-      <input matInput type="time" [(ngModel)]="clockOutAt" />
+      <input matInput type="time" [(ngModel)]="clockOutAt" [ngModelOptions]="{ updateOn: 'blur' }" />
       @if (clockOutAt) {
         <button type="button" mat-icon-button matSuffix (click)="clearClockOut()" aria-label="Clear clock out">
           <mat-icon>close</mat-icon>
@@ -34,11 +34,11 @@
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Start</mat-label>
-          <input matInput type="time" [(ngModel)]="s.start" [name]="'segmentStart' + $index" required />
+          <input matInput type="time" [(ngModel)]="s.start" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentStart' + $index" required />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>End</mat-label>
-          <input matInput type="time" [(ngModel)]="s.end" [name]="'segmentEnd' + $index" />
+          <input matInput type="time" [(ngModel)]="s.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentEnd' + $index" />
         </mat-form-field>
         <button mat-icon-button type="button" (click)="removeSegment($index)" aria-label="Remove">
           <mat-icon>close</mat-icon>
