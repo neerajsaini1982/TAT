@@ -207,9 +207,11 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     }
 
     // Lets a Lead/Admin mark an employee absent for a shift they didn't
-    // show up for (or clear a mistaken mark). Blocked once a TimeEntry
-    // exists — at that point the employee did clock in, so the relevant
-    // action is AdminClockOut (see TimeEntriesController) instead.
+    // show up for (or clear a mistaken mark). Marking someone absent who
+    // did clock in wipes that TimeEntry (and its segments, via cascade
+    // delete) rather than being blocked by it — absent means the shift
+    // didn't happen, so a stray punch (e.g. clocked in then never showed
+    // up again) shouldn't be left dangling behind it.
     [HttpPut("{id:int}/absent")]
     [Authorize(Policy = "LeadOrAbove")]
     public async Task<ActionResult<ShiftAssignmentDto>> MarkAbsent(int id, MarkAbsentRequest request)
@@ -229,9 +231,13 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             return BadRequest("A note is required when marking an employee absent.");
         }
 
-        if (request.IsAbsent && db.TimeEntries.Any(t => t.ShiftAssignmentId == assignment.Id))
+        if (request.IsAbsent)
         {
-            return Conflict("This employee already clocked in for this shift.");
+            var existingEntry = db.TimeEntries.SingleOrDefault(t => t.ShiftAssignmentId == assignment.Id);
+            if (existingEntry is not null)
+            {
+                db.TimeEntries.Remove(existingEntry);
+            }
         }
 
         assignment.IsAbsent = request.IsAbsent;
