@@ -1,15 +1,17 @@
-// Kept in sync with HOUR_HEIGHT_PX in schedule-day-view.ts — the hour rows
-// here are plain stacked blocks (their height is what defines an hour's
-// pixel span), while event cards are positioned against that same scale
-// via absolute top/height computed in the component.
-$hour-height: 60px;
-
+// Row/gridline heights come from the component (hourHeightPx, an inline
+// style binding) rather than a fixed value here — the whole timeline is
+// scaled to a constant total height (TIMELINE_HEIGHT_PX) regardless of how
+// many hours the day spans, so the full day is always visible in this one
+// section with no internal scrolling.
 .day-view {
   display: flex;
-  max-height: 70vh;
-  overflow: auto;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 4px;
+  // Horizontal only — a busy day can still need to scroll sideways to see
+  // every overlapping-shift column, but the vertical span is always scaled
+  // to fit (see hourHeightPx), so there's never a vertical scrollbar here.
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .time-axis {
@@ -22,7 +24,6 @@ $hour-height: 60px;
 }
 
 .hour-row {
-  height: $hour-height;
   box-sizing: border-box;
   padding: 2px 8px 0 0;
   text-align: right;
@@ -42,7 +43,6 @@ $hour-height: 60px;
 }
 
 .hour-gridline {
-  height: $hour-height;
   box-sizing: border-box;
   border-top: 1px solid var(--mat-sys-outline-variant);
 

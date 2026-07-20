@@ -4,13 +4,14 @@ import { ShiftAssignmentDto } from '../../../core/shift-assignments-api';
 import { employeeColor } from '../../../core/employee-colors';
 import { LaidOutEvent, layoutDayEvents, toMinutes } from '../../../core/day-view-layout';
 
-const HOUR_HEIGHT_PX = 60;
-// Padding around the day's actual shifts so a light day doesn't render a
-// timeline that's mostly cut off, and a normal day still shows the whole
-// business day for context — same reasoning as the vertical padding
-// google calendar's day view always keeps around the day's events.
-const DEFAULT_START_HOUR = 8;
-const DEFAULT_END_HOUR = 20;
+// The whole timeline always renders at this height, however many hours the
+// day spans — see hourHeightPx below — so the day's full start-to-end range
+// is visible in one section without scrolling, rather than a fixed
+// per-hour pixel height that could run taller than the viewport on a long
+// day (or leave a fixed 8am-8pm range mostly empty on a short one).
+const TIMELINE_HEIGHT_PX = 560;
+const FALLBACK_START_HOUR = 9;
+const FALLBACK_END_HOUR = 17;
 
 @Component({
   selector: 'app-schedule-day-view',
@@ -23,18 +24,20 @@ export class ScheduleDayView {
 
   protected readonly employeeColor = employeeColor;
 
+  // Bounded to the day's actual earliest start / latest end (rounded out to
+  // the hour for clean gridlines) — no padding before the first shift or
+  // after the last, per the "just start with the first shift's time" ask.
   protected readonly timeRange = computed(() => {
     const events = this.assignments();
     if (events.length === 0) {
-      return { startHour: DEFAULT_START_HOUR, endHour: DEFAULT_END_HOUR };
+      return { startHour: FALLBACK_START_HOUR, endHour: FALLBACK_END_HOUR };
     }
 
     const starts = events.map((a) => toMinutes(a.shiftStartTime));
     const ends = events.map((a) => toMinutes(a.shiftEndTime));
-    return {
-      startHour: Math.min(DEFAULT_START_HOUR, Math.floor(Math.min(...starts) / 60)),
-      endHour: Math.max(DEFAULT_END_HOUR, Math.ceil(Math.max(...ends) / 60)),
-    };
+    const startHour = Math.floor(Math.min(...starts) / 60);
+    const endHour = Math.ceil(Math.max(...ends) / 60);
+    return { startHour, endHour: Math.max(endHour, startHour + 1) };
   });
 
   protected readonly hours = computed(() => {
@@ -42,10 +45,12 @@ export class ScheduleDayView {
     return Array.from({ length: endHour - startHour }, (_, i) => startHour + i);
   });
 
-  protected readonly totalHeightPx = computed(() => {
+  protected readonly hourHeightPx = computed(() => {
     const { startHour, endHour } = this.timeRange();
-    return (endHour - startHour) * HOUR_HEIGHT_PX;
+    return TIMELINE_HEIGHT_PX / (endHour - startHour);
   });
+
+  protected readonly totalHeightPx = TIMELINE_HEIGHT_PX;
 
   protected readonly laidOutEvents = computed<LaidOutEvent<ShiftAssignmentDto>[]>(() =>
     layoutDayEvents(
@@ -59,8 +64,9 @@ export class ScheduleDayView {
 
   eventStyle(laidOut: LaidOutEvent<ShiftAssignmentDto>): Record<string, string> {
     const { startHour } = this.timeRange();
-    const top = ((laidOut.startMinutes - startHour * 60) / 60) * HOUR_HEIGHT_PX;
-    const height = ((laidOut.endMinutes - laidOut.startMinutes) / 60) * HOUR_HEIGHT_PX;
+    const hourHeight = this.hourHeightPx();
+    const top = ((laidOut.startMinutes - startHour * 60) / 60) * hourHeight;
+    const height = ((laidOut.endMinutes - laidOut.startMinutes) / 60) * hourHeight;
     const width = (100 / laidOut.columnCount) * laidOut.columnSpan;
     const left = (100 / laidOut.columnCount) * laidOut.column;
     return {

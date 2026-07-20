@@ -1,15 +1,15 @@
 <div class="day-view">
-  <div class="time-axis">
+  <div class="time-axis" [style.height.px]="totalHeightPx">
     @for (hour of hours(); track hour) {
-      <div class="hour-row">
+      <div class="hour-row" [style.height.px]="hourHeightPx()">
         <span class="hour-label">{{ hourLabel(hour) }}</span>
       </div>
     }
   </div>
 
-  <div class="timeline" [style.height.px]="totalHeightPx()">
+  <div class="timeline" [style.height.px]="totalHeightPx">
     @for (hour of hours(); track hour) {
-      <div class="hour-gridline"></div>
+      <div class="hour-gridline" [style.height.px]="hourHeightPx()"></div>
     }
 
     @for (laidOut of laidOutEvents(); track laidOut.event.id) {
