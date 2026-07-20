@@ -46,8 +46,9 @@ const DEFAULT_SETTINGS = {
   lunchLimitMinutes: 30,
 };
 
-// Net hours worked once clocked out: wall time minus every closed segment.
-function workedHours(entry: TimeEntryDto): number {
+// Net time worked once clocked out: wall time minus every closed segment,
+// in whole minutes (formatted as "H Hrs M Mins" — see hoursWorkedLabel).
+function workedMinutes(entry: TimeEntryDto): number {
   const msBetween = (start: string, end: string) => new Date(end).getTime() - new Date(start).getTime();
 
   let ms = msBetween(entry.clockInAt, entry.clockOutAt!);
@@ -56,7 +57,7 @@ function workedHours(entry: TimeEntryDto): number {
       ms -= msBetween(segment.startAt, segment.endAt);
     }
   }
-  return round2(ms / 3_600_000);
+  return Math.round(ms / 60_000);
 }
 
 // Shown on the Employee/Admin/Lead home page right after login. In the
@@ -215,8 +216,11 @@ export class CurrentWeekSchedule implements OnInit {
     return shift.entry ? [...shift.entry.segments].sort((a, b) => a.startAt.localeCompare(b.startAt)) : [];
   }
 
-  hoursWorked(entry: TimeEntryDto): number {
-    return workedHours(entry);
+  hoursWorkedLabel(entry: TimeEntryDto): string {
+    const totalMinutes = workedMinutes(entry);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return `${hours} Hrs ${minutes} Mins`;
   }
 
   hasOpenSegment(entry: TimeEntryDto): boolean {

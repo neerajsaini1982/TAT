@@ -39,9 +39,8 @@
                   <th>Employee</th>
                 }
                 <th>Shift</th>
-                <th>Clock In</th>
+                <th>Clock In / Clock Out</th>
                 <th>Breaks</th>
-                <th>Clock Out</th>
                 <th>Status</th>
                 @if (showEmployeeNames()) {
                   <th></th>
@@ -62,17 +61,39 @@
                     <span class="shift-time">{{ scheduledTime(shift.assignment) }}</span>
                   </td>
 
-                  <td class="punch-cell">
-                    @if (shift.entry?.clockInAt) {
-                      {{ punchTime(shift.entry?.clockInAt) }}
-                    } @else if (shift.canClockIn) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="clockIn(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Clock In
-                      </button>
-                    } @else if (shift.isMine && day.isToday && !shift.entry) {
-                      <span [title]="'Opens at ' + shift.earliestClockInLabel">-</span>
-                    } @else {
-                      -
+                  <td class="punch-cell clock-cell">
+                    <span class="clock-part">
+                      @if (shift.entry?.clockInAt) {
+                        {{ punchTime(shift.entry?.clockInAt) }}
+                      } @else if (shift.canClockIn) {
+                        <button type="button" class="punch-btn" mat-stroked-button (click)="clockIn(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                          Clock In
+                        </button>
+                      } @else if (shift.isMine && day.isToday && !shift.entry) {
+                        <span [title]="'Opens at ' + shift.earliestClockInLabel">-</span>
+                      } @else {
+                        -
+                      }
+                    </span>
+                    <span class="clock-sep">/</span>
+                    <span class="clock-part">
+                      @if (shift.entry?.clockOutAt) {
+                        {{ punchTime(shift.entry?.clockOutAt) }}
+                        @if (shift.entry?.clockedOutByAccountId) {
+                          <mat-icon class="admin-clockout-icon" [title]="'Clocked out by a lead/admin: ' + (shift.entry?.note ?? '')">
+                            admin_panel_settings
+                          </mat-icon>
+                        }
+                      } @else if (canClockOut(shift)) {
+                        <button type="button" class="punch-btn" mat-flat-button color="primary" (click)="clockOut(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                          Clock Out
+                        </button>
+                      } @else {
+                        -
+                      }
+                    </span>
+                    @if (shift.entry?.clockOutAt) {
+                      <div class="hours-worked-line"><strong>{{ hoursWorkedLabel(shift.entry!) }}</strong></div>
                     }
                   </td>
 
@@ -98,26 +119,6 @@
                       </div>
                     }
                     @if (segmentsFor(shift).length === 0 && !canStartSegment(shift)) {
-                      -
-                    }
-                  </td>
-
-                  <td class="punch-cell">
-                    @if (shift.entry?.clockOutAt) {
-                      <div class="clockout-line">
-                        {{ punchTime(shift.entry?.clockOutAt) }}
-                        @if (shift.entry?.clockedOutByAccountId) {
-                          <mat-icon class="admin-clockout-icon" [title]="'Clocked out by a lead/admin: ' + (shift.entry?.note ?? '')">
-                            admin_panel_settings
-                          </mat-icon>
-                        }
-                      </div>
-                      <div class="hours-worked-line">{{ hoursWorked(shift.entry!) }} hrs worked</div>
-                    } @else if (canClockOut(shift)) {
-                      <button type="button" class="punch-btn" mat-flat-button color="primary" (click)="clockOut(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Clock Out
-                      </button>
-                    } @else {
                       -
                     }
                   </td>

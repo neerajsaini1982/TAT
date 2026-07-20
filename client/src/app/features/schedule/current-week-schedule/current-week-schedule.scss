@@ -159,13 +159,25 @@
   }
 }
 
-.clockout-line {
+// Clock In and Clock Out share one cell as "value / value", with the
+// worked-time summary on its own line underneath once clocked out.
+.clock-cell {
+  white-space: normal;
+}
+
+.clock-part {
   color: var(--mat-sys-on-surface);
+}
+
+.clock-sep {
+  margin: 0 4px;
+  color: var(--mat-sys-outline);
 }
 
 .hours-worked-line {
   font-size: 12px;
-  margin-top: 1px;
+  margin-top: 2px;
+  color: var(--mat-sys-on-surface);
 }
 
 // Any number of scheduled/actual break-lunch lines, so unlike the other
