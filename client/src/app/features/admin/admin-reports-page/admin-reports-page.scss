@@ -1,0 +1,64 @@
+:host {
+  display: block;
+}
+
+.filters-card {
+  margin-bottom: 16px;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 8px 0 0;
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.hours-report-table {
+  width: 100%;
+}
+
+.detail-cell {
+  padding: 0 16px 16px !important;
+}
+
+.day-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 6px 12px;
+    text-align: left;
+    font-size: 13px;
+  }
+
+  thead th {
+    color: var(--mat-sys-on-surface-variant);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+}
+
+.absent-row td {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+.notes-cell {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.flag {
+  color: var(--mat-sys-error);
+  font-weight: 600;
+}
