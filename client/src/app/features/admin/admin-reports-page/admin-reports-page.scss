@@ -50,6 +50,12 @@
   th {
     white-space: nowrap;
   }
+
+  // Top-level (per-employee) totals stay bold; the day-table drill-down
+  // below is deliberately lighter weight so it reads as subordinate detail.
+  td {
+    font-weight: 600;
+  }
 }
 
 // Duration columns are short and fixed-shape ("4h 30m") — right-align and
@@ -76,9 +82,11 @@
 // Fixed (rather than content-sized) so expand + employeeId + fullName add
 // up to a known pixel offset — see .detail-cell below, which indents the
 // nested table by exactly that sum to line its columns up with these.
+// (No font-weight here: ".hours-report-table td" above already bolds every
+// top-level cell, and — being class+element — would out-specificity a
+// weight set on this single class anyway.)
 .mat-column-fullName {
   width: 220px;
-  font-weight: 500;
 }
 
 // Notes is the least predictable column in width — let it absorb whatever
