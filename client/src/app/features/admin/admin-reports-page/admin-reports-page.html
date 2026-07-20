@@ -78,16 +78,6 @@
     <ng-container matColumnDef="expandedDetail">
       <td mat-cell *matCellDef="let emp" [attr.colspan]="columns.length" class="detail-cell">
         <table class="day-table">
-          <thead>
-            <tr>
-              <th class="day-date-col">Date</th>
-              <th class="day-numeric-col">Time Worked</th>
-              <th class="day-numeric-col">Break Time</th>
-              <th class="day-numeric-col">Lunch Time</th>
-              <th class="day-numeric-col">Net Worked Time</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
           <tbody>
             @for (day of emp.days; track day.date) {
               <tr [class.absent-row]="day.isAbsent">
