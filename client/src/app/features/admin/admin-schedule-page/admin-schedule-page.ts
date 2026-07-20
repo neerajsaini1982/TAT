@@ -109,6 +109,28 @@ export class AdminSchedulePage implements OnInit {
   private readonly entriesByAssignmentId = signal<Map<number, TimeEntryDto>>(new Map());
   protected readonly employeeColor = employeeColor;
 
+  // Shift templates grouped into rows by start time — shifts that all
+  // start at the same time land on one line, the next-earliest start time
+  // on the line below, and so on. Makes it much faster to find "the 11am
+  // shift" while dragging than scanning one big unordered wrapped list.
+  protected readonly groupedShifts = computed(() => {
+    const byStartTime = new Map<string, ShiftDto[]>();
+    for (const shift of this.shifts()) {
+      const group = byStartTime.get(shift.startTime);
+      if (group) {
+        group.push(shift);
+      } else {
+        byStartTime.set(shift.startTime, [shift]);
+      }
+    }
+    return [...byStartTime.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([startTime, shiftsAtTime]) => ({
+        startTime,
+        shifts: [...shiftsAtTime].sort((a, b) => a.endTime.localeCompare(b.endTime)),
+      }));
+  });
+
   // Header labels paired with each column's actual calendar date, e.g. "Mon" + "Jul 20".
   protected readonly dayColumns = computed(() => {
     const start = this.weekStart();

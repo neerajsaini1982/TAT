@@ -149,9 +149,8 @@
 
 .palette {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  flex-wrap: wrap;
   margin-bottom: 16px;
 }
 
@@ -171,13 +170,34 @@
   font-size: 13px;
   color: var(--mat-sys-on-surface-variant);
   white-space: nowrap;
+  // Lines the label up with the first row of chips instead of the whole
+  // (now multi-row) palette-list block, now that .palette is top-aligned.
+  padding-top: 8px;
 }
 
 .palette-list {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 40px;
+  flex: 1 1 auto;
+}
+
+// One row per distinct start time — shifts starting at the same time sit
+// on the same line, earlier start times above later ones (see
+// groupedShifts in admin-schedule-page.ts).
+.palette-row {
+  display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  min-height: 40px;
+}
+
+.palette-row-time {
+  min-width: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .palette-empty {

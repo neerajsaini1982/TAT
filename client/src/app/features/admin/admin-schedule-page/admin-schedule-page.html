@@ -81,10 +81,15 @@
   <div class="palette">
     <span class="palette-label">Drag a shift onto a cell to assign it:</span>
     <div cdkDropList id="palette" class="palette-list">
-      @for (shift of shifts(); track shift.id) {
-        <div class="chip template-chip" cdkDrag [cdkDragData]="{ kind: 'template', shift: shift }">
-          <span class="chip-name">{{ shift.name }}</span>
-          <span class="chip-time">{{ shiftTime(shift) }}</span>
+      @for (group of groupedShifts(); track group.startTime) {
+        <div class="palette-row">
+          <span class="palette-row-time">{{ group.startTime.slice(0, 5) }}</span>
+          @for (shift of group.shifts; track shift.id) {
+            <div class="chip template-chip" cdkDrag [cdkDragData]="{ kind: 'template', shift: shift }">
+              <span class="chip-name">{{ shift.name }}</span>
+              <span class="chip-time">{{ shiftTime(shift) }}</span>
+            </div>
+          }
         </div>
       }
       @if (shifts().length === 0) {
