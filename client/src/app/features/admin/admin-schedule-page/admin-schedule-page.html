@@ -65,6 +65,17 @@
     </div>
   </div>
 
+  <div class="filters-bar">
+    <mat-form-field appearance="outline" class="employee-search">
+      <mat-label>Search employees</mat-label>
+      <input matInput [ngModel]="employeeSearch()" (ngModelChange)="employeeSearch.set($event)" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+    <mat-checkbox [ngModel]="showOnlyScheduled()" (ngModelChange)="showOnlyScheduled.set($event)">
+      Show only scheduled employees
+    </mat-checkbox>
+  </div>
+
   <div class="table-wrap">
     <div class="table-scroll" #bodyScroll (scroll)="onBodyScroll(bodyScroll)">
       <table>
@@ -85,7 +96,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (row of rows(); track row.accountId) {
+        @for (row of visibleRows(); track row.accountId) {
           <tr>
             <td class="employee-col" [style.--employee-color]="employeeColor(row.accountId)">
               <span class="employee-dot"></span>{{ row.name }}
@@ -165,9 +176,11 @@
             <td class="total-col">{{ row.totalHours }}</td>
           </tr>
         }
-        @if (rows().length === 0) {
+        @if (visibleRows().length === 0) {
           <tr>
-            <td [attr.colspan]="dayHeaders.length + 2">No employees at this location yet.</td>
+            <td [attr.colspan]="dayHeaders.length + 2">
+              {{ rows().length === 0 ? 'No employees at this location yet.' : 'No employees match your filters.' }}
+            </td>
           </tr>
         }
       </tbody>

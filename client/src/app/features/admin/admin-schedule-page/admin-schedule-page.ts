@@ -1,8 +1,12 @@
 import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
 import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -47,7 +51,18 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 @Component({
   selector: 'app-admin-schedule-page',
-  imports: [RouterLink, MatButtonModule, MatIconModule, CdkDropListGroup, CdkDropList, CdkDrag],
+  imports: [
+    RouterLink,
+    FormsModule,
+    MatButtonModule,
+    MatCheckboxModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    CdkDropListGroup,
+    CdkDropList,
+    CdkDrag,
+  ],
   templateUrl: './admin-schedule-page.html',
   styleUrl: './admin-schedule-page.scss',
 })
@@ -97,6 +112,21 @@ export class AdminSchedulePage implements OnInit {
       label,
       dateLabel: addDays(start, i).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
     }));
+  });
+
+  // Filters affect which rows are displayed, not the Daily Total / Total
+  // Hrs figures below — those stay the full location's schedule regardless
+  // of what's currently filtered into view.
+  protected readonly employeeSearch = signal('');
+  protected readonly showOnlyScheduled = signal(false);
+
+  protected readonly visibleRows = computed(() => {
+    const query = this.employeeSearch().trim().toLowerCase();
+    const onlyScheduled = this.showOnlyScheduled();
+    return this.rows().filter(
+      (row) =>
+        (!query || row.name.toLowerCase().includes(query)) && (!onlyScheduled || row.totalHours > 0),
+    );
   });
 
   protected readonly dailyTotals = computed(() =>

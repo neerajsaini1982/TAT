@@ -110,6 +110,18 @@
   margin-bottom: 16px;
 }
 
+.filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.employee-search {
+  min-width: 220px;
+}
+
 .palette-label {
   font-size: 13px;
   color: var(--mat-sys-on-surface-variant);
