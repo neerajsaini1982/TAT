@@ -1,4 +1,7 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, output } from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 
 import { ShiftAssignmentDto } from '../../../core/shift-assignments-api';
 import { employeeColor } from '../../../core/employee-colors';
@@ -15,12 +18,19 @@ const FALLBACK_END_HOUR = 17;
 
 @Component({
   selector: 'app-schedule-day-view',
-  imports: [],
+  imports: [MatButtonModule, MatIconModule, MatMenuModule],
   templateUrl: './schedule-day-view.html',
   styleUrl: './schedule-day-view.scss',
 })
 export class ScheduleDayView {
   readonly assignments = input<ShiftAssignmentDto[]>([]);
+
+  // Per-card settings menu — Mark Absent is the first entry today, with more
+  // expected to land here later (see the menu in the template), so each
+  // action is its own output rather than baking the note-dialog/API calls
+  // into this presentational component.
+  readonly markAbsent = output<ShiftAssignmentDto>();
+  readonly clearAbsent = output<ShiftAssignmentDto>();
 
   protected readonly employeeColor = employeeColor;
 

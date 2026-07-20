@@ -21,6 +21,23 @@
         [class.draft]="!laidOut.event.isPublished"
         [class.absent]="laidOut.event.isAbsent"
       >
+        <button
+          type="button"
+          mat-icon-button
+          class="event-menu-trigger"
+          [matMenuTriggerFor]="menu"
+          [attr.aria-label]="'Options for ' + laidOut.event.accountFirstName + ' ' + laidOut.event.accountLastName"
+        >
+          <mat-icon>settings</mat-icon>
+        </button>
+        <mat-menu #menu="matMenu">
+          @if (laidOut.event.isAbsent) {
+            <button type="button" mat-menu-item (click)="clearAbsent.emit(laidOut.event)">Clear Absent</button>
+          } @else {
+            <button type="button" mat-menu-item (click)="markAbsent.emit(laidOut.event)">Mark Absent</button>
+          }
+        </mat-menu>
+
         <span class="event-title">{{ laidOut.event.accountFirstName }} {{ laidOut.event.accountLastName }}</span>
         <span class="event-shift">{{ laidOut.event.shiftName }}</span>
         <span class="event-time">{{ timeRangeLabel(laidOut.event) }}</span>

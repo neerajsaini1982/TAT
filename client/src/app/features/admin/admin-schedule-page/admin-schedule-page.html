@@ -74,7 +74,11 @@
     }
   </div>
 
-  <app-schedule-day-view [assignments]="selectedDayAssignments()" />
+  <app-schedule-day-view
+    [assignments]="selectedDayAssignments()"
+    (markAbsent)="markAbsent($event)"
+    (clearAbsent)="clearAbsent($event)"
+  />
 } @else {
 
 <div cdkDropListGroup class="schedule">
