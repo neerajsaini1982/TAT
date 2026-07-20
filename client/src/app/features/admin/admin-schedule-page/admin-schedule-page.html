@@ -65,13 +65,21 @@
     </div>
   </div>
 
-  <div class="table-scroll">
-    <table>
-      <thead>
+  <div class="table-wrap">
+    <div class="table-scroll" #bodyScroll (scroll)="onBodyScroll(bodyScroll)">
+      <table>
+        <colgroup>
+          <col class="col-employee" />
+          @for (col of dayColumns(); track col.label) {
+            <col class="col-day" />
+          }
+          <col class="col-total" />
+        </colgroup>
+        <thead>
         <tr>
           <th class="employee-col">Employee</th>
-          @for (label of dayHeaders; track label) {
-            <th>{{ label }}</th>
+          @for (col of dayColumns(); track col.label) {
+            <th>{{ col.label }} <span class="day-date">{{ col.dateLabel }}</span></th>
           }
           <th class="total-col">Total Hrs</th>
         </tr>
@@ -163,17 +171,38 @@
           </tr>
         }
       </tbody>
-      @if (rows().length > 0) {
-        <tfoot>
-          <tr>
-            <td class="employee-col">Daily Total</td>
-            @for (total of dailyTotals(); track $index) {
-              <td>{{ total }}</td>
+      </table>
+    </div>
+
+    @if (rows().length > 0) {
+      <!-- A separate table below the scrolling body, rather than a <tfoot> inside
+           it: a <tfoot> is always the table's last row, so it never has room to
+           detach and "stick" — position:sticky has nothing to push it away from.
+           Keeping the Daily Total row outside .table-scroll entirely means it's
+           never subject to that box's vertical scrolling in the first place, and
+           stays visible without a sticky offset. Its own scrollLeft is mirrored
+           from the body via onBodyScroll so columns still line up when scrolled
+           horizontally; the colgroup on both tables keeps column widths identical. -->
+      <div class="table-footer-scroll" #footerScroll>
+        <table>
+          <colgroup>
+            <col class="col-employee" />
+            @for (col of dayColumns(); track col.label) {
+              <col class="col-day" />
             }
-            <td class="total-col"></td>
-          </tr>
-        </tfoot>
-      }
-    </table>
+            <col class="col-total" />
+          </colgroup>
+          <tfoot>
+            <tr>
+              <td class="employee-col">Daily Total</td>
+              @for (total of dailyTotals(); track $index) {
+                <td>{{ total }}</td>
+              }
+              <td class="total-col">{{ weekTotalHours() }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
   </div>
 </div>

@@ -1,4 +1,4 @@
-import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
@@ -90,6 +90,15 @@ export class AdminSchedulePage implements OnInit {
   private readonly entriesByAssignmentId = signal<Map<number, TimeEntryDto>>(new Map());
   protected readonly employeeColor = employeeColor;
 
+  // Header labels paired with each column's actual calendar date, e.g. "Mon" + "Jul 20".
+  protected readonly dayColumns = computed(() => {
+    const start = this.weekStart();
+    return DAY_HEADERS.map((label, i) => ({
+      label,
+      dateLabel: addDays(start, i).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    }));
+  });
+
   protected readonly dailyTotals = computed(() =>
     DAY_HEADERS.map((_, i) =>
       this.rows().reduce((sum, row) => sum + row.days[i].assignments.reduce((s, a) => s + a.hours, 0), 0),
@@ -108,6 +117,19 @@ export class AdminSchedulePage implements OnInit {
     () => this.hasAssignments() && this.allAssignments().every((a) => a.isPublished),
   );
   protected readonly publishing = signal(false);
+
+  // The Daily Total row lives in its own table below .table-scroll (see the
+  // template comment there) so it stays visible while the body scrolls
+  // vertically. It still needs to track the body's horizontal scroll so its
+  // columns stay lined up underneath the body's.
+  private readonly footerScroll = viewChild<ElementRef<HTMLDivElement>>('footerScroll');
+
+  onBodyScroll(body: HTMLDivElement): void {
+    const footer = this.footerScroll()?.nativeElement;
+    if (footer) {
+      footer.scrollLeft = body.scrollLeft;
+    }
+  }
 
   ngOnInit(): void {
     this.settingsApi.get(this.locationCode).subscribe({
