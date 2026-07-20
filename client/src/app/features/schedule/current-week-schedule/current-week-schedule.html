@@ -40,12 +40,9 @@
                 }
                 <th>Shift</th>
                 <th>Clock In</th>
-                <th>Break In</th>
-                <th>Break Out</th>
-                <th>Lunch In</th>
-                <th>Lunch Out</th>
-                <th>2nd Break In</th>
-                <th>2nd Break Out</th>
+                <th>Break</th>
+                <th>Lunch</th>
+                <th>2nd Break</th>
                 <th>Clock Out</th>
                 <th>Status</th>
                 @if (showEmployeeNames()) {
@@ -84,8 +81,15 @@
                   <td class="punch-cell">
                     @if (!shift.assignment.isBreakRequired) {
                       -
+                    } @else if (shift.entry?.breakStartAt && shift.entry?.breakEndAt) {
+                      {{ punchTime(shift.entry?.breakStartAt) }} – {{ punchTime(shift.entry?.breakEndAt) }}
                     } @else if (shift.entry?.breakStartAt) {
-                      {{ punchTime(shift.entry?.breakStartAt) }}
+                      {{ punchTime(shift.entry?.breakStartAt) }} –
+                      @if (canBreakEnd(shift)) {
+                        <button type="button" class="punch-btn" mat-stroked-button (click)="breakEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                          End
+                        </button>
+                      }
                     } @else if (canBreakStart(shift)) {
                       <button type="button" class="punch-btn" mat-stroked-button (click)="breakStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
                         Start
@@ -94,25 +98,19 @@
                       -
                     }
                   </td>
-                  <td class="punch-cell">
-                    @if (!shift.assignment.isBreakRequired) {
-                      -
-                    } @else if (shift.entry?.breakEndAt) {
-                      {{ punchTime(shift.entry?.breakEndAt) }}
-                    } @else if (canBreakEnd(shift)) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="breakEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        End
-                      </button>
-                    } @else {
-                      -
-                    }
-                  </td>
 
                   <td class="punch-cell">
                     @if (!shift.assignment.isLunchRequired) {
                       -
+                    } @else if (shift.entry?.lunchStartAt && shift.entry?.lunchEndAt) {
+                      {{ punchTime(shift.entry?.lunchStartAt) }} – {{ punchTime(shift.entry?.lunchEndAt) }}
                     } @else if (shift.entry?.lunchStartAt) {
-                      {{ punchTime(shift.entry?.lunchStartAt) }}
+                      {{ punchTime(shift.entry?.lunchStartAt) }} –
+                      @if (canLunchEnd(shift)) {
+                        <button type="button" class="punch-btn" mat-stroked-button (click)="lunchEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                          End
+                        </button>
+                      }
                     } @else if (canLunchStart(shift)) {
                       <button type="button" class="punch-btn" mat-stroked-button (click)="lunchStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
                         Start
@@ -121,41 +119,22 @@
                       -
                     }
                   </td>
-                  <td class="punch-cell">
-                    @if (!shift.assignment.isLunchRequired) {
-                      -
-                    } @else if (shift.entry?.lunchEndAt) {
-                      {{ punchTime(shift.entry?.lunchEndAt) }}
-                    } @else if (canLunchEnd(shift)) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="lunchEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        End
-                      </button>
-                    } @else {
-                      -
-                    }
-                  </td>
 
                   <td class="punch-cell">
                     @if (!shift.assignment.isBreakRequired) {
                       -
+                    } @else if (shift.entry?.break2StartAt && shift.entry?.break2EndAt) {
+                      {{ punchTime(shift.entry?.break2StartAt) }} – {{ punchTime(shift.entry?.break2EndAt) }}
                     } @else if (shift.entry?.break2StartAt) {
-                      {{ punchTime(shift.entry?.break2StartAt) }}
+                      {{ punchTime(shift.entry?.break2StartAt) }} –
+                      @if (canBreak2End(shift)) {
+                        <button type="button" class="punch-btn" mat-stroked-button (click)="break2End(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                          End
+                        </button>
+                      }
                     } @else if (canBreak2Start(shift)) {
                       <button type="button" class="punch-btn" mat-stroked-button (click)="break2Start(shift)" [disabled]="busyShiftId() === shift.assignment.id">
                         Start
-                      </button>
-                    } @else {
-                      -
-                    }
-                  </td>
-                  <td class="punch-cell">
-                    @if (!shift.assignment.isBreakRequired) {
-                      -
-                    } @else if (shift.entry?.break2EndAt) {
-                      {{ punchTime(shift.entry?.break2EndAt) }}
-                    } @else if (canBreak2End(shift)) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="break2End(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        End
                       </button>
                     } @else {
                       -

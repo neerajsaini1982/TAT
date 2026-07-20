@@ -37,9 +37,11 @@
       @if (error()) {
         <p class="error">{{ error() }}</p>
       }
-
-      <h2 class="section-title">This Week's Schedule</h2>
-      <app-current-week-schedule [locationCode]="locationCode" />
     </mat-card-content>
   </mat-card>
+
+  <div class="schedule-section">
+    <h2 class="section-title">This Week's Schedule</h2>
+    <app-current-week-schedule [locationCode]="locationCode" />
+  </div>
 }

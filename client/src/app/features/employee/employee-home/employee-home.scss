@@ -40,5 +40,17 @@
 .section-title {
   font-size: 18px;
   font-weight: 600;
-  margin: 28px 0 12px;
+  margin: 0 0 12px;
+}
+
+// Full-bleed so the schedule table can use the full viewport width instead
+// of being squeezed into the app shell's centered ~960px .content column —
+// same left:50%/translateX(-50%) technique as admin-schedule-page.scss.
+.schedule-section {
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  box-sizing: border-box;
+  padding: 20px 24px 0;
 }
