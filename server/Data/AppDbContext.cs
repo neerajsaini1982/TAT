@@ -15,6 +15,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LocationSettings> LocationSettings => Set<LocationSettings>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
+    public DbSet<ScheduledBreak> ScheduledBreaks => Set<ScheduledBreak>();
+    public DbSet<TimeEntrySegment> TimeEntrySegments => Set<TimeEntrySegment>();
 
     // SQLite has no native "datetime with offset" column type, so EF Core
     // round-trips every DateTime as Kind=Unspecified after a read — even
@@ -59,6 +61,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(l => l.Shifts)
                 .HasForeignKey(s => s.LocationId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<ScheduledBreak>(entity =>
+        {
+            entity.Property(b => b.Kind).HasConversion<string>();
+
+            entity.HasOne(b => b.Shift)
+                .WithMany(s => s.ScheduledBreaks)
+                .HasForeignKey(b => b.ShiftId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Availability>(entity =>
@@ -150,6 +162,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
             // One clock-in per shift assignment.
             entity.HasIndex(t => t.ShiftAssignmentId).IsUnique();
+        });
+
+        modelBuilder.Entity<TimeEntrySegment>(entity =>
+        {
+            entity.Property(s => s.Kind).HasConversion<string>();
+
+            entity.HasOne(s => s.TimeEntry)
+                .WithMany(t => t.Segments)
+                .HasForeignKey(s => s.TimeEntryId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

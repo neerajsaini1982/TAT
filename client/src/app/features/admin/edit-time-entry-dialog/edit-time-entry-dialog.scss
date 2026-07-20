@@ -1,6 +1,12 @@
 .content {
-  width: 420px;
+  width: 480px;
   max-width: 90vw;
+}
+
+.scheduled-ref {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 12px;
 }
 
 .time-grid {
@@ -14,14 +20,42 @@
   width: 100%;
 }
 
-// The "not required for this shift" hints span both columns, right under
-// the pair of fields they explain (Break/Lunch/2nd Break).
-.not-required-hint {
-  grid-column: 1 / -1;
-  margin: -8px 0 4px;
-  font-size: 12px;
-  font-style: italic;
+.segments-section {
+  margin: 8px 0;
+  padding: 12px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+}
+
+.segments-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 8px;
+}
+
+.segments-empty {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+  margin: 0 0 8px;
+}
+
+.segment-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+
+  .segment-kind {
+    min-width: 100px;
+  }
+}
+
+.segments-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
 }
 
 .error {

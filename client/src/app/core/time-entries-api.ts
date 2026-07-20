@@ -2,34 +2,38 @@ import { Service, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
 import { API_BASE_URL } from './api-config';
+import { BreakKind } from './shifts-api';
+
+export interface TimeEntrySegmentDto {
+  id: number;
+  kind: BreakKind;
+  startAt: string;
+  endAt: string | null;
+}
 
 export interface TimeEntryDto {
   id: number;
   shiftAssignmentId: number;
   accountId: number;
   clockInAt: string;
-  breakStartAt: string | null;
-  breakEndAt: string | null;
-  lunchStartAt: string | null;
-  lunchEndAt: string | null;
-  break2StartAt: string | null;
-  break2EndAt: string | null;
   clockOutAt: string | null;
+  segments: TimeEntrySegmentDto[];
   clockedOutByAccountId: number | null;
   note: string | null;
   editedByAccountId: number | null;
   editedAt: string | null;
 }
 
+export interface AdminSegmentInput {
+  kind: BreakKind;
+  startAt: string;
+  endAt: string | null;
+}
+
 export interface AdminEditTimeEntryRequest {
   clockInAt: string;
-  breakStartAt: string | null;
-  breakEndAt: string | null;
-  lunchStartAt: string | null;
-  lunchEndAt: string | null;
-  break2StartAt: string | null;
-  break2EndAt: string | null;
   clockOutAt: string | null;
+  segments: AdminSegmentInput[];
   note: string;
 }
 
@@ -54,28 +58,12 @@ export class TimeEntriesApi {
     return this.http.post<TimeEntryDto>(`${this.base}/clock-in`, { shiftAssignmentId });
   }
 
-  breakStart(id: number) {
-    return this.http.post<TimeEntryDto>(`${this.base}/${id}/break-start`, {});
+  startSegment(id: number, kind: BreakKind) {
+    return this.http.post<TimeEntryDto>(`${this.base}/${id}/segments/start`, { kind });
   }
 
-  breakEnd(id: number) {
-    return this.http.post<TimeEntryDto>(`${this.base}/${id}/break-end`, {});
-  }
-
-  lunchStart(id: number) {
-    return this.http.post<TimeEntryDto>(`${this.base}/${id}/lunch-start`, {});
-  }
-
-  lunchEnd(id: number) {
-    return this.http.post<TimeEntryDto>(`${this.base}/${id}/lunch-end`, {});
-  }
-
-  break2Start(id: number) {
-    return this.http.post<TimeEntryDto>(`${this.base}/${id}/break2-start`, {});
-  }
-
-  break2End(id: number) {
-    return this.http.post<TimeEntryDto>(`${this.base}/${id}/break2-end`, {});
+  endSegment(id: number) {
+    return this.http.post<TimeEntryDto>(`${this.base}/${id}/segments/end`, {});
   }
 
   clockOut(id: number) {

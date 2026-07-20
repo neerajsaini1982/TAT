@@ -1,86 +1,56 @@
 <h2 mat-dialog-title>Edit Punch Times — {{ data.employeeName }}</h2>
 <mat-dialog-content class="content">
+  <p class="scheduled-ref"><strong>Scheduled:</strong> {{ scheduledLabel }}</p>
+
   <div class="time-grid">
     <mat-form-field appearance="outline">
       <mat-label>Clock In</mat-label>
-      <input matInput type="time" [(ngModel)]="clockInAt" required />
+      <input matInput type="time" [(ngModel)]="clockInAt" [ngModelOptions]="{ updateOn: 'blur' }" required />
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Clock Out</mat-label>
-      <input matInput type="time" [(ngModel)]="clockOutAt" />
+      <input matInput type="time" [(ngModel)]="clockOutAt" [ngModelOptions]="{ updateOn: 'blur' }" />
       @if (clockOutAt) {
-        <button type="button" mat-icon-button matSuffix (click)="clear('clockOutAt')" aria-label="Clear clock out">
+        <button type="button" mat-icon-button matSuffix (click)="clearClockOut()" aria-label="Clear clock out">
           <mat-icon>close</mat-icon>
         </button>
       }
     </mat-form-field>
-
-    <mat-form-field appearance="outline">
-      <mat-label>Break Start</mat-label>
-      <input matInput type="time" [(ngModel)]="breakStartAt" />
-      @if (breakStartAt) {
-        <button type="button" mat-icon-button matSuffix (click)="clear('breakStartAt')" aria-label="Clear break start">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>Break End</mat-label>
-      <input matInput type="time" [(ngModel)]="breakEndAt" />
-      @if (breakEndAt) {
-        <button type="button" mat-icon-button matSuffix (click)="clear('breakEndAt')" aria-label="Clear break end">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-    </mat-form-field>
-    @if (!data.isBreakRequired) {
-      <p class="not-required-hint">Break isn't required for this shift.</p>
-    }
-
-    <mat-form-field appearance="outline">
-      <mat-label>Lunch Start</mat-label>
-      <input matInput type="time" [(ngModel)]="lunchStartAt" />
-      @if (lunchStartAt) {
-        <button type="button" mat-icon-button matSuffix (click)="clear('lunchStartAt')" aria-label="Clear lunch start">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>Lunch End</mat-label>
-      <input matInput type="time" [(ngModel)]="lunchEndAt" />
-      @if (lunchEndAt) {
-        <button type="button" mat-icon-button matSuffix (click)="clear('lunchEndAt')" aria-label="Clear lunch end">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-    </mat-form-field>
-    @if (!data.isLunchRequired) {
-      <p class="not-required-hint">Lunch isn't required for this shift.</p>
-    }
-
-    <mat-form-field appearance="outline">
-      <mat-label>2nd Break Start</mat-label>
-      <input matInput type="time" [(ngModel)]="break2StartAt" />
-      @if (break2StartAt) {
-        <button type="button" mat-icon-button matSuffix (click)="clear('break2StartAt')" aria-label="Clear 2nd break start">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-    </mat-form-field>
-    <mat-form-field appearance="outline">
-      <mat-label>2nd Break End</mat-label>
-      <input matInput type="time" [(ngModel)]="break2EndAt" />
-      @if (break2EndAt) {
-        <button type="button" mat-icon-button matSuffix (click)="clear('break2EndAt')" aria-label="Clear 2nd break end">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
-    </mat-form-field>
-    @if (!data.isBreakRequired) {
-      <p class="not-required-hint">2nd break isn't required for this shift.</p>
-    }
   </div>
+
+  <div class="segments-section">
+    <span class="segments-label">Breaks & Lunches Taken</span>
+    @if (segments.length === 0) {
+      <p class="segments-empty">None recorded.</p>
+    }
+    @for (s of segments; track $index) {
+      <div class="segment-row">
+        <mat-form-field appearance="outline" class="segment-kind">
+          <mat-label>Type</mat-label>
+          <mat-select [(ngModel)]="s.kind" [name]="'segmentKind' + $index">
+            <mat-option value="Break">Break</mat-option>
+            <mat-option value="Lunch">Lunch</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Start</mat-label>
+          <input matInput type="time" [(ngModel)]="s.start" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentStart' + $index" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>End</mat-label>
+          <input matInput type="time" [(ngModel)]="s.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentEnd' + $index" />
+        </mat-form-field>
+        <button mat-icon-button type="button" (click)="removeSegment($index)" aria-label="Remove">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    }
+    <div class="segments-actions">
+      <button mat-stroked-button type="button" (click)="addSegment('Break')">+ Add Break</button>
+      <button mat-stroked-button type="button" (click)="addSegment('Lunch')">+ Add Lunch</button>
+    </div>
+  </div>
+
   <mat-form-field appearance="outline" class="note-field">
     <mat-label>Reason for this edit</mat-label>
     <textarea matInput rows="2" [(ngModel)]="note"></textarea>

@@ -30,7 +30,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         var today = DateOnly.FromDateTime(DateTime.Now);
 
         var assignments = db.ShiftAssignments
-            .Include(a => a.Shift)
+            .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
             .Include(a => a.Account)
             .Where(a => a.AccountId == accountId && a.Date >= today && a.IsPublished)
             .OrderBy(a => a.Date)
@@ -86,7 +86,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
 
         var weekEndDate = weekStartDate.AddDays(6);
         var assignments = db.ShiftAssignments
-            .Include(a => a.Shift)
+            .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
             .Include(a => a.Account)
             .Where(a => a.Shift!.LocationId == location.Id && a.Date >= weekStartDate && a.Date <= weekEndDate)
             .OrderBy(a => a.Date)
@@ -102,7 +102,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     [Authorize(Policy = "AdminOrAbove")]
     public async Task<ActionResult<ShiftAssignmentDto>> Create(CreateShiftAssignmentRequest request)
     {
-        var shift = db.Shifts.Include(s => s.Location).SingleOrDefault(s => s.Id == request.ShiftId);
+        var shift = db.Shifts.Include(s => s.Location).Include(s => s.ScheduledBreaks).SingleOrDefault(s => s.Id == request.ShiftId);
         var account = db.Accounts.Find(request.AccountId);
         if (shift is null || account is null || !CanAccess(shift.Location?.LocationCode) || account.LocationId != shift.LocationId)
         {
@@ -148,6 +148,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     {
         var assignment = db.ShiftAssignments
             .Include(a => a.Shift).ThenInclude(s => s!.Location)
+            .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
             .SingleOrDefault(a => a.Id == id);
         if (assignment is null || !CanAccess(assignment.Shift?.Location?.LocationCode))
         {
@@ -215,6 +216,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     {
         var assignment = db.ShiftAssignments
             .Include(a => a.Shift).ThenInclude(s => s!.Location)
+            .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
             .Include(a => a.Account)
             .SingleOrDefault(a => a.Id == id);
         if (assignment is null || !CanAccess(assignment.Shift?.Location?.LocationCode))
@@ -300,8 +302,10 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         a.Shift!.Name,
         a.Shift.StartTime,
         a.Shift.EndTime,
-        a.Shift.IsBreakRequired,
-        a.Shift.IsLunchRequired,
+        a.Shift.ScheduledBreaks
+            .OrderBy(b => b.StartTime)
+            .Select(b => new ScheduledBreakDto(b.Kind, b.StartTime, b.EndTime))
+            .ToList(),
         ComputeHours(a.Shift.StartTime, a.Shift.EndTime),
         a.AccountId,
         a.Account!.FirstName,

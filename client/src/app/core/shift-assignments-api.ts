@@ -2,6 +2,7 @@ import { Service, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
 import { API_BASE_URL } from './api-config';
+import { ScheduledBreakDto } from './shifts-api';
 
 export interface ShiftAssignmentDto {
   id: number;
@@ -9,8 +10,7 @@ export interface ShiftAssignmentDto {
   shiftName: string;
   shiftStartTime: string;
   shiftEndTime: string;
-  isBreakRequired: boolean;
-  isLunchRequired: boolean;
+  scheduledBreaks: ScheduledBreakDto[];
   hours: number;
   accountId: number;
   accountFirstName: string;

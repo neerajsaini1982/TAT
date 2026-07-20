@@ -3,13 +3,22 @@ import { HttpClient } from '@angular/common/http';
 
 import { API_BASE_URL } from './api-config';
 
+export type BreakKind = 'Break' | 'Lunch';
+
+// StartTime/EndTime are "HH:mm:ss" (API's TimeOnly shape) — wall-clock in
+// the shift's own location, no timezone conversion needed.
+export interface ScheduledBreakDto {
+  kind: BreakKind;
+  startTime: string;
+  endTime: string;
+}
+
 export interface ShiftDto {
   id: number;
   name: string;
   startTime: string;
   endTime: string;
-  isBreakRequired: boolean;
-  isLunchRequired: boolean;
+  scheduledBreaks: ScheduledBreakDto[];
   isActive: boolean;
   locationCode: string;
 }
@@ -18,8 +27,7 @@ export interface CreateShiftRequest {
   name: string;
   startTime: string;
   endTime: string;
-  isBreakRequired: boolean;
-  isLunchRequired: boolean;
+  scheduledBreaks: ScheduledBreakDto[];
   locationId: number | null;
 }
 
@@ -27,8 +35,7 @@ export interface UpdateShiftRequest {
   name: string;
   startTime: string;
   endTime: string;
-  isBreakRequired: boolean;
-  isLunchRequired: boolean;
+  scheduledBreaks: ScheduledBreakDto[];
   isActive: boolean;
 }
 

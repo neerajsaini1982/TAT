@@ -14,7 +14,7 @@ import { LocationSettingsApi } from '../../../core/location-settings-api';
 import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { employeeColor } from '../../../core/employee-colors';
-import { isBreak2OverLimit, isBreakOverLimit, isLateClockIn, isLunchOverLimit } from '../../../core/attendance-flags';
+import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-flags';
 import { addDays, combineDateAndTime, formatDate, formatWeekRange, mondayOf } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
@@ -302,19 +302,16 @@ export class AdminSchedulePage implements OnInit {
     return !!entry && isLateClockIn(entry, assignment, this.lateClockInGraceMinutes());
   }
 
+  // Checks every Break/Lunch segment on the entry, however many the
+  // employee has taken — not just a fixed first/second slot.
   isBreakOver(assignment: ShiftAssignmentDto): boolean {
     const entry = this.entryFor(assignment);
-    return !!entry && isBreakOverLimit(entry, this.breakLimitMinutes(), new Date());
+    return !!entry && isAnySegmentOverLimit(entry, 'Break', this.breakLimitMinutes(), new Date());
   }
 
   isLunchOver(assignment: ShiftAssignmentDto): boolean {
     const entry = this.entryFor(assignment);
-    return !!entry && isLunchOverLimit(entry, this.lunchLimitMinutes(), new Date());
-  }
-
-  isBreak2Over(assignment: ShiftAssignmentDto): boolean {
-    const entry = this.entryFor(assignment);
-    return !!entry && isBreak2OverLimit(entry, this.breakLimitMinutes(), new Date());
+    return !!entry && isAnySegmentOverLimit(entry, 'Lunch', this.lunchLimitMinutes(), new Date());
   }
 
   // A currently-clocked-in employee — clocked-out ones don't need the
@@ -400,8 +397,7 @@ export class AdminSchedulePage implements OnInit {
         data: {
           employeeName: `${assignment.accountFirstName} ${assignment.accountLastName}`,
           entry,
-          isBreakRequired: assignment.isBreakRequired,
-          isLunchRequired: assignment.isLunchRequired,
+          scheduledBreaks: assignment.scheduledBreaks,
         },
       })
       .afterClosed()
@@ -413,13 +409,12 @@ export class AdminSchedulePage implements OnInit {
         this.timeEntriesApi
           .adminEditTimes(assignment.id, {
             clockInAt: toIso(result.clockInAt)!,
-            breakStartAt: toIso(result.breakStartAt),
-            breakEndAt: toIso(result.breakEndAt),
-            lunchStartAt: toIso(result.lunchStartAt),
-            lunchEndAt: toIso(result.lunchEndAt),
-            break2StartAt: toIso(result.break2StartAt),
-            break2EndAt: toIso(result.break2EndAt),
             clockOutAt: toIso(result.clockOutAt),
+            segments: result.segments.map((s) => ({
+              kind: s.kind,
+              startAt: toIso(s.start)!,
+              endAt: toIso(s.end),
+            })),
             note: result.note,
           })
           .subscribe({

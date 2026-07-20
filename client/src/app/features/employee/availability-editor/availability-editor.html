@@ -45,12 +45,12 @@
               <mat-icon class="time-icon">schedule</mat-icon>
               <mat-form-field appearance="outline" class="time-field">
                 <mat-label>Start</mat-label>
-                <input matInput type="time" [(ngModel)]="day.startTime" [disabled]="locked()" />
+                <input matInput type="time" [(ngModel)]="day.startTime" [ngModelOptions]="{ updateOn: 'blur' }" [disabled]="locked()" />
               </mat-form-field>
               <span class="time-sep">–</span>
               <mat-form-field appearance="outline" class="time-field">
                 <mat-label>End</mat-label>
-                <input matInput type="time" [(ngModel)]="day.endTime" [disabled]="locked()" />
+                <input matInput type="time" [(ngModel)]="day.endTime" [ngModelOptions]="{ updateOn: 'blur' }" [disabled]="locked()" />
               </mat-form-field>
             }
           </div>

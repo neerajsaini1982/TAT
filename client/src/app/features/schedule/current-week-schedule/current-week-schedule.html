@@ -39,11 +39,8 @@
                   <th>Employee</th>
                 }
                 <th>Shift</th>
-                <th>Clock In</th>
-                <th>Break</th>
-                <th>Lunch</th>
-                <th>2nd Break</th>
-                <th>Clock Out</th>
+                <th>Clock In / Clock Out</th>
+                <th>Breaks</th>
                 <th>Status</th>
                 @if (showEmployeeNames()) {
                   <th></th>
@@ -64,96 +61,64 @@
                     <span class="shift-time">{{ scheduledTime(shift.assignment) }}</span>
                   </td>
 
-                  <td class="punch-cell">
-                    @if (shift.entry?.clockInAt) {
-                      {{ punchTime(shift.entry?.clockInAt) }}
-                    } @else if (shift.canClockIn) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="clockIn(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Clock In
-                      </button>
-                    } @else if (shift.isMine && day.isToday && !shift.entry) {
-                      <span [title]="'Opens at ' + shift.earliestClockInLabel">-</span>
-                    } @else {
-                      -
-                    }
-                  </td>
-
-                  <td class="punch-cell">
-                    @if (!shift.assignment.isBreakRequired) {
-                      -
-                    } @else if (shift.entry?.breakStartAt && shift.entry?.breakEndAt) {
-                      {{ punchTime(shift.entry?.breakStartAt) }} – {{ punchTime(shift.entry?.breakEndAt) }}
-                    } @else if (shift.entry?.breakStartAt) {
-                      {{ punchTime(shift.entry?.breakStartAt) }} –
-                      @if (canBreakEnd(shift)) {
-                        <button type="button" class="punch-btn" mat-stroked-button (click)="breakEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                          End
+                  <td class="punch-cell clock-cell">
+                    <span class="clock-part">
+                      @if (shift.entry?.clockInAt) {
+                        {{ punchTime(shift.entry?.clockInAt) }}
+                      } @else if (shift.canClockIn) {
+                        <button type="button" class="punch-btn" mat-stroked-button (click)="clockIn(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                          Clock In
                         </button>
+                      } @else if (shift.isMine && day.isToday && !shift.entry) {
+                        <span [title]="'Opens at ' + shift.earliestClockInLabel">-</span>
+                      } @else {
+                        -
                       }
-                    } @else if (canBreakStart(shift)) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="breakStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Start
-                      </button>
-                    } @else {
-                      -
-                    }
-                  </td>
-
-                  <td class="punch-cell">
-                    @if (!shift.assignment.isLunchRequired) {
-                      -
-                    } @else if (shift.entry?.lunchStartAt && shift.entry?.lunchEndAt) {
-                      {{ punchTime(shift.entry?.lunchStartAt) }} – {{ punchTime(shift.entry?.lunchEndAt) }}
-                    } @else if (shift.entry?.lunchStartAt) {
-                      {{ punchTime(shift.entry?.lunchStartAt) }} –
-                      @if (canLunchEnd(shift)) {
-                        <button type="button" class="punch-btn" mat-stroked-button (click)="lunchEnd(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                          End
+                    </span>
+                    <span class="clock-sep">/</span>
+                    <span class="clock-part">
+                      @if (shift.entry?.clockOutAt) {
+                        {{ punchTime(shift.entry?.clockOutAt) }}
+                        @if (shift.entry?.clockedOutByAccountId) {
+                          <mat-icon class="admin-clockout-icon" [title]="'Clocked out by a lead/admin: ' + (shift.entry?.note ?? '')">
+                            admin_panel_settings
+                          </mat-icon>
+                        }
+                      } @else if (canClockOut(shift)) {
+                        <button type="button" class="punch-btn" mat-flat-button color="primary" (click)="clockOut(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                          Clock Out
                         </button>
+                      } @else {
+                        -
                       }
-                    } @else if (canLunchStart(shift)) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="lunchStart(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Start
-                      </button>
-                    } @else {
-                      -
-                    }
-                  </td>
-
-                  <td class="punch-cell">
-                    @if (!shift.assignment.isBreakRequired) {
-                      -
-                    } @else if (shift.entry?.break2StartAt && shift.entry?.break2EndAt) {
-                      {{ punchTime(shift.entry?.break2StartAt) }} – {{ punchTime(shift.entry?.break2EndAt) }}
-                    } @else if (shift.entry?.break2StartAt) {
-                      {{ punchTime(shift.entry?.break2StartAt) }} –
-                      @if (canBreak2End(shift)) {
-                        <button type="button" class="punch-btn" mat-stroked-button (click)="break2End(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                          End
-                        </button>
-                      }
-                    } @else if (canBreak2Start(shift)) {
-                      <button type="button" class="punch-btn" mat-stroked-button (click)="break2Start(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Start
-                      </button>
-                    } @else {
-                      -
-                    }
-                  </td>
-
-                  <td class="punch-cell">
+                    </span>
                     @if (shift.entry?.clockOutAt) {
-                      {{ punchTime(shift.entry?.clockOutAt) }} · {{ hoursWorked(shift.entry!) }}h
-                      @if (shift.entry?.clockedOutByAccountId) {
-                        <mat-icon class="admin-clockout-icon" [title]="'Clocked out by a lead/admin: ' + (shift.entry?.note ?? '')">
-                          admin_panel_settings
-                        </mat-icon>
-                      }
-                    } @else if (canClockOut(shift)) {
-                      <button type="button" class="punch-btn" mat-flat-button color="primary" (click)="clockOut(shift)" [disabled]="busyShiftId() === shift.assignment.id">
-                        Clock Out
-                      </button>
-                    } @else {
+                      <div class="hours-worked-line"><strong>{{ hoursWorkedLabel(shift.entry!) }}</strong></div>
+                    }
+                  </td>
+
+                  <td class="punch-cell breaks-cell">
+                    @for (seg of segmentsFor(shift); track seg.id) {
+                      <div class="segment-line">
+                        {{ seg.kind }}: {{ punchTime(seg.startAt) }}–{{ seg.endAt ? punchTime(seg.endAt) : 'ongoing' }}
+                        @if (shift.isMine && !seg.endAt) {
+                          <button type="button" class="punch-btn" mat-stroked-button (click)="endSegment(shift)" [disabled]="busyShiftId() === shift.assignment.id">
+                            End
+                          </button>
+                        }
+                      </div>
+                    }
+                    @if (canStartSegment(shift)) {
+                      <div class="segment-actions">
+                        <button type="button" class="punch-btn" mat-stroked-button (click)="startSegment(shift, 'Break')" [disabled]="busyShiftId() === shift.assignment.id">
+                          + Break
+                        </button>
+                        <button type="button" class="punch-btn" mat-stroked-button (click)="startSegment(shift, 'Lunch')" [disabled]="busyShiftId() === shift.assignment.id">
+                          + Lunch
+                        </button>
+                      </div>
+                    }
+                    @if (segmentsFor(shift).length === 0 && !canStartSegment(shift)) {
                       -
                     }
                   </td>
