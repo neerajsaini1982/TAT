@@ -10,9 +10,22 @@
       </mat-select>
     </mat-form-field>
   }
+  <mat-form-field appearance="outline" class="search-filter">
+    <mat-label>Search name</mat-label>
+    <input matInput [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+  <button mat-stroked-button (click)="showInactive.set(!showInactive())">
+    {{ showInactive() ? 'Show Active Only' : 'Show All Employees' }}
+  </button>
   <span class="spacer"></span>
+  @if (lockedLocationCode) {
+    <a mat-stroked-button [routerLink]="['/', lockedLocationCode, 'admin', 'accounts', 'import']">Upload Employees</a>
+  }
   <button mat-flat-button color="primary" (click)="startCreate()">Add Account</button>
 </div>
+
+<p class="result-count">{{ filteredAccounts().length }} of {{ accounts().length }} shown</p>
 
 @if (showForm()) {
   <mat-card class="form-card">
@@ -70,7 +83,12 @@
   </mat-card>
 }
 
-<table mat-table [dataSource]="accounts()" class="mat-elevation-z1">
+<table mat-table [dataSource]="filteredAccounts()" class="mat-elevation-z1">
+  <ng-container matColumnDef="serial">
+    <th mat-header-cell *matHeaderCellDef>#</th>
+    <td mat-cell *matCellDef="let a; let i = index">{{ i + 1 }}</td>
+  </ng-container>
+
   <ng-container matColumnDef="locationCode">
     <th mat-header-cell *matHeaderCellDef>Location</th>
     <td mat-cell *matCellDef="let a">{{ a.locationCode }}</td>
@@ -121,6 +139,17 @@
   <ng-container matColumnDef="actions">
     <th mat-header-cell *matHeaderCellDef></th>
     <td mat-cell *matCellDef="let a">
+      @if (a.role === 'Employee') {
+        <button
+          mat-icon-button
+          (click)="sendCredentials(a)"
+          [disabled]="!canSendCredentials(a) || sendingId() === a.id"
+          [title]="a.email ? 'Send login credentials' : 'No email address on file'"
+          aria-label="Send login credentials"
+        >
+          <mat-icon>{{ sendingId() === a.id ? 'hourglass_top' : 'mail' }}</mat-icon>
+        </button>
+      }
       <button mat-icon-button (click)="startEdit(a)" aria-label="Edit">
         <mat-icon>edit</mat-icon>
       </button>

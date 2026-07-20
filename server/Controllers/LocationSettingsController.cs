@@ -38,6 +38,8 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
 
         var settings = GetOrCreateSettings(location.Id);
         return Ok(new EmployeeLocationSettingsDto(
+            settings.TimeFormat,
+            settings.TimeZone,
             settings.ClockInWindowMinutes,
             settings.LateClockInGraceMinutes,
             settings.BreakLimitMinutes,

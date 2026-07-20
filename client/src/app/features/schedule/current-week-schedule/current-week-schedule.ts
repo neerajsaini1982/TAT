@@ -2,18 +2,20 @@ import { Component, DestroyRef, Input, OnInit, computed, inject, signal } from '
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable, catchError, forkJoin, of } from 'rxjs';
 
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
 import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
-import { LocationSettingsApi } from '../../../core/location-settings-api';
+import { LocationSettingsApi, TimeFormat } from '../../../core/location-settings-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { employeeColor } from '../../../core/employee-colors';
+import { formatInstant, formatTimeOnly } from '../../../core/location-time';
 import { isBreak2OverLimit, isBreakOverLimit, isLateClockIn, isLunchOverLimit } from '../../../core/attendance-flags';
-import { addDays, dayOfWeekLabel, formatDate, mondayOf, parseDate, toMmDdYyyy } from '../../../core/week-utils';
-
-type PunchStatus = 'not-started' | 'working' | 'on-break' | 'on-lunch' | 'on-break2' | 'clocked-out';
+import { addDays, combineDateAndTime, dayOfWeekLabel, formatDate, mondayOf, toMmDdYyyy } from '../../../core/week-utils';
+import { NoteDialog, NoteDialogData } from '../../admin/note-dialog/note-dialog';
+import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../../admin/edit-time-entry-dialog/edit-time-entry-dialog';
 
 interface DayShift {
   assignment: ShiftAssignmentDto;
@@ -22,7 +24,6 @@ interface DayShift {
   earliestClockInLabel: string;
   canClockIn: boolean;
   entry: TimeEntryDto | null;
-  status: PunchStatus;
 }
 
 interface DayGroup {
@@ -36,41 +37,13 @@ interface DayGroup {
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 const DEFAULT_SETTINGS = {
+  timeFormat: 'TwelveHour' as TimeFormat,
+  timeZone: 'America/Los_Angeles',
   clockInWindowMinutes: 15,
   lateClockInGraceMinutes: 5,
   breakLimitMinutes: 15,
   lunchLimitMinutes: 30,
 };
-
-function combineDateAndTime(dateIso: string, time: string): Date {
-  const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
-  const date = parseDate(dateIso);
-  date.setHours(hours, minutes, 0, 0);
-  return date;
-}
-
-function formatHHmm(date: Date): string {
-  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-}
-
-function statusOf(entry: TimeEntryDto | null): PunchStatus {
-  if (!entry) {
-    return 'not-started';
-  }
-  if (entry.clockOutAt) {
-    return 'clocked-out';
-  }
-  if (entry.breakStartAt && !entry.breakEndAt) {
-    return 'on-break';
-  }
-  if (entry.lunchStartAt && !entry.lunchEndAt) {
-    return 'on-lunch';
-  }
-  if (entry.break2StartAt && !entry.break2EndAt) {
-    return 'on-break2';
-  }
-  return 'working';
-}
 
 // Net hours worked once clocked out: wall time minus break and lunch time.
 function workedHours(entry: TimeEntryDto): number {
@@ -93,17 +66,20 @@ function workedHours(entry: TimeEntryDto): number {
 // default 'mine' scope it's just the caller's own upcoming shifts (used on
 // the Employee home page). In 'location' scope (Admin/Lead home page) it
 // shows every account's shifts for the location, each labeled with the
-// employee's name since more than one person can be working the same day —
-// but punch actions and the punch timeline only ever apply to the caller's
-// own shift, since punching is self-service and there's no admin visibility
-// into other employees' time entries.
+// employee's name since more than one person can be working the same day.
+// Rendered as one aligned table per day so every punch (Clock In, Break,
+// Lunch, 2nd Break, Clock Out) lines up in its own column — a column shows
+// "-" when the shift doesn't require that punch (Shift.IsBreakRequired/
+// IsLunchRequired) or when it just hasn't happened yet. Self-punch actions
+// (Clock In/Break/Lunch/Clock Out buttons) only ever render for the
+// caller's own shift, since punching is self-service; Mark/Clear Absent and
+// Edit Times are location-scope-only admin actions on any employee's row.
 // Narrowed down to the Monday-Sunday of the current week, today onward
-// (i.e. "what's left of this week"). Card styling mirrors
-// EmployeeSchedulePage's day cards for a consistent look. Today's card
-// additionally walks the caller's own shift through Clock In -> Break ->
-// Lunch -> (a second Break, once Lunch has ended) -> Clock Out, shown in
-// that chronological order, gated by the location's ClockInWindowMinutes
-// setting.
+// (i.e. "what's left of this week"). Every time is displayed in the
+// location's own configured timezone and 12/24-hour format (see
+// LocationSettings.TimeZone/TimeFormat), not the viewing browser's — an
+// admin checking in from a different timezone, or a screen physically in
+// the store, should both read the same wall-clock time.
 @Component({
   selector: 'app-current-week-schedule',
   imports: [MatButtonModule, MatCardModule, MatIconModule],
@@ -119,18 +95,24 @@ export class CurrentWeekSchedule implements OnInit {
   private readonly settingsApi = inject(LocationSettingsApi);
   private readonly realtime = inject(ScheduleRealtime);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly loading = signal(true);
   protected readonly days = signal<DayGroup[]>([]);
   protected readonly busyShiftId = signal<number | null>(null);
+  protected readonly markingId = signal<number | null>(null);
+  protected readonly error = signal<string | null>(null);
   protected readonly showEmployeeNames = computed(() => this.scope === 'location');
   protected readonly employeeColor = employeeColor;
   protected readonly totalHours = computed(() =>
     round2(this.days().reduce((sum, d) => sum + d.hours, 0)),
   );
 
-  // Attendance thresholds for badging the caller's own shift(s) as
-  // Late/Long Break/Long Lunch — see LocationSettings and attendance-flags.ts.
+  // Attendance thresholds + display prefs, all sourced from LocationSettings
+  // (see LocationSettingsController.GetMine) — every signed-in role reads
+  // the same subset, so admin and employee views always agree.
+  private timeFormat: TimeFormat = DEFAULT_SETTINGS.timeFormat;
+  private timeZone = DEFAULT_SETTINGS.timeZone;
   private lateClockInGraceMinutes = DEFAULT_SETTINGS.lateClockInGraceMinutes;
   private breakLimitMinutes = DEFAULT_SETTINGS.breakLimitMinutes;
   private lunchLimitMinutes = DEFAULT_SETTINGS.lunchLimitMinutes;
@@ -156,9 +138,16 @@ export class CurrentWeekSchedule implements OnInit {
       mine: this.api.getMine(),
       assignments: isLocationScope ? this.api.getForWeek(weekStart, this.locationCode!) : this.api.getMine(),
       settings: this.settingsApi.getMine().pipe(catchError(() => of(DEFAULT_SETTINGS))),
-      entries: this.timeEntriesApi.getMine(today).pipe(catchError(() => of([]))),
+      // Location scope (Admin/Lead) needs every employee's punches to fill
+      // the table's columns, not just the caller's own — mine scope only
+      // ever needs the caller's own, which is also all getMine ever returns.
+      entries: isLocationScope
+        ? this.timeEntriesApi.getForLocation(this.locationCode!, today).pipe(catchError(() => of([])))
+        : this.timeEntriesApi.getMine(today).pipe(catchError(() => of([]))),
     }).subscribe({
       next: ({ mine, assignments, settings, entries }) => {
+        this.timeFormat = settings.timeFormat;
+        this.timeZone = settings.timeZone;
         this.lateClockInGraceMinutes = settings.lateClockInGraceMinutes;
         this.breakLimitMinutes = settings.breakLimitMinutes;
         this.lunchLimitMinutes = settings.lunchLimitMinutes;
@@ -184,15 +173,17 @@ export class CurrentWeekSchedule implements OnInit {
                 const isMine = mineIds.has(assignment.id);
                 const earliestClockInAt = combineDateAndTime(assignment.date, assignment.shiftStartTime);
                 earliestClockInAt.setMinutes(earliestClockInAt.getMinutes() - settings.clockInWindowMinutes);
-                const entry = isMine ? (entryByShiftId.get(assignment.id) ?? null) : null;
+                // Location scope shows every employee's punches (see the
+                // getForLocation fetch above); only the *actions* stay
+                // self-service (see the isMine checks on each canX below).
+                const entry = entryByShiftId.get(assignment.id) ?? null;
                 return {
                   assignment,
                   employeeName: `${assignment.accountFirstName} ${assignment.accountLastName}`,
                   isMine,
-                  earliestClockInLabel: formatHHmm(earliestClockInAt),
+                  earliestClockInLabel: this.punchTime(earliestClockInAt.toISOString()),
                   canClockIn: isToday && isMine && !entry && now >= earliestClockInAt,
                   entry,
-                  status: statusOf(entry),
                 };
               });
 
@@ -212,12 +203,14 @@ export class CurrentWeekSchedule implements OnInit {
     });
   }
 
-  shiftTime(shift: ShiftAssignmentDto): string {
-    return `${shift.shiftStartTime.slice(0, 5)}–${shift.shiftEndTime.slice(0, 5)}`;
+  scheduledTime(shift: ShiftAssignmentDto): string {
+    return `${formatTimeOnly(shift.shiftStartTime, this.timeFormat)}–${formatTimeOnly(shift.shiftEndTime, this.timeFormat)}`;
   }
 
-  timeLabel(iso: string): string {
-    return formatHHmm(new Date(iso));
+  // "-" is the universal empty state for a punch cell: either the shift
+  // doesn't require that punch at all, or it just hasn't happened yet.
+  punchTime(iso: string | null | undefined): string {
+    return iso ? formatInstant(iso, this.timeZone, this.timeFormat) : '-';
   }
 
   minutesBetween(startIso: string, endIso: string): number {
@@ -255,6 +248,44 @@ export class CurrentWeekSchedule implements OnInit {
     return isLunchOverLimit(entry, this.lunchLimitMinutes, new Date());
   }
 
+  // Each of these mirrors the sequential state machine TimeEntriesController
+  // enforces server-side — a punch button only ever renders in the one cell
+  // it's currently valid for, so there's exactly one obvious next action.
+  // Every one of these is gated on isMine — punching is self-service only,
+  // even though entry data itself is now visible for every employee in
+  // location scope (see load()).
+  canBreakStart(shift: DayShift): boolean {
+    const e = shift.entry;
+    return shift.isMine && !!e && !e.clockOutAt && !this.isOnLunch(e) && !this.isOnBreak2(e) && !e.breakStartAt;
+  }
+
+  canBreakEnd(shift: DayShift): boolean {
+    return shift.isMine && !!shift.entry && this.isOnBreak(shift.entry);
+  }
+
+  canLunchStart(shift: DayShift): boolean {
+    const e = shift.entry;
+    return shift.isMine && !!e && !e.clockOutAt && !this.isOnBreak(e) && !this.isOnBreak2(e) && !e.lunchStartAt;
+  }
+
+  canLunchEnd(shift: DayShift): boolean {
+    return shift.isMine && !!shift.entry && this.isOnLunch(shift.entry);
+  }
+
+  canBreak2Start(shift: DayShift): boolean {
+    const e = shift.entry;
+    return shift.isMine && !!e && !e.clockOutAt && !!e.lunchEndAt && !this.isOnBreak(e) && !this.isOnLunch(e) && !e.break2StartAt;
+  }
+
+  canBreak2End(shift: DayShift): boolean {
+    return shift.isMine && !!shift.entry && this.isOnBreak2(shift.entry);
+  }
+
+  canClockOut(shift: DayShift): boolean {
+    const e = shift.entry;
+    return shift.isMine && !!e && !e.clockOutAt && !this.isOnBreak(e) && !this.isOnLunch(e) && !this.isOnBreak2(e);
+  }
+
   clockIn(shift: DayShift): void {
     if (!shift.canClockIn) {
       return;
@@ -263,43 +294,43 @@ export class CurrentWeekSchedule implements OnInit {
   }
 
   breakStart(shift: DayShift): void {
-    if (shift.entry) {
+    if (shift.isMine && shift.entry) {
       this.run(shift.assignment.id, this.timeEntriesApi.breakStart(shift.entry.id));
     }
   }
 
   breakEnd(shift: DayShift): void {
-    if (shift.entry) {
+    if (shift.isMine && shift.entry) {
       this.run(shift.assignment.id, this.timeEntriesApi.breakEnd(shift.entry.id));
     }
   }
 
   lunchStart(shift: DayShift): void {
-    if (shift.entry) {
+    if (shift.isMine && shift.entry) {
       this.run(shift.assignment.id, this.timeEntriesApi.lunchStart(shift.entry.id));
     }
   }
 
   lunchEnd(shift: DayShift): void {
-    if (shift.entry) {
+    if (shift.isMine && shift.entry) {
       this.run(shift.assignment.id, this.timeEntriesApi.lunchEnd(shift.entry.id));
     }
   }
 
   break2Start(shift: DayShift): void {
-    if (shift.entry) {
+    if (shift.isMine && shift.entry) {
       this.run(shift.assignment.id, this.timeEntriesApi.break2Start(shift.entry.id));
     }
   }
 
   break2End(shift: DayShift): void {
-    if (shift.entry) {
+    if (shift.isMine && shift.entry) {
       this.run(shift.assignment.id, this.timeEntriesApi.break2End(shift.entry.id));
     }
   }
 
   clockOut(shift: DayShift): void {
-    if (shift.entry) {
+    if (shift.isMine && shift.entry) {
       this.run(shift.assignment.id, this.timeEntriesApi.clockOut(shift.entry.id));
     }
   }
@@ -326,11 +357,96 @@ export class CurrentWeekSchedule implements OnInit {
       days.map((day) => ({
         ...day,
         shifts: day.shifts.map((s) =>
-          s.assignment.id === shiftAssignmentId
-            ? { ...s, entry, status: statusOf(entry), canClockIn: false }
-            : s,
+          s.assignment.id === shiftAssignmentId ? { ...s, entry, canClockIn: false } : s,
         ),
       })),
     );
+  }
+
+  // Location-scope only (Admin/Lead home page) — lets an admin mark a
+  // teammate absent right from today's schedule instead of having to open
+  // the full weekly grid at admin/schedule. Reuses the same NoteDialog and
+  // ShiftAssignmentsApi.markAbsent() the grid already uses, so both screens
+  // stay backed by the same server rule (409 if a TimeEntry already exists).
+  markAbsent(shift: DayShift): void {
+    this.dialog
+      .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
+        data: {
+          title: `Mark ${shift.employeeName} absent`,
+          label: 'Reason',
+          noteRequired: true,
+          confirmLabel: 'Mark Absent',
+        },
+      })
+      .afterClosed()
+      .subscribe((note) => {
+        if (!note) {
+          return;
+        }
+        this.markingId.set(shift.assignment.id);
+        this.api.markAbsent(shift.assignment.id, { isAbsent: true, note }).subscribe({
+          next: () => {
+            this.markingId.set(null);
+            this.load();
+          },
+          error: (err) => {
+            this.markingId.set(null);
+            this.error.set(err?.error ?? 'Failed to mark absent.');
+          },
+        });
+      });
+  }
+
+  clearAbsent(shift: DayShift): void {
+    this.markingId.set(shift.assignment.id);
+    this.api.markAbsent(shift.assignment.id, { isAbsent: false, note: null }).subscribe({
+      next: () => {
+        this.markingId.set(null);
+        this.load();
+      },
+      error: (err) => {
+        this.markingId.set(null);
+        this.error.set(err?.error ?? 'Failed to clear absence.');
+      },
+    });
+  }
+
+  // Location-scope only — lets an admin set every punch on today's entry
+  // directly, whether correcting a mistake or filling one in from scratch.
+  // Same dialog/endpoint admin-schedule-page's weekly grid uses.
+  editTimes(shift: DayShift): void {
+    this.dialog
+      .open<EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult>(EditTimeEntryDialog, {
+        data: {
+          employeeName: shift.employeeName,
+          entry: shift.entry,
+          isBreakRequired: shift.assignment.isBreakRequired,
+          isLunchRequired: shift.assignment.isLunchRequired,
+        },
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+        const toIso = (time: string | null) =>
+          time ? combineDateAndTime(shift.assignment.date, time).toISOString() : null;
+        this.timeEntriesApi
+          .adminEditTimes(shift.assignment.id, {
+            clockInAt: toIso(result.clockInAt)!,
+            breakStartAt: toIso(result.breakStartAt),
+            breakEndAt: toIso(result.breakEndAt),
+            lunchStartAt: toIso(result.lunchStartAt),
+            lunchEndAt: toIso(result.lunchEndAt),
+            break2StartAt: toIso(result.break2StartAt),
+            break2EndAt: toIso(result.break2EndAt),
+            clockOutAt: toIso(result.clockOutAt),
+            note: result.note,
+          })
+          .subscribe({
+            next: () => this.load(),
+            error: (err) => this.error.set(err?.error ?? 'Failed to update punch times.'),
+          });
+      });
   }
 }

@@ -1,5 +1,4 @@
-import { Component, DestroyRef, OnInit, inject, isDevMode, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, inject, isDevMode, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -13,8 +12,6 @@ import { Auth } from '../../../core/auth';
 import { AccountsApi } from '../../../core/accounts-api';
 import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/current-week-schedule';
-import { ShiftAssignmentsApi, TodayScheduleEntryDto } from '../../../core/shift-assignments-api';
-import { ScheduleRealtime } from '../../../core/schedule-realtime';
 
 @Component({
   selector: 'app-employee-home',
@@ -31,12 +28,9 @@ import { ScheduleRealtime } from '../../../core/schedule-realtime';
   templateUrl: './employee-home.html',
   styleUrl: './employee-home.scss',
 })
-export class EmployeeHome implements OnInit {
+export class EmployeeHome {
   protected readonly auth = inject(Auth);
   private readonly accountsApi = inject(AccountsApi);
-  private readonly shiftAssignmentsApi = inject(ShiftAssignmentsApi);
-  private readonly realtime = inject(ScheduleRealtime);
-  private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
@@ -46,35 +40,8 @@ export class EmployeeHome implements OnInit {
   protected readonly resettingCode = signal(false);
   protected readonly newCode = signal<string | null>(null);
 
-  protected readonly todaySchedule = signal<TodayScheduleEntryDto[]>([]);
-  protected readonly todayScheduleLoading = signal(true);
-
   protected get isSignedIn(): boolean {
     return this.auth.isAuthenticated() && this.auth.locationCode() === this.locationCode;
-  }
-
-  ngOnInit(): void {
-    this.loadTodaySchedule();
-    // Keeps the kiosk pre-login screen current if an admin transfers a
-    // shift or marks someone absent while it's sitting open.
-    this.realtime
-      .connect(this.locationCode)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.loadTodaySchedule());
-  }
-
-  private loadTodaySchedule(): void {
-    this.shiftAssignmentsApi.getToday(this.locationCode).subscribe({
-      next: (entries) => {
-        this.todaySchedule.set(entries);
-        this.todayScheduleLoading.set(false);
-      },
-      error: () => this.todayScheduleLoading.set(false),
-    });
-  }
-
-  shiftTime(entry: TodayScheduleEntryDto): string {
-    return `${entry.shiftStartTime.slice(0, 5)}–${entry.shiftEndTime.slice(0, 5)}`;
   }
 
   async login(): Promise<void> {

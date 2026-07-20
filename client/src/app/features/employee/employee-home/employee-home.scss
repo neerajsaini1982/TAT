@@ -3,93 +3,6 @@
   margin: 0 auto;
 }
 
-.today-schedule-card {
-  max-width: 480px;
-  margin: 16px auto 0;
-}
-
-// Grid (not flex) so every row shares the same column widths — with flex,
-// each row's items size to that row's own content, so e.g. the time column
-// drifts left/right depending on how long that row's employee/shift text
-// happens to be. subgrid lets each .today-row keep its own background/
-// border while still lining up with .today-list's column tracks.
-.today-list {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  column-gap: 12px;
-  row-gap: 4px;
-}
-
-.today-row {
-  display: grid;
-  grid-template-columns: subgrid;
-  grid-column: 1 / -1;
-  align-items: center;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 6px;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  // Same punch-status coloring as the admin schedule grid, so the two
-  // screens read consistently: green while on the clock, muted once
-  // clocked out, and the plain row above for anyone not punched in yet.
-  &.clocked-in {
-    background: color-mix(in srgb, #2e7d32 18%, var(--mat-sys-surface));
-  }
-
-  &.clocked-out {
-    background: color-mix(in srgb, var(--mat-sys-on-surface-variant) 12%, var(--mat-sys-surface));
-  }
-}
-
-.punch-status {
-  display: flex;
-  align-items: center;
-  justify-self: end;
-  gap: 2px;
-  padding: 1px 8px 1px 6px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
-
-  mat-icon {
-    font-size: 13px;
-    width: 13px;
-    height: 13px;
-    line-height: 13px;
-  }
-
-  &.in {
-    background: #2e7d32;
-    color: #fff;
-  }
-
-  &.out {
-    background: var(--mat-sys-surface-container-high);
-    color: var(--mat-sys-on-surface-variant);
-  }
-}
-
-.today-employee {
-  font-weight: 600;
-}
-
-.today-shift {
-  color: var(--mat-sys-on-surface-variant);
-}
-
-.today-time {
-  color: var(--mat-sys-on-surface-variant);
-  white-space: nowrap;
-  justify-self: end;
-}
-
 .form {
   display: flex;
   flex-direction: column;
@@ -127,5 +40,17 @@
 .section-title {
   font-size: 18px;
   font-weight: 600;
-  margin: 28px 0 12px;
+  margin: 0 0 12px;
+}
+
+// Full-bleed so the schedule table can use the full viewport width instead
+// of being squeezed into the app shell's centered ~960px .content column —
+// same left:50%/translateX(-50%) technique as admin-schedule-page.scss.
+.schedule-section {
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  box-sizing: border-box;
+  padding: 20px 24px 0;
 }

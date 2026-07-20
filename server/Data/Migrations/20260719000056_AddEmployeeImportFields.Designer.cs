@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Server.Data;
 
@@ -10,9 +11,11 @@ using Server.Data;
 namespace Server.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260719000056_AddEmployeeImportFields")]
+    partial class AddEmployeeImportFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -347,12 +350,6 @@ namespace Server.Data.Migrations
                     b.Property<string>("AbsenceNote")
                         .HasColumnType("TEXT");
 
-                    b.Property<DateTime?>("AbsentMarkedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("AbsentMarkedByAccountId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("AccountId")
                         .HasColumnType("INTEGER");
 
@@ -375,8 +372,6 @@ namespace Server.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("AbsentMarkedByAccountId");
 
                     b.HasIndex("AccountId");
 
@@ -416,12 +411,6 @@ namespace Server.Data.Migrations
                     b.Property<int?>("ClockedOutByAccountId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("EditedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("EditedByAccountId")
-                        .HasColumnType("INTEGER");
-
                     b.Property<DateTime?>("LunchEndAt")
                         .HasColumnType("TEXT");
 
@@ -439,8 +428,6 @@ namespace Server.Data.Migrations
                     b.HasIndex("AccountId");
 
                     b.HasIndex("ClockedOutByAccountId");
-
-                    b.HasIndex("EditedByAccountId");
 
                     b.HasIndex("ShiftAssignmentId")
                         .IsUnique();
@@ -515,11 +502,6 @@ namespace Server.Data.Migrations
 
             modelBuilder.Entity("Server.Models.ShiftAssignment", b =>
                 {
-                    b.HasOne("Server.Models.Account", "AbsentMarkedByAccount")
-                        .WithMany()
-                        .HasForeignKey("AbsentMarkedByAccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("Server.Models.Account", "Account")
                         .WithMany()
                         .HasForeignKey("AccountId")
@@ -531,8 +513,6 @@ namespace Server.Data.Migrations
                         .HasForeignKey("ShiftId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("AbsentMarkedByAccount");
 
                     b.Navigation("Account");
 
@@ -552,11 +532,6 @@ namespace Server.Data.Migrations
                         .HasForeignKey("ClockedOutByAccountId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Server.Models.Account", "EditedByAccount")
-                        .WithMany()
-                        .HasForeignKey("EditedByAccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("Server.Models.ShiftAssignment", "ShiftAssignment")
                         .WithMany()
                         .HasForeignKey("ShiftAssignmentId")
@@ -566,8 +541,6 @@ namespace Server.Data.Migrations
                     b.Navigation("Account");
 
                     b.Navigation("ClockedOutByAccount");
-
-                    b.Navigation("EditedByAccount");
 
                     b.Navigation("ShiftAssignment");
                 });

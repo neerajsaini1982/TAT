@@ -17,6 +17,20 @@ export interface TimeEntryDto {
   clockOutAt: string | null;
   clockedOutByAccountId: number | null;
   note: string | null;
+  editedByAccountId: number | null;
+  editedAt: string | null;
+}
+
+export interface AdminEditTimeEntryRequest {
+  clockInAt: string;
+  breakStartAt: string | null;
+  breakEndAt: string | null;
+  lunchStartAt: string | null;
+  lunchEndAt: string | null;
+  break2StartAt: string | null;
+  break2EndAt: string | null;
+  clockOutAt: string | null;
+  note: string;
 }
 
 @Service()
@@ -72,5 +86,12 @@ export class TimeEntriesApi {
   // explaining why (left early, etc.) — see TimeEntriesController.AdminClockOut.
   adminClockOut(id: number, note: string) {
     return this.http.post<TimeEntryDto>(`${this.base}/${id}/admin-clock-out`, { note });
+  }
+
+  // Lead/Admin only: sets every punch on a shift's entry directly, creating
+  // it if the employee never clocked in at all — see
+  // TimeEntriesController.AdminEditTimes.
+  adminEditTimes(shiftAssignmentId: number, request: AdminEditTimeEntryRequest) {
+    return this.http.put<TimeEntryDto>(`${this.base}/by-assignment/${shiftAssignmentId}/admin-edit`, request);
   }
 }

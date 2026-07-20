@@ -7,6 +7,7 @@ using Server.Data;
 using Server.Hubs;
 using Server.Models;
 using Server.Security;
+using Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +37,7 @@ builder.Services.AddScoped<TokenService>();
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IScheduleNotifier, ScheduleNotifier>();
+builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

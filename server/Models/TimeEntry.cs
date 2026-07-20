@@ -32,4 +32,11 @@ public class TimeEntry
     public int? ClockedOutByAccountId { get; set; }
     public Account? ClockedOutByAccount { get; set; }
     public string? Note { get; set; }
+
+    // Who last used AdminEditTimes on this entry and when — kept for
+    // reporting even though the affected punch fields themselves get
+    // overwritten. Null for an entry that's only ever been self-punched.
+    public int? EditedByAccountId { get; set; }
+    public Account? EditedByAccount { get; set; }
+    public DateTime? EditedAt { get; set; }
 }

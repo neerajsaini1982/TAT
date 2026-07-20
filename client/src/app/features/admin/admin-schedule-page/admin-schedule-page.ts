@@ -15,8 +15,9 @@ import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { employeeColor } from '../../../core/employee-colors';
 import { isBreak2OverLimit, isBreakOverLimit, isLateClockIn, isLunchOverLimit } from '../../../core/attendance-flags';
-import { addDays, formatDate, formatWeekRange, mondayOf } from '../../../core/week-utils';
+import { addDays, combineDateAndTime, formatDate, formatWeekRange, mondayOf } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
+import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
 
 interface DayCell {
   date: string;
@@ -62,7 +63,10 @@ export class AdminSchedulePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
-  private readonly todayIso = formatDate(new Date());
+  // Edit Times is only offered for today's chips: a TimeEntry can only ever
+  // exist for today's date (see entryFor below), so entries for other days
+  // in the visible week aren't even fetched.
+  protected readonly todayIso = formatDate(new Date());
 
   protected readonly dayHeaders = DAY_HEADERS;
   protected readonly weekStart = signal(mondayOf(new Date()));
@@ -90,6 +94,9 @@ export class AdminSchedulePage implements OnInit {
     DAY_HEADERS.map((_, i) =>
       this.rows().reduce((sum, row) => sum + row.days[i].assignments.reduce((s, a) => s + a.hours, 0), 0),
     ),
+  );
+  protected readonly weekTotalHours = computed(() =>
+    Math.round(this.dailyTotals().reduce((sum, hours) => sum + hours, 0) * 100) / 100,
   );
 
   // The whole week is a draft/preview, invisible to employees, until the
@@ -379,6 +386,46 @@ export class AdminSchedulePage implements OnInit {
           next: () => this.load(),
           error: (err) => this.error.set(err?.error ?? 'Failed to clock out.'),
         });
+      });
+  }
+
+  // Lets an admin set every punch on today's entry directly — available
+  // whether or not the employee has clocked in yet (entryFor is null in
+  // that case, and the dialog starts blank apart from a default Clock In
+  // of "now").
+  editTimes(assignment: ShiftAssignmentDto): void {
+    const entry = this.entryFor(assignment);
+    this.dialog
+      .open<EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult>(EditTimeEntryDialog, {
+        data: {
+          employeeName: `${assignment.accountFirstName} ${assignment.accountLastName}`,
+          entry,
+          isBreakRequired: assignment.isBreakRequired,
+          isLunchRequired: assignment.isLunchRequired,
+        },
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+        const toIso = (time: string | null) => (time ? combineDateAndTime(assignment.date, time).toISOString() : null);
+        this.timeEntriesApi
+          .adminEditTimes(assignment.id, {
+            clockInAt: toIso(result.clockInAt)!,
+            breakStartAt: toIso(result.breakStartAt),
+            breakEndAt: toIso(result.breakEndAt),
+            lunchStartAt: toIso(result.lunchStartAt),
+            lunchEndAt: toIso(result.lunchEndAt),
+            break2StartAt: toIso(result.break2StartAt),
+            break2EndAt: toIso(result.break2EndAt),
+            clockOutAt: toIso(result.clockOutAt),
+            note: result.note,
+          })
+          .subscribe({
+            next: () => this.load(),
+            error: (err) => this.error.set(err?.error ?? 'Failed to update punch times.'),
+          });
       });
   }
 }

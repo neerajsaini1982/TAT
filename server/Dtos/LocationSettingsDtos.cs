@@ -43,9 +43,13 @@ public record UpdateLocationSettingsRequest(
     string? SmtpFromName);
 
 // Minimal subset any signed-in account (not just Admin/Sa) can read, so an
-// Employee's client can compute when its own Clock In buttons unlock and
-// whether its own punches should render as late/over-limit.
+// Employee's client can compute when its own Clock In buttons unlock,
+// whether its own punches should render as late/over-limit, and how to
+// display every scheduled/punch time (TimeFormat + TimeZone) consistently
+// with what the admin configured for this location.
 public record EmployeeLocationSettingsDto(
+    TimeFormat TimeFormat,
+    string TimeZone,
     int ClockInWindowMinutes,
     int LateClockInGraceMinutes,
     int BreakLimitMinutes,

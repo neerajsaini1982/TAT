@@ -104,7 +104,10 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
     // Read-only roster for a location/week so admins can see who has
     // submitted and who hasn't, replacing the old WhatsApp thread.
     // Admin and Lead accounts can work shifts too, so they're schedulable
-    // alongside Employee accounts; only Sa (no location, not a worker) is excluded.
+    // alongside Employee accounts; only Sa (no location, not a worker) is
+    // excluded. Inactive/terminated accounts are excluded too — an ADP
+    // import can leave a location with far more terminated than active
+    // employees, and scheduling only ever needs the latter.
     [HttpGet]
     [Authorize(Policy = "AdminOrAbove")]
     public ActionResult<IEnumerable<AvailabilityDto>> GetForLocation(
@@ -112,7 +115,8 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
     {
         var accountsQuery = db.Accounts
             .Include(a => a.Location)
-            .Where(a => a.Role == AccountRole.Employee || a.Role == AccountRole.Lead || a.Role == AccountRole.Admin);
+            .Where(a => a.Role == AccountRole.Employee || a.Role == AccountRole.Lead || a.Role == AccountRole.Admin)
+            .Where(a => a.IsActive);
 
         if (User.IsInRole(nameof(AccountRole.Sa)))
         {

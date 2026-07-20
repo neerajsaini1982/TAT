@@ -15,6 +15,17 @@ export interface AccountDto {
   isActive: boolean;
   userCode: string | null;
   locationCode: string | null;
+  // Populated by the ADP employee-directory import (see employee-import-api.ts);
+  // null for accounts created by hand.
+  birthDate: string | null;
+  jobTitle: string | null;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  state: string | null;
+  zipcode: string | null;
+  supervisor: string | null;
+  adpStatus: string | null;
 }
 
 export interface CreateAccountRequest {
@@ -66,5 +77,11 @@ export class AccountsApi {
 
   resetMyCode() {
     return this.http.post<AccountDto>(`${this.base}/mine/reset-code`, {});
+  }
+
+  // Emails the employee their login link and user code (LoginCredentials
+  // template). loginLink is built by the caller from window.location.origin.
+  sendCredentials(id: number, loginLink: string) {
+    return this.http.post<void>(`${this.base}/${id}/send-credentials`, { loginLink });
   }
 }

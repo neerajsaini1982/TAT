@@ -7,8 +7,9 @@ public static class EmailTemplateKeys
 {
     public const string SchedulePublished = "SchedulePublished";
     public const string AvailabilityReminder = "AvailabilityReminder";
+    public const string LoginCredentials = "LoginCredentials";
 
-    public static readonly IReadOnlyList<string> All = [SchedulePublished, AvailabilityReminder];
+    public static readonly IReadOnlyList<string> All = [SchedulePublished, AvailabilityReminder, LoginCredentials];
 }
 
 public class EmailTemplate

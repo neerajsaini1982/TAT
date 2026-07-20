@@ -8,6 +8,7 @@ import { SaAccountsPage } from './features/sa/sa-accounts-page/sa-accounts-page'
 import { SaShiftsPage } from './features/sa/sa-shifts-page/sa-shifts-page';
 import { AdminHome } from './features/admin/admin-home/admin-home';
 import { AdminAccountsPage } from './features/admin/admin-accounts-page/admin-accounts-page';
+import { EmployeeImportPage } from './features/admin/employee-import-page/employee-import-page';
 import { AdminShiftsPage } from './features/admin/admin-shifts-page/admin-shifts-page';
 import { AdminAvailabilityPage } from './features/admin/admin-availability-page/admin-availability-page';
 import { AdminSchedulePage } from './features/admin/admin-schedule-page/admin-schedule-page';
@@ -31,6 +32,7 @@ export const routes: Routes = [
 
   { path: ':locationCode/admin', component: AdminHome },
   { path: ':locationCode/admin/accounts', component: AdminAccountsPage, canActivate: [adminGuard] },
+  { path: ':locationCode/admin/accounts/import', component: EmployeeImportPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/shifts', component: AdminShiftsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/availability', component: AdminAvailabilityPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/schedule', component: AdminSchedulePage, canActivate: [adminGuard] },

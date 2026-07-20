@@ -1,3 +1,19 @@
+// The app shell centers every route in a 960px .content column (see
+// app.scss) — fine for forms, but it squeezes this table into a box
+// narrower than most screens and forces horizontal scroll for no reason.
+// Break out to the full viewport width instead; .content stays centered
+// under the toolbar, so left:50%/translateX(-50%) reliably re-centers a
+// 100vw-wide host regardless of exact viewport size.
+:host {
+  display: block;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  box-sizing: border-box;
+  padding: 24px;
+}
+
 .header {
   display: flex;
   align-items: center;
@@ -52,6 +68,12 @@
   justify-content: center;
   gap: 16px;
   margin-bottom: 16px;
+}
+
+.week-total {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .status-badge {
@@ -267,8 +289,17 @@
   }
 }
 
+// A bounded height is what makes position:sticky work correctly here — an
+// unbounded auto-height div never actually scrolls internally, so it can't
+// be a real sticky "scrollport": the header/column would just render at a
+// fixed CSS offset instead of tracking the visible area. Capping the height
+// makes .table-scroll the true scrolling region (both axes), so the sticky
+// header row and sticky first column below track it properly, and
+// everything above (title, week nav, Post Schedule bar) stays on-screen
+// without needing to be pinned itself.
 .table-scroll {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 65vh;
 }
 
 table {
@@ -290,12 +321,30 @@ th {
   background: var(--mat-sys-surface-container);
   position: sticky;
   top: 0;
+  z-index: 2;
 }
 
+// Pinned to the left so the employee's name is never scrolled out of view,
+// same reasoning as the sticky header row above — a solid background is
+// required or cells scrolling underneath show through. The corner cell
+// (th.employee-col) sits above both the sticky row and sticky column, so it
+// needs the highest z-index of the three.
 .employee-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
   min-width: 140px;
   white-space: nowrap;
   font-weight: 500;
+  background: var(--mat-sys-surface);
+}
+
+th.employee-col {
+  z-index: 3;
+}
+
+tfoot .employee-col {
+  background: var(--mat-sys-surface-container);
 }
 
 // The dot only renders where --employee-color is actually bound (the

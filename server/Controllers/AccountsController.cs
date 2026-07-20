@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -7,12 +6,13 @@ using Server.Data;
 using Server.Dtos;
 using Server.Models;
 using Server.Security;
+using Server.Services;
 
 namespace Server.Controllers;
 
 [ApiController]
 [Route("api/accounts")]
-public class AccountsController(AppDbContext db) : ControllerBase
+public class AccountsController(AppDbContext db, IEmailSender emailSender) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = "AdminOrAbove")]
@@ -81,7 +81,7 @@ public class AccountsController(AppDbContext db) : ControllerBase
         // so they don't need a username or password of their own.
         if (request.Role == AccountRole.Employee)
         {
-            username = GenerateUniqueUsername(request.FirstName, request.LastName);
+            username = AccountProvisioning.GenerateUniqueUsername(db, request.FirstName, request.LastName);
             passwordHash = PasswordHasher.Hash(Guid.NewGuid().ToString("N"));
         }
         else
@@ -111,7 +111,7 @@ public class AccountsController(AppDbContext db) : ControllerBase
             Role = request.Role,
             IsActive = true,
             LocationId = location?.Id,
-            UserCode = location is null ? null : GenerateUniqueUserCode(location.Id),
+            UserCode = location is null ? null : AccountProvisioning.GenerateUniqueUserCode(db, location.Id),
         };
 
         db.Accounts.Add(account);
@@ -137,7 +137,7 @@ public class AccountsController(AppDbContext db) : ControllerBase
             return BadRequest("This account has no location and therefore no user code.");
         }
 
-        account.UserCode = GenerateUniqueUserCode(account.LocationId.Value);
+        account.UserCode = AccountProvisioning.GenerateUniqueUserCode(db, account.LocationId.Value);
         db.SaveChanges();
 
         return Ok(ToDto(account));
@@ -156,10 +156,73 @@ public class AccountsController(AppDbContext db) : ControllerBase
             return BadRequest("This account has no user code to reset.");
         }
 
-        account.UserCode = GenerateUniqueUserCode(account.LocationId.Value);
+        account.UserCode = AccountProvisioning.GenerateUniqueUserCode(db, account.LocationId.Value);
         db.SaveChanges();
 
         return Ok(ToDto(account));
+    }
+
+    // Emails an Employee their login link and user code, using the
+    // LoginCredentials template (custom if the location has saved one, else
+    // the built-in default) and this location's SMTP settings. The login
+    // link itself is computed by the caller (it already knows its own
+    // origin) rather than the server guessing its hostname.
+    [HttpPost("{id:int}/send-credentials")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public async Task<IActionResult> SendCredentials(int id, SendCredentialsRequest request)
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == id);
+        if (account is null || !CanAccess(account))
+        {
+            return NotFound();
+        }
+
+        if (string.IsNullOrWhiteSpace(account.Email))
+        {
+            return BadRequest("This employee has no email address on file.");
+        }
+
+        if (account.LocationId is null || string.IsNullOrEmpty(account.UserCode))
+        {
+            return BadRequest("This account has no user code to send.");
+        }
+
+        var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == account.LocationId);
+        if (settings is null)
+        {
+            return BadRequest("SMTP is not configured for this location. Set it up under Settings first.");
+        }
+
+        var template = db.EmailTemplates.SingleOrDefault(
+            t => t.LocationId == account.LocationId && t.Key == EmailTemplateKeys.LoginCredentials)
+            ?? EmailTemplateCatalog.Default(EmailTemplateKeys.LoginCredentials);
+
+        var placeholders = new Dictionary<string, string>
+        {
+            ["{{employeeName}}"] = $"{account.FirstName} {account.LastName}",
+            ["{{locationName}}"] = account.Location?.Name ?? string.Empty,
+            ["{{userCode}}"] = account.UserCode,
+            ["{{loginLink}}"] = request.LoginLink,
+        };
+
+        try
+        {
+            await emailSender.SendAsync(
+                settings,
+                account.Email,
+                Render(template.Subject, placeholders),
+                Render(template.BodyHtml, placeholders));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception)
+        {
+            return StatusCode(StatusCodes.Status502BadGateway, "Failed to send email. Check the SMTP settings and try again.");
+        }
+
+        return NoContent();
     }
 
     [HttpPut("{id:int}")]
@@ -204,35 +267,14 @@ public class AccountsController(AppDbContext db) : ControllerBase
     private string? CallerLocationCode() =>
         User.FindFirst(TokenService.LocationCodeClaimType)?.Value;
 
-    private string GenerateUniqueUserCode(int locationId)
+    private static string Render(string template, Dictionary<string, string> placeholders)
     {
-        string code;
-        do
+        foreach (var (token, value) in placeholders)
         {
-            code = Random.Shared.Next(0, 1_000_000).ToString("D6");
-        } while (db.Accounts.Any(a => a.LocationId == locationId && a.UserCode == code));
-
-        return code;
-    }
-
-    // Employees don't pick a username, but Account.Username is still globally
-    // unique, so derive one from their name and disambiguate if needed.
-    private string GenerateUniqueUsername(string firstName, string lastName)
-    {
-        var baseName = Regex.Replace($"{firstName}.{lastName}".ToLowerInvariant(), "[^a-z0-9.]", "").Trim('.');
-        if (string.IsNullOrEmpty(baseName))
-        {
-            baseName = "employee";
+            template = template.Replace(token, value);
         }
 
-        var username = baseName;
-        var suffix = 1;
-        while (db.Accounts.Any(a => a.Username == username))
-        {
-            username = $"{baseName}{++suffix}";
-        }
-
-        return username;
+        return template;
     }
 
     private static AccountDto ToDto(Account a) => new(
@@ -245,5 +287,14 @@ public class AccountsController(AppDbContext db) : ControllerBase
         a.Role.ToString(),
         a.IsActive,
         a.UserCode,
-        a.Location?.LocationCode);
+        a.Location?.LocationCode,
+        a.BirthDate,
+        a.JobTitle,
+        a.Address1,
+        a.Address2,
+        a.City,
+        a.State,
+        a.Zipcode,
+        a.Supervisor,
+        a.AdpStatus);
 }
