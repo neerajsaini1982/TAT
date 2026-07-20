@@ -284,13 +284,33 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     private int CallerAccountId() =>
         int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    private static double ComputeHours(TimeOnly start, TimeOnly end)
+    // Lunch is unpaid, so it comes out of the shift's clock span; Break is
+    // paid and stays in — same convention current-week-schedule.ts uses for
+    // actual worked hours (see workedMinutes there), applied here to the
+    // *scheduled* span instead of clocked-in/out times.
+    private static double ComputeHours(TimeOnly start, TimeOnly end, IEnumerable<ScheduledBreak> scheduledBreaks)
     {
         var span = end - start;
         if (span < TimeSpan.Zero)
         {
             // Overnight shift (e.g. 22:00-06:00) crosses midnight.
             span += TimeSpan.FromDays(1);
+        }
+
+        foreach (var b in scheduledBreaks)
+        {
+            if (b.Kind != BreakKind.Lunch)
+            {
+                continue;
+            }
+
+            var lunchSpan = b.EndTime - b.StartTime;
+            if (lunchSpan < TimeSpan.Zero)
+            {
+                lunchSpan += TimeSpan.FromDays(1);
+            }
+
+            span -= lunchSpan;
         }
 
         return Math.Round(span.TotalHours, 2);
@@ -306,7 +326,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .OrderBy(b => b.StartTime)
             .Select(b => new ScheduledBreakDto(b.Kind, b.StartTime, b.EndTime))
             .ToList(),
-        ComputeHours(a.Shift.StartTime, a.Shift.EndTime),
+        ComputeHours(a.Shift.StartTime, a.Shift.EndTime, a.Shift.ScheduledBreaks),
         a.AccountId,
         a.Account!.FirstName,
         a.Account.LastName,
