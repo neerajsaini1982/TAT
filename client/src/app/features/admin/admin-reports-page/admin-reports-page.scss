@@ -56,6 +56,12 @@
   td {
     font-weight: 600;
   }
+
+  // Grand-total row across every employee in the report.
+  tfoot td {
+    border-top: 2px solid var(--mat-sys-outline-variant);
+    background: var(--mat-sys-surface-container);
+  }
 }
 
 // Duration columns are short and fixed-shape ("4h 30m") — right-align and
@@ -117,6 +123,10 @@
   td {
     padding: 8px 16px;
     font-size: 13px;
+    // font-weight is inherited, and .detail-cell (the wrapping <td> this
+    // table sits inside) picks up bold from ".hours-report-table td" above
+    // — reset it here or the drill-down would inherit that bold too.
+    font-weight: normal;
     box-sizing: border-box;
   }
 }
