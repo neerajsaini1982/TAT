@@ -159,27 +159,20 @@
   }
 }
 
+.clockout-line {
+  color: var(--mat-sys-on-surface);
+}
+
+.hours-worked-line {
+  font-size: 12px;
+  margin-top: 1px;
+}
+
 // Any number of scheduled/actual break-lunch lines, so unlike the other
 // punch cells this one wraps and stacks instead of staying single-line.
 .breaks-cell {
   white-space: normal;
   min-width: 200px;
-}
-
-.scheduled-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 4px;
-}
-
-.scheduled-chip {
-  font-size: 11px;
-  color: var(--mat-sys-on-surface-variant);
-  background: var(--mat-sys-surface-container-high);
-  border-radius: 999px;
-  padding: 1px 8px;
-  white-space: nowrap;
 }
 
 .segment-line {

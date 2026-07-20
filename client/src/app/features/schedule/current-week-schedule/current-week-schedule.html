@@ -77,13 +77,6 @@
                   </td>
 
                   <td class="punch-cell breaks-cell">
-                    @if (shift.assignment.scheduledBreaks.length > 0) {
-                      <div class="scheduled-line">
-                        @for (b of shift.assignment.scheduledBreaks; track $index) {
-                          <span class="scheduled-chip">{{ b.kind }} {{ scheduledBreakTime(b.startTime, b.endTime) }}</span>
-                        }
-                      </div>
-                    }
                     @for (seg of segmentsFor(shift); track seg.id) {
                       <div class="segment-line">
                         {{ seg.kind }}: {{ punchTime(seg.startAt) }}–{{ seg.endAt ? punchTime(seg.endAt) : 'ongoing' }}
@@ -104,19 +97,22 @@
                         </button>
                       </div>
                     }
-                    @if (shift.assignment.scheduledBreaks.length === 0 && segmentsFor(shift).length === 0 && !canStartSegment(shift)) {
+                    @if (segmentsFor(shift).length === 0 && !canStartSegment(shift)) {
                       -
                     }
                   </td>
 
                   <td class="punch-cell">
                     @if (shift.entry?.clockOutAt) {
-                      {{ punchTime(shift.entry?.clockOutAt) }} · {{ hoursWorked(shift.entry!) }}h
-                      @if (shift.entry?.clockedOutByAccountId) {
-                        <mat-icon class="admin-clockout-icon" [title]="'Clocked out by a lead/admin: ' + (shift.entry?.note ?? '')">
-                          admin_panel_settings
-                        </mat-icon>
-                      }
+                      <div class="clockout-line">
+                        {{ punchTime(shift.entry?.clockOutAt) }}
+                        @if (shift.entry?.clockedOutByAccountId) {
+                          <mat-icon class="admin-clockout-icon" [title]="'Clocked out by a lead/admin: ' + (shift.entry?.note ?? '')">
+                            admin_panel_settings
+                          </mat-icon>
+                        }
+                      </div>
+                      <div class="hours-worked-line">{{ hoursWorked(shift.entry!) }} hrs worked</div>
                     } @else if (canClockOut(shift)) {
                       <button type="button" class="punch-btn" mat-flat-button color="primary" (click)="clockOut(shift)" [disabled]="busyShiftId() === shift.assignment.id">
                         Clock Out

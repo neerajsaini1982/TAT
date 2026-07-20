@@ -205,10 +205,6 @@ export class CurrentWeekSchedule implements OnInit {
     return `${formatTimeOnly(shift.shiftStartTime, this.timeFormat)}–${formatTimeOnly(shift.shiftEndTime, this.timeFormat)}`;
   }
 
-  scheduledBreakTime(startTime: string, endTime: string): string {
-    return `${formatTimeOnly(startTime, this.timeFormat)}–${formatTimeOnly(endTime, this.timeFormat)}`;
-  }
-
   // "-" is the universal empty state for a punch cell: it just hasn't
   // happened yet.
   punchTime(iso: string | null | undefined): string {
