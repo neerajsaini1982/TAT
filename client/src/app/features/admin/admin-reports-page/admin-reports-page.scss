@@ -1,0 +1,184 @@
+// The app shell centers every route in a 960px .content column (see
+// app.scss) — fine for forms, but it squeezes this table into a box
+// narrower than most screens for no reason. Break out to the full viewport
+// width instead, same technique as admin-schedule-page.scss.
+:host {
+  display: block;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  box-sizing: border-box;
+  padding: 24px;
+}
+
+.filters-card {
+  margin-bottom: 16px;
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 8px 0 0;
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// table-layout: fixed makes every column width below exact rather than a
+// content-based suggestion — the nested day-table (below) mirrors these
+// same widths so its columns line up under the matching parent column.
+.hours-report-table {
+  width: 100%;
+  table-layout: fixed;
+
+  th,
+  td {
+    padding: 12px 16px;
+    box-sizing: border-box;
+  }
+
+  // Header labels ("Net Worked Time", etc.) are short phrases — keep them
+  // on one line now that there's room, same as the duration values below.
+  th {
+    white-space: nowrap;
+  }
+
+  // Top-level (per-employee) totals stay bold; the day-table drill-down
+  // below is deliberately lighter weight so it reads as subordinate detail.
+  td {
+    font-weight: 600;
+  }
+
+  // Grand-total row across every employee in the report — sized up and set
+  // off with a double rule so it reads clearly as a summary, not just
+  // another data row.
+  //
+  // Targets .mat-mdc-footer-cell rather than "tfoot td": CdkTable inserts
+  // the <tfoot> wrapper itself via the renderer, so — unlike the <td>s,
+  // which come from this component's own template — it never gets
+  // Angular's view-encapsulation attribute. A scoped "tfoot td" selector
+  // silently never matches anything as a result.
+  .mat-mdc-footer-cell {
+    border-top: 4px double var(--mat-sys-outline);
+    background: var(--mat-sys-surface-container);
+    font-size: 15px;
+    font-weight: 700;
+  }
+}
+
+// Duration columns are short and fixed-shape ("4h 30m") — right-align and
+// pin a width so they line up in a neat column instead of each cell sizing
+// to its own content.
+.mat-column-workedTime,
+.mat-column-breakTime,
+.mat-column-lunchTime,
+.mat-column-netWorkedTime {
+  width: 150px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.mat-column-expand {
+  width: 56px;
+}
+
+.mat-column-employeeId {
+  width: 120px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Fixed (rather than content-sized) so expand + employeeId + fullName add
+// up to a known pixel offset — see .detail-cell below, which indents the
+// nested table by exactly that sum to line its columns up with these.
+// (No font-weight here: ".hours-report-table td" above already bolds every
+// top-level cell, and — being class+element — would out-specificity a
+// weight set on this single class anyway.)
+.mat-column-fullName {
+  width: 220px;
+}
+
+// Notes is the least predictable column in width — let it absorb whatever
+// space the fixed-width columns to its left don't use.
+.mat-column-notes {
+  width: auto;
+}
+
+// Indented by expand (56px) + employeeId (120px) so the nested table's
+// Date column starts exactly under the parent row's Full Name column —
+// see the day-table widths below, which mirror the parent's column widths
+// from that point on so every column lines up.
+.detail-cell {
+  padding: 0 16px 20px 176px !important;
+  background: var(--mat-sys-surface-container-low);
+}
+
+// Alignment is deliberately left to the per-column classes below
+// (.day-date-col, .day-numeric-col, etc.) rather than set here — a
+// "td { text-align: left }" here would out-specificity ".day-numeric-col"
+// (class+element beats a single class) and silently win regardless of
+// source order, overriding the right-align those columns need.
+.day-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+
+  td {
+    padding: 8px 16px;
+    font-size: 13px;
+    // font-weight is inherited, and .detail-cell (the wrapping <td> this
+    // table sits inside) picks up bold from ".hours-report-table td" above
+    // — reset it here or the drill-down would inherit that bold too.
+    font-weight: normal;
+    box-sizing: border-box;
+  }
+}
+
+// Matches .mat-column-fullName's width so this column sits directly under
+// Full Name in the parent row.
+.day-date-col {
+  width: 220px;
+  white-space: nowrap;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Matches the parent row's workedTime/breakTime/lunchTime/netWorkedTime
+// column width so these line up one-for-one with their parent column.
+.day-numeric-col {
+  width: 150px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+// The "Absent — reason" cell spans what would otherwise be the four numeric
+// columns — it reads as a sentence, not a number, so it stays left-aligned
+// and free to wrap unlike its siblings.
+.day-absent-col {
+  text-align: left;
+  white-space: normal;
+}
+
+.absent-row td {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
+.notes-cell {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  text-align: left;
+  white-space: normal;
+}
+
+.flag {
+  color: var(--mat-sys-error);
+  font-weight: 600;
+}
