@@ -1,3 +1,18 @@
+@if (canBrowseWeeks()) {
+  <div class="week-nav">
+    <button type="button" mat-icon-button (click)="previousWeek()" aria-label="Previous week">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <span class="week-range">{{ weekRangeLabel() }}</span>
+    <button type="button" mat-icon-button (click)="nextWeek()" aria-label="Next week">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+    @if (!isCurrentWeek()) {
+      <button type="button" mat-button (click)="backToThisWeek()">This week</button>
+    }
+  </div>
+}
+
 @if (!loading()) {
   <div class="summary">
     <mat-icon>schedule</mat-icon>
@@ -6,8 +21,10 @@
         {{ days().length }} {{ days().length === 1 ? 'day' : 'days' }} scheduled,
         <strong>{{ totalHours() }} total hours</strong>
       </span>
-    } @else {
+    } @else if (isCurrentWeek()) {
       <span>No shifts scheduled for the rest of this week.</span>
+    } @else {
+      <span>No shifts scheduled that week.</span>
     }
   </div>
 }

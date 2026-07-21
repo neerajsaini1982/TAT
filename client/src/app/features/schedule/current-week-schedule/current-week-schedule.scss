@@ -2,6 +2,19 @@
   display: block;
 }
 
+.week-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 12px;
+
+  .week-range {
+    font-weight: 600;
+    font-size: 15px;
+    min-width: 150px;
+  }
+}
+
 .summary {
   display: flex;
   align-items: center;

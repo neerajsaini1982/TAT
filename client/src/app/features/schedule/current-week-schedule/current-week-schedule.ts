@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { Observable, catchError, forkJoin, of } from 'rxjs';
+import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
 import { TimeEntriesApi, TimeEntryDto, TimeEntrySegmentDto } from '../../../core/time-entries-api';
@@ -14,7 +14,7 @@ import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { employeeColor } from '../../../core/employee-colors';
 import { formatInstant, formatTimeOnly } from '../../../core/location-time';
 import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-flags';
-import { addDays, combineDateAndTime, dayOfWeekLabel, formatDate, mondayOf, toMmDdYyyy } from '../../../core/week-utils';
+import { addDays, combineDateAndTime, dayOfWeekLabel, formatDate, formatWeekRange, mondayOf, toMmDdYyyy } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../../admin/note-dialog/note-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../../admin/edit-time-entry-dialog/edit-time-entry-dialog';
 
@@ -75,12 +75,14 @@ function workedMinutes(entry: TimeEntryDto): number {
 // End/Clock Out) only ever render for the caller's own shift, since
 // punching is self-service; Mark/Clear Absent and Edit Times are
 // location-scope-only admin actions on any employee's row.
-// Narrowed down to the Monday-Sunday of the current week, today onward
-// (i.e. "what's left of this week"). Every time is displayed in the
-// location's own configured timezone and 12/24-hour format (see
-// LocationSettings.TimeZone/TimeFormat), not the viewing browser's — an
-// admin checking in from a different timezone, or a screen physically in
-// the store, should both read the same wall-clock time.
+// Defaults to the Monday-Sunday of the current week, today onward (i.e.
+// "what's left of this week") — location scope can additionally browse to
+// any other week (see canBrowseWeeks/previousWeek/nextWeek), at which
+// point the "today onward" trim no longer applies and the full week shows.
+// Every time is displayed in the location's own configured timezone and
+// 12/24-hour format (see LocationSettings.TimeZone/TimeFormat), not the
+// viewing browser's — an admin checking in from a different timezone, or a
+// screen physically in the store, should both read the same wall-clock time.
 @Component({
   selector: 'app-current-week-schedule',
   imports: [MatButtonModule, MatCardModule, MatIconModule],
@@ -109,6 +111,18 @@ export class CurrentWeekSchedule implements OnInit {
     round2(this.days().reduce((sum, d) => sum + d.hours, 0)),
   );
 
+  // Browsing other weeks is an admin/lead thing — an employee's own
+  // schedule only ever comes from GetMine, which is hardcoded server-side
+  // to "today onward" (see ShiftAssignmentsController.GetMine), so there's
+  // nothing earlier to fetch for scope 'mine' without a server change.
+  // Location scope already has getForWeek, which takes any week.
+  protected readonly canBrowseWeeks = computed(() => this.scope === 'location');
+  protected readonly weekStart = signal(mondayOf(new Date()));
+  protected readonly weekRangeLabel = computed(() => formatWeekRange(this.weekStart()));
+  protected readonly isCurrentWeek = computed(
+    () => formatDate(this.weekStart()) === formatDate(mondayOf(new Date())),
+  );
+
   // Attendance thresholds + display prefs, all sourced from LocationSettings
   // (see LocationSettingsController.GetMine) — every signed-in role reads
   // the same subset, so admin and employee views always agree.
@@ -129,84 +143,127 @@ export class CurrentWeekSchedule implements OnInit {
     }
   }
 
+  previousWeek(): void {
+    this.weekStart.set(addDays(this.weekStart(), -7));
+    this.load();
+  }
+
+  nextWeek(): void {
+    this.weekStart.set(addDays(this.weekStart(), 7));
+    this.load();
+  }
+
+  backToThisWeek(): void {
+    this.weekStart.set(mondayOf(new Date()));
+    this.load();
+  }
+
   private load(): void {
     const today = formatDate(new Date());
-    const weekStart = formatDate(mondayOf(new Date()));
-    const weekEnd = formatDate(addDays(mondayOf(new Date()), 6));
+    const weekStart = formatDate(this.weekStart());
+    const weekEnd = formatDate(addDays(this.weekStart(), 6));
+    const isCurrentWeek = this.isCurrentWeek();
     const isLocationScope = this.scope === 'location' && this.locationCode;
 
     forkJoin({
       mine: this.api.getMine(),
       assignments: isLocationScope ? this.api.getForWeek(weekStart, this.locationCode!) : this.api.getMine(),
       settings: this.settingsApi.getMine().pipe(catchError(() => of(DEFAULT_SETTINGS))),
-      // Location scope (Admin/Lead) needs every employee's punches to fill
-      // the table's columns, not just the caller's own — mine scope only
-      // ever needs the caller's own, which is also all getMine ever returns.
-      entries: isLocationScope
-        ? this.timeEntriesApi.getForLocation(this.locationCode!, today).pipe(catchError(() => of([])))
-        : this.timeEntriesApi.getMine(today).pipe(catchError(() => of([]))),
-    }).subscribe({
-      next: ({ mine, assignments, settings, entries }) => {
-        this.timeFormat = settings.timeFormat;
-        this.timeZone = settings.timeZone;
-        this.lateClockInGraceMinutes = settings.lateClockInGraceMinutes;
-        this.breakLimitMinutes = settings.breakLimitMinutes;
-        this.lunchLimitMinutes = settings.lunchLimitMinutes;
+    })
+      .pipe(
+        switchMap(({ mine, assignments, settings }) => {
+          // This widget is "what's scheduled" for the selected week — the
+          // rest-of-week trim only makes sense for the actual current week;
+          // a past or future week shows in full regardless of today's date.
+          const visibleDates = [
+            ...new Set(
+              assignments
+                .filter((a) => a.date >= weekStart && a.date <= weekEnd && (!isCurrentWeek || a.date >= today))
+                .map((a) => a.date),
+            ),
+          ];
 
-        const entryByShiftId = new Map(entries.map((e) => [e.shiftAssignmentId, e]));
-        const mineIds = new Set(mine.map((a) => a.id));
-        const now = new Date();
+          // Location scope (Admin/Lead) needs every employee's punches to
+          // fill the table's columns, not just the caller's own, and for
+          // whichever dates are actually visible now that those can be any
+          // day in any week — mine scope only ever needs the caller's own
+          // for today, which is also all getMine ever returns.
+          const entries$ = isLocationScope
+            ? visibleDates.length > 0
+              ? forkJoin(
+                  visibleDates.map((date) =>
+                    this.timeEntriesApi.getForLocation(this.locationCode!, date).pipe(catchError(() => of([]))),
+                  ),
+                ).pipe(map((lists) => lists.flat()))
+              : of([])
+            : this.timeEntriesApi.getMine(today).pipe(catchError(() => of([])));
 
-        const byDate = new Map<string, ShiftAssignmentDto[]>();
-        for (const a of assignments) {
-          if (a.date < weekStart || a.date > weekEnd || a.date < today) {
-            continue;
+          return entries$.pipe(map((entries) => ({ mine, assignments, settings, entries, visibleDates })));
+        }),
+      )
+      .subscribe({
+        next: ({ mine, assignments, settings, entries, visibleDates }) => {
+          this.timeFormat = settings.timeFormat;
+          this.timeZone = settings.timeZone;
+          this.lateClockInGraceMinutes = settings.lateClockInGraceMinutes;
+          this.breakLimitMinutes = settings.breakLimitMinutes;
+          this.lunchLimitMinutes = settings.lunchLimitMinutes;
+
+          const entryByShiftId = new Map(entries.map((e) => [e.shiftAssignmentId, e]));
+          const mineIds = new Set(mine.map((a) => a.id));
+          const now = new Date();
+          const visibleDateSet = new Set(visibleDates);
+
+          const byDate = new Map<string, ShiftAssignmentDto[]>();
+          for (const a of assignments) {
+            if (!visibleDateSet.has(a.date)) {
+              continue;
+            }
+            byDate.set(a.date, [...(byDate.get(a.date) ?? []), a]);
           }
-          byDate.set(a.date, [...(byDate.get(a.date) ?? []), a]);
-        }
 
-        this.days.set(
-          Array.from(byDate.entries())
-            .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-            .map(([date, assignmentsForDay]) => {
-              const isToday = date === today;
-              const shifts: DayShift[] = assignmentsForDay.map((assignment) => {
-                const isMine = mineIds.has(assignment.id);
-                const earliestClockInAt = combineDateAndTime(assignment.date, assignment.shiftStartTime);
-                earliestClockInAt.setMinutes(earliestClockInAt.getMinutes() - settings.clockInWindowMinutes);
-                // Location scope shows every employee's punches (see the
-                // getForLocation fetch above); only the *actions* stay
-                // self-service (see the isMine checks on each canX below).
-                const entry = entryByShiftId.get(assignment.id) ?? null;
+          this.days.set(
+            Array.from(byDate.entries())
+              .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+              .map(([date, assignmentsForDay]) => {
+                const isToday = date === today;
+                const shifts: DayShift[] = assignmentsForDay.map((assignment) => {
+                  const isMine = mineIds.has(assignment.id);
+                  const earliestClockInAt = combineDateAndTime(assignment.date, assignment.shiftStartTime);
+                  earliestClockInAt.setMinutes(earliestClockInAt.getMinutes() - settings.clockInWindowMinutes);
+                  // Location scope shows every employee's punches (see the
+                  // getForLocation fetch above); only the *actions* stay
+                  // self-service (see the isMine checks on each canX below).
+                  const entry = entryByShiftId.get(assignment.id) ?? null;
+                  return {
+                    assignment,
+                    employeeName: `${assignment.accountFirstName} ${assignment.accountLastName}`,
+                    isMine,
+                    earliestClockInLabel: this.punchTime(earliestClockInAt.toISOString()),
+                    canClockIn: isToday && isMine && !entry && now >= earliestClockInAt,
+                    entry,
+                  };
+                });
+
                 return {
-                  assignment,
-                  employeeName: `${assignment.accountFirstName} ${assignment.accountLastName}`,
-                  isMine,
-                  earliestClockInLabel: this.punchTime(earliestClockInAt.toISOString()),
-                  canClockIn: isToday && isMine && !entry && now >= earliestClockInAt,
-                  entry,
+                  date,
+                  dayLabel: dayOfWeekLabel(date),
+                  dateLabel: toMmDdYyyy(date),
+                  isToday,
+                  shifts,
+                  // Actual worked hours (matches the per-row "H Hrs M Mins"
+                  // label), not scheduled shift length — a shift that's still
+                  // clocked in, never started, or absent contributes 0 here.
+                  hours: round2(
+                    shifts.reduce((sum, s) => (s.entry?.clockOutAt ? sum + workedMinutes(s.entry) / 60 : sum), 0),
+                  ),
                 };
-              });
-
-              return {
-                date,
-                dayLabel: dayOfWeekLabel(date),
-                dateLabel: toMmDdYyyy(date),
-                isToday,
-                shifts,
-                // Actual worked hours (matches the per-row "H Hrs M Mins"
-                // label), not scheduled shift length — a shift that's still
-                // clocked in, never started, or absent contributes 0 here.
-                hours: round2(
-                  shifts.reduce((sum, s) => (s.entry?.clockOutAt ? sum + workedMinutes(s.entry) / 60 : sum), 0),
-                ),
-              };
-            }),
-        );
-        this.loading.set(false);
-      },
-      error: () => this.loading.set(false),
-    });
+              }),
+          );
+          this.loading.set(false);
+        },
+        error: () => this.loading.set(false),
+      });
   }
 
   scheduledTime(shift: ShiftAssignmentDto): string {
