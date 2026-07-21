@@ -29,6 +29,13 @@ interface DayModel {
   allDay: boolean;
   startTime: string;
   endTime: string;
+  // Set once the employee focuses Start/End — a native <input type="time">
+  // reports '' for a half-typed value (e.g. hour and minute set but AM/PM
+  // never touched) exactly the same as "never touched", and blank Start/End
+  // is silently read as "All day" by save() below, so save() confirms
+  // rather than saving that silently.
+  startTouched: boolean;
+  endTouched: boolean;
 }
 
 // The actual day-by-day availability form, shared between the standalone
@@ -88,12 +95,30 @@ export class AvailabilityEditor implements OnInit {
         allDay: d.isAvailable && !d.startTime && !d.endTime,
         startTime: toInputTime(d.startTime),
         endTime: toInputTime(d.endTime ?? '17:00:00'),
+        startTouched: false,
+        endTouched: false,
       })),
     );
     this.loading.set(false);
   }
 
   private save(submit: boolean): void {
+    for (const d of this.days()) {
+      if (!d.isAvailable || d.allDay) {
+        continue;
+      }
+      if (d.startTouched && !d.startTime) {
+        if (!confirm(`${d.label}'s start time is blank even though you edited it. Save anyway?`)) {
+          return;
+        }
+      }
+      if (d.endTouched && !d.endTime) {
+        if (!confirm(`${d.label}'s end time is blank even though you edited it. Save anyway?`)) {
+          return;
+        }
+      }
+    }
+
     this.error.set(null);
     this.api
       .saveMine({

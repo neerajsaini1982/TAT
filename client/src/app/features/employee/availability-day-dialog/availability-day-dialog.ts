@@ -34,6 +34,14 @@ export class AvailabilityDayDialog {
   protected startTime: string;
   protected endTime: string;
 
+  // Set once the employee focuses Start/End — a native <input type="time">
+  // reports '' for a half-typed value (e.g. hour and minute set but AM/PM
+  // never touched) exactly the same as "never touched", and blank Start/End
+  // here is silently read as "All day" by the pages that consume this
+  // dialog's result, so save() confirms rather than saving that silently.
+  protected startTouched = false;
+  protected endTouched = false;
+
   constructor(
     private readonly dialogRef: MatDialogRef<AvailabilityDayDialog, AvailabilityDayDialogResult>,
     @Inject(MAT_DIALOG_DATA) protected readonly data: AvailabilityDayDialogData,
@@ -45,6 +53,19 @@ export class AvailabilityDayDialog {
   }
 
   save(): void {
+    if (this.isAvailable && !this.allDay) {
+      if (this.startTouched && !this.startTime) {
+        if (!confirm('Start time is blank even though you edited it. Save anyway?')) {
+          return;
+        }
+      }
+      if (this.endTouched && !this.endTime) {
+        if (!confirm('End time is blank even though you edited it. Save anyway?')) {
+          return;
+        }
+      }
+    }
+
     this.dialogRef.close({
       isAvailable: this.isAvailable,
       allDay: this.allDay,

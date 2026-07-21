@@ -9,7 +9,7 @@
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Clock Out</mat-label>
-      <input matInput type="time" [(ngModel)]="clockOutAt" [ngModelOptions]="{ updateOn: 'blur' }" />
+      <input matInput type="time" [(ngModel)]="clockOutAt" [ngModelOptions]="{ updateOn: 'blur' }" (focus)="clockOutTouched = true" />
       @if (clockOutAt) {
         <button type="button" mat-icon-button matSuffix (click)="clearClockOut()" aria-label="Clear clock out">
           <mat-icon>close</mat-icon>
@@ -38,7 +38,7 @@
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>End</mat-label>
-          <input matInput type="time" [(ngModel)]="s.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentEnd' + $index" />
+          <input matInput type="time" [(ngModel)]="s.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentEnd' + $index" (focus)="s.endTouched = true" />
         </mat-form-field>
         <button mat-icon-button type="button" (click)="removeSegment($index)" aria-label="Remove">
           <mat-icon>close</mat-icon>

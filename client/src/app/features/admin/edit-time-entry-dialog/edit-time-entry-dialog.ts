@@ -23,6 +23,10 @@ interface SegmentRow {
   kind: BreakKind;
   start: string;
   end: string;
+  // Set once the admin focuses the End field — lets save() tell "never
+  // touched, still on this break" apart from "started typing an end time
+  // but didn't finish it", since both look identical as an empty string.
+  endTouched: boolean;
 }
 
 export interface EditTimeEntryResult {
@@ -58,6 +62,11 @@ export class EditTimeEntryDialog {
   protected note = '';
   protected error: string | null = null;
 
+  // Same reasoning as SegmentRow.endTouched — Clock Out is optional (someone
+  // still clocked in has none), so an empty value is only worth confirming
+  // when the admin actually put their cursor there.
+  protected clockOutTouched = false;
+
   constructor(
     private readonly dialogRef: MatDialogRef<EditTimeEntryDialog, EditTimeEntryResult>,
     @Inject(MAT_DIALOG_DATA) protected readonly data: EditTimeEntryDialogData,
@@ -74,16 +83,16 @@ export class EditTimeEntryDialog {
       ? entry.segments
           .slice()
           .sort((a, b) => a.startAt.localeCompare(b.startAt))
-          .map((s) => ({ kind: s.kind, start: toInput(s.startAt), end: toInput(s.endAt) }))
+          .map((s) => ({ kind: s.kind, start: toInput(s.startAt), end: toInput(s.endAt), endTouched: false }))
       : data.scheduledBreaks
           .slice()
           .sort((a, b) => a.startTime.localeCompare(b.startTime))
-          .map((b) => ({ kind: b.kind, start: b.startTime.slice(0, 5), end: b.endTime.slice(0, 5) }));
+          .map((b) => ({ kind: b.kind, start: b.startTime.slice(0, 5), end: b.endTime.slice(0, 5), endTouched: false }));
   }
 
   addSegment(kind: BreakKind): void {
     const { start, end } = DEFAULT_WINDOW[kind];
-    this.segments = [...this.segments, { kind, start, end }];
+    this.segments = [...this.segments, { kind, start, end, endTouched: false }];
   }
 
   removeSegment(index: number): void {
@@ -92,6 +101,7 @@ export class EditTimeEntryDialog {
 
   save(): void {
     this.error = null;
+
     if (!this.clockInAt) {
       this.error = 'Clock in time is required.';
       return;
@@ -129,6 +139,26 @@ export class EditTimeEntryDialog {
       return;
     }
 
+    // Clock Out and segment End are both optional — someone still clocked
+    // in, or still on their current break, legitimately has none. But a
+    // native <input type="time"> reports '' for a half-typed value (e.g.
+    // hour and minute set but AM/PM never touched) exactly the same as for
+    // "never touched", so a blank value the admin actually clicked into is
+    // worth a confirmation rather than silently saving as "still clocked
+    // in" — that's how Clock Out times have gone missing before.
+    if (this.clockOutTouched && !this.clockOutAt) {
+      if (!confirm("Clock Out is blank even though you edited it. Save without a clock-out time?")) {
+        return;
+      }
+    }
+    for (const s of this.segments) {
+      if (s.endTouched && !s.end) {
+        if (!confirm(`${s.kind} end time is blank even though you edited it. Save without an end time?`)) {
+          return;
+        }
+      }
+    }
+
     this.dialogRef.close({
       clockInAt: this.clockInAt,
       clockOutAt: this.clockOutAt || null,
@@ -143,6 +173,8 @@ export class EditTimeEntryDialog {
 
   clearClockOut(): void {
     this.clockOutAt = '';
+    // An explicit clear is unambiguous — no need to confirm it again in save().
+    this.clockOutTouched = false;
   }
 
   get scheduledLabel(): string {

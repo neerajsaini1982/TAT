@@ -12,12 +12,12 @@
         <div class="time-row">
           <mat-form-field appearance="outline" class="time-field">
             <mat-label>Start</mat-label>
-            <input matInput type="time" [(ngModel)]="startTime" [ngModelOptions]="{ updateOn: 'blur' }" />
+            <input matInput type="time" [(ngModel)]="startTime" [ngModelOptions]="{ updateOn: 'blur' }" (focus)="startTouched = true" />
           </mat-form-field>
           <span class="time-sep">–</span>
           <mat-form-field appearance="outline" class="time-field">
             <mat-label>End</mat-label>
-            <input matInput type="time" [(ngModel)]="endTime" [ngModelOptions]="{ updateOn: 'blur' }" />
+            <input matInput type="time" [(ngModel)]="endTime" [ngModelOptions]="{ updateOn: 'blur' }" (focus)="endTouched = true" />
           </mat-form-field>
         </div>
       }
