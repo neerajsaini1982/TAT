@@ -57,10 +57,20 @@
     font-weight: 600;
   }
 
-  // Grand-total row across every employee in the report.
-  tfoot td {
-    border-top: 2px solid var(--mat-sys-outline-variant);
+  // Grand-total row across every employee in the report — sized up and set
+  // off with a double rule so it reads clearly as a summary, not just
+  // another data row.
+  //
+  // Targets .mat-mdc-footer-cell rather than "tfoot td": CdkTable inserts
+  // the <tfoot> wrapper itself via the renderer, so — unlike the <td>s,
+  // which come from this component's own template — it never gets
+  // Angular's view-encapsulation attribute. A scoped "tfoot td" selector
+  // silently never matches anything as a result.
+  .mat-mdc-footer-cell {
+    border-top: 4px double var(--mat-sys-outline);
     background: var(--mat-sys-surface-container);
+    font-size: 15px;
+    font-weight: 700;
   }
 }
 
