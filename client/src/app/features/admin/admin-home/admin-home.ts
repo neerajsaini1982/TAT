@@ -1,5 +1,5 @@
 import { Component, inject, isDevMode, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -14,7 +14,6 @@ import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/curren
   selector: 'app-admin-home',
   imports: [
     FormsModule,
-    RouterLink,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
@@ -53,9 +52,5 @@ export class AdminHome {
     } finally {
       this.loading.set(false);
     }
-  }
-
-  logout(): void {
-    this.auth.logout();
   }
 }

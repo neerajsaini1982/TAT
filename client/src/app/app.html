@@ -2,21 +2,54 @@
   <span class="title">{{ title() }}</span>
   <span class="spacer"></span>
 
-  <button mat-icon-button (click)="themeService.toggleScheme()"
-          [attr.aria-label]="themeService.scheme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">
-    <mat-icon>{{ themeService.scheme() === 'light' ? 'dark_mode' : 'light_mode' }}</mat-icon>
-  </button>
-
-  <button mat-icon-button [matMenuTriggerFor]="themeMenu" aria-label="Choose theme color">
-    <mat-icon>palette</mat-icon>
-  </button>
-  <mat-menu #themeMenu="matMenu">
-    @for (option of themes; track option.name) {
-      <button mat-menu-item (click)="themeService.setTheme(option.name)">
-        {{ option.label }}
+  @if (isAdminMenu()) {
+    <button mat-button [matMenuTriggerFor]="accountMenu" class="account-btn">
+      <mat-icon>settings</mat-icon>
+      <span>{{ auth.session()?.firstName }}</span>
+    </button>
+    <mat-menu #accountMenu="matMenu">
+      <button mat-menu-item (click)="themeService.toggleScheme()">
+        <mat-icon>{{ themeService.scheme() === 'light' ? 'dark_mode' : 'light_mode' }}</mat-icon>
+        <span>{{ themeService.scheme() === 'light' ? 'Dark mode' : 'Light mode' }}</span>
       </button>
-    }
-  </mat-menu>
+      <button mat-menu-item [matMenuTriggerFor]="themeMenu">
+        <mat-icon>palette</mat-icon>
+        <span>Theme color</span>
+      </button>
+      <mat-divider />
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'accounts']">Manage Accounts</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'shifts']">Manage Shifts</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'availability']">Availability</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'schedule']">Schedule</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'reports']">Reports</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'settings']">Settings</a>
+      <mat-divider />
+      <button mat-menu-item (click)="logout()">Log Out</button>
+    </mat-menu>
+    <mat-menu #themeMenu="matMenu">
+      @for (option of themes; track option.name) {
+        <button mat-menu-item (click)="themeService.setTheme(option.name)">
+          {{ option.label }}
+        </button>
+      }
+    </mat-menu>
+  } @else {
+    <button mat-icon-button (click)="themeService.toggleScheme()"
+            [attr.aria-label]="themeService.scheme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">
+      <mat-icon>{{ themeService.scheme() === 'light' ? 'dark_mode' : 'light_mode' }}</mat-icon>
+    </button>
+
+    <button mat-icon-button [matMenuTriggerFor]="themeMenu" aria-label="Choose theme color">
+      <mat-icon>palette</mat-icon>
+    </button>
+    <mat-menu #themeMenu="matMenu">
+      @for (option of themes; track option.name) {
+        <button mat-menu-item (click)="themeService.setTheme(option.name)">
+          {{ option.label }}
+        </button>
+      }
+    </mat-menu>
+  }
 </mat-toolbar>
 
 <main class="content">

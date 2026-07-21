@@ -16,6 +16,13 @@ mat-toolbar {
   flex: 1 1 auto;
 }
 
+.account-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: none;
+}
+
 .content {
   padding: 24px;
   max-width: 960px;
