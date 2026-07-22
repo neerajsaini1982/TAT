@@ -25,6 +25,7 @@ export interface EmployeeHoursReportDto {
   totalLunchMinutes: number;
   totalNetWorkedMinutes: number;
   absentDays: number;
+  openEntryDays: number;
   days: DailyHoursDto[];
 }
 

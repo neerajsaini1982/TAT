@@ -82,6 +82,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
             days.Sum(d => d.LunchMinutes),
             days.Sum(d => d.NetWorkedMinutes ?? 0),
             days.Count(d => d.IsAbsent),
+            days.Count(d => d.StillClockedIn),
             days);
     }
 

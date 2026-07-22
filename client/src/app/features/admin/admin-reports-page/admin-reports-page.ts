@@ -71,6 +71,7 @@ export class AdminReportsPage implements OnInit {
       lunchMinutes: rows.reduce((sum, r) => sum + r.totalLunchMinutes, 0),
       netWorkedMinutes: rows.reduce((sum, r) => sum + r.totalNetWorkedMinutes, 0),
       absentDays: rows.reduce((sum, r) => sum + r.absentDays, 0),
+      openEntryDays: rows.reduce((sum, r) => sum + r.openEntryDays, 0),
     };
   });
 
