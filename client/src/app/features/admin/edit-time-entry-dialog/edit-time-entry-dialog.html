@@ -9,12 +9,16 @@
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Clock Out</mat-label>
-      <input matInput type="time" [(ngModel)]="clockOutAt" [ngModelOptions]="{ updateOn: 'blur' }" (focus)="clockOutTouched = true" />
-      @if (clockOutAt) {
-        <button type="button" mat-icon-button matSuffix (click)="clearClockOut()" aria-label="Clear clock out">
-          <mat-icon>close</mat-icon>
-        </button>
-      }
+      <input matInput type="time" #clockOutInput [(ngModel)]="clockOutAt" [ngModelOptions]="{ updateOn: 'blur' }" (focus)="clockOutTouched = true" />
+      <!-- Always shown, not just when clockOutAt has a value: a native time
+           input can display a full-looking "3:35 PM" in its hour/minute/AM-PM
+           segments while its own .value still reports empty (a real browser
+           quirk, not a typo) — the admin needs a reliable way to force the
+           field back to a clean, genuinely-empty state before retyping, even
+           though the bound model already reads '' in that situation. -->
+      <button type="button" mat-icon-button matSuffix (click)="clearClockOut(clockOutInput)" aria-label="Clear clock out">
+        <mat-icon>close</mat-icon>
+      </button>
     </mat-form-field>
   </div>
 
@@ -38,7 +42,12 @@
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>End</mat-label>
-          <input matInput type="time" [(ngModel)]="s.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentEnd' + $index" (focus)="s.endTouched = true" />
+          <input matInput type="time" #segmentEndInput [(ngModel)]="s.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentEnd' + $index" (focus)="s.endTouched = true" />
+          <!-- See the Clock Out clear button above for why this is always
+               shown rather than gated on s.end having a value. -->
+          <button type="button" mat-icon-button matSuffix (click)="clearSegmentEnd(s, segmentEndInput)" aria-label="Clear end time">
+            <mat-icon>close</mat-icon>
+          </button>
         </mat-form-field>
         <button mat-icon-button type="button" (click)="removeSegment($index)" aria-label="Remove">
           <mat-icon>close</mat-icon>

@@ -9,7 +9,7 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { TimeEntryDto } from '../../../core/time-entries-api';
 import { BreakKind, ScheduledBreakDto } from '../../../core/shifts-api';
-import { formatHHmm } from '../../../core/week-utils';
+import { formatHHmm, isPastDate } from '../../../core/week-utils';
 
 export interface EditTimeEntryDialogData {
   employeeName: string;
@@ -17,6 +17,11 @@ export interface EditTimeEntryDialogData {
   // Shown as read-only reference at the top of the dialog so the admin can
   // see what was scheduled while entering what actually happened.
   scheduledBreaks: ScheduledBreakDto[];
+  // The shift's own date (not today's) — "still clocked in" only makes
+  // sense for today; a blank Clock Out on a day that's already over is
+  // never correct, so save() blocks on it below regardless of whether the
+  // admin actually touched the field (see isPastDate usage in save()).
+  date: string;
 }
 
 interface SegmentRow {
@@ -145,15 +150,30 @@ export class EditTimeEntryDialog {
     // hour and minute set but AM/PM never touched) exactly the same as for
     // "never touched", so a blank value the admin actually clicked into is
     // worth a confirmation rather than silently saving as "still clocked
-    // in" — that's how Clock Out times have gone missing before.
+    // in" — that's how Clock Out times have gone missing before. Worth
+    // noting for whoever's reading this next: the field can still *look*
+    // fully filled in (a real "3:35 PM" across all three segments) when
+    // this fires — the browser's own .value getter can report empty for an
+    // edit over a pre-filled value even though every segment displays a
+    // real digit, which is exactly the state the "Clear clock out" button
+    // exists to force out of (see the always-shown button in the template).
     if (this.clockOutTouched && !this.clockOutAt) {
-      if (!confirm("Clock Out is blank even though you edited it. Save without a clock-out time?")) {
+      if (!confirm('Clock Out shows blank to the browser (even if it looks filled in on screen). Click the X next to it to reset, then retype the full time. Save without a clock-out time for now?')) {
+        return;
+      }
+    } else if (!this.clockOutAt && isPastDate(this.data.date)) {
+      // Untouched isn't enough to excuse this one: "still clocked in" only
+      // makes sense for today. A past shift left blank here is never
+      // correct (it read as a live, ongoing punch on every report), even
+      // if the admin only opened this dialog to fix a break/lunch time and
+      // never meant to touch Clock Out at all.
+      if (!confirm('This shift is from a past day. Leaving Clock Out blank will show as still clocked in on reports. Save without a clock-out time?')) {
         return;
       }
     }
     for (const s of this.segments) {
       if (s.endTouched && !s.end) {
-        if (!confirm(`${s.kind} end time is blank even though you edited it. Save without an end time?`)) {
+        if (!confirm(`${s.kind} end time shows blank to the browser (even if it looks filled in on screen). Click the X next to it to reset, then retype the full time. Save without an end time for now?`)) {
           return;
         }
       }
@@ -171,10 +191,23 @@ export class EditTimeEntryDialog {
     this.dialogRef.close();
   }
 
-  clearClockOut(): void {
+  clearClockOut(input: HTMLInputElement): void {
     this.clockOutAt = '';
     // An explicit clear is unambiguous — no need to confirm it again in save().
     this.clockOutTouched = false;
+    // Angular only re-writes the native element's value when the *bound*
+    // model actually changes — if it was already '' (the browser's own
+    // .value, regardless of what's visually in its segments), assigning ''
+    // above is a no-op as far as Angular is concerned, and stale digits
+    // would keep showing. Reset the DOM directly so what's on screen always
+    // matches the truth.
+    input.value = '';
+  }
+
+  clearSegmentEnd(segment: SegmentRow, input: HTMLInputElement): void {
+    segment.end = '';
+    segment.endTouched = false;
+    input.value = '';
   }
 
   get scheduledLabel(): string {
