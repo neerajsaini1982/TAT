@@ -1,0 +1,137 @@
+.week-days-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  // Opts into the portrait-oriented named page defined in styles.scss —
+  // this view stacks each day full-width instead of laying 7 out side by
+  // side, so it wants portrait's extra height rather than the app-wide
+  // default's landscape width.
+  page: printDaysPage;
+}
+
+.day-row {
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  overflow: hidden;
+  // Keeps a day row from splitting across a page break when printed —
+  // each row stays a single, readable unit.
+  break-inside: avoid;
+}
+
+.day-row-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 8px;
+  background: var(--mat-sys-surface-container-low);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.day-row-name {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.day-row-date {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.day-row-body {
+  display: flex;
+}
+
+.time-axis {
+  flex: 0 0 44px;
+  border-right: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+}
+
+.hour-cell {
+  box-sizing: border-box;
+  padding: 1px 6px 0 0;
+  text-align: right;
+}
+
+.hour-label {
+  font-size: 9px;
+  color: var(--mat-sys-on-surface-variant);
+  transform: translateY(-50%);
+  display: inline-block;
+}
+
+.timeline {
+  position: relative;
+  flex: 1 1 auto;
+}
+
+.hour-gridline {
+  box-sizing: border-box;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+// Deliberately sparser than ScheduleDayView/ScheduleWeekTimeline's event
+// cards — just name + time, per the "smaller cards, name and shift time,
+// nothing else" ask, since this print layout already spends more vertical
+// space than those to give each day the full page width.
+.event-card {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 3px;
+  padding: 1px 4px;
+  color: #fff;
+  font-size: 9px;
+  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+
+  &.draft {
+    opacity: 0.75;
+    border: 1px dashed rgba(255, 255, 255, 0.8);
+  }
+
+  &.absent {
+    opacity: 0.5;
+
+    .event-title {
+      text-decoration: line-through;
+    }
+  }
+}
+
+.event-title {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-time {
+  opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty-note {
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 11px;
+}
+
+.empty-note-week {
+  margin: 12px 0 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}

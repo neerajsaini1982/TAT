@@ -1,0 +1,46 @@
+<div class="week-days-timeline">
+  @for (row of dayRows(); track row.label) {
+    <div class="day-row">
+      <div class="day-row-label">
+        <span class="day-row-name">{{ row.label }}</span>
+        <span class="day-row-date">{{ row.dateLabel }}</span>
+      </div>
+
+      <div class="day-row-body">
+        <div class="time-axis" [style.height.px]="totalHeightPx">
+          @for (hour of row.hours; track hour) {
+            <div class="hour-cell" [style.height.px]="row.hourHeightPx">
+              <span class="hour-label">{{ hourLabel(hour) }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="timeline" [style.height.px]="totalHeightPx">
+          @for (hour of row.hours; track hour) {
+            <div class="hour-gridline" [style.height.px]="row.hourHeightPx"></div>
+          }
+          @for (laidOut of row.laidOutEvents; track laidOut.event.id) {
+            @let style = eventStyle(row, laidOut);
+            <div
+              class="event-card"
+              [style]="style"
+              [style.background]="employeeColor(laidOut.event.accountId)"
+              [class.draft]="!laidOut.event.isPublished"
+              [class.absent]="laidOut.event.isAbsent"
+            >
+              <span class="event-title">{{ laidOut.event.accountFirstName }} {{ laidOut.event.accountLastName }}</span>
+              <span class="event-time">{{ timeRangeLabel(laidOut.event) }}</span>
+            </div>
+          }
+          @if (row.laidOutEvents.length === 0) {
+            <span class="empty-note">No shifts</span>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (days().length > 0 && !days().some((d) => d.assignments.length > 0)) {
+    <p class="empty-note-week">No shifts scheduled this week.</p>
+  }
+</div>
