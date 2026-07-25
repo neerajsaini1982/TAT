@@ -39,7 +39,8 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .ThenBy(a => a.Account!.LastName)
             .ToList();
 
-        return Ok(assignments.Select(ToDto));
+        var positions = ComputeBreakPositions(assignments);
+        return Ok(assignments.Select(a => ToDto(a, positions[a.Id])));
     }
 
     // Bulk-marks every assignment in a location/week as published so it
@@ -95,7 +96,8 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .ThenBy(a => a.Account!.LastName)
             .ToList();
 
-        return Ok(assignments.Select(ToDto));
+        var positions = ComputeBreakPositions(assignments);
+        return Ok(assignments.Select(a => ToDto(a, positions[a.Id])));
     }
 
     [HttpPost]
@@ -138,8 +140,9 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
 
         assignment.Shift = shift;
         assignment.Account = account;
+        var position = ComputeBreakPositions([assignment])[assignment.Id];
         await notifier.NotifyLocationChanged(shift.Location!.LocationCode);
-        return Ok(ToDto(assignment));
+        return Ok(ToDto(assignment, position));
     }
 
     [HttpPut("{id:int}/move")]
@@ -183,8 +186,9 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         db.SaveChanges();
 
         assignment.Account = account;
+        var position = ComputeBreakPositions([assignment])[assignment.Id];
         await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
-        return Ok(ToDto(assignment));
+        return Ok(ToDto(assignment, position));
     }
 
     [HttpDelete("{id:int}")]
@@ -246,8 +250,9 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         assignment.AbsentMarkedAt = DateTime.UtcNow;
         db.SaveChanges();
 
+        var position = ComputeBreakPositions([assignment])[assignment.Id];
         await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
-        return Ok(ToDto(assignment));
+        return Ok(ToDto(assignment, position));
     }
 
     private Location? ResolveLocation(string? locationCode)
@@ -322,16 +327,71 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         return Math.Round(span.TotalHours, 2);
     }
 
-    private static ShiftAssignmentDto ToDto(ShiftAssignment a) => new(
+    // Determines each assignment's zero-based order among the assignments
+    // sharing its Shift+Date (earliest CreatedAt first, Id as a stable
+    // tiebreaker), so StaggerBreaks below can give the 1st employee on a
+    // shift the shift's defined break time, the 2nd a later one, etc. Takes
+    // its own DB pass rather than trusting the caller's list to contain every
+    // sibling — GetMine, for instance, only loads one account's assignments.
+    private Dictionary<int, int> ComputeBreakPositions(IReadOnlyCollection<ShiftAssignment> assignments)
+    {
+        var keys = assignments.Select(a => (a.ShiftId, a.Date)).Distinct().ToList();
+        if (keys.Count == 0)
+        {
+            return [];
+        }
+
+        var shiftIds = keys.Select(k => k.ShiftId).Distinct().ToList();
+        var dates = keys.Select(k => k.Date).Distinct().ToList();
+
+        var candidates = db.ShiftAssignments
+            .Where(a => shiftIds.Contains(a.ShiftId) && dates.Contains(a.Date))
+            .Select(a => new { a.Id, a.ShiftId, a.Date, a.CreatedAt })
+            .ToList()
+            .Where(a => keys.Contains((a.ShiftId, a.Date)));
+
+        var positions = new Dictionary<int, int>();
+        foreach (var group in candidates.GroupBy(a => (a.ShiftId, a.Date)))
+        {
+            var ordered = group.OrderBy(a => a.CreatedAt).ThenBy(a => a.Id).ToList();
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                positions[ordered[i].Id] = i;
+            }
+        }
+
+        return positions;
+    }
+
+    // Shifts every break/lunch window later by its own duration times
+    // `position`, so the employees on a shift take theirs back-to-back
+    // instead of all at once — the 1st keeps the shift's defined time, the
+    // 2nd starts right as the 1st's ends, and so on. Each scheduled
+    // break/lunch staggers independently, so a shift with both a break and a
+    // lunch keeps them offset from each other the same way for everyone.
+    private static List<ScheduledBreakDto> StaggerBreaks(IEnumerable<ScheduledBreak> scheduledBreaks, int position) =>
+        scheduledBreaks
+            .OrderBy(b => b.StartTime)
+            .Select(b =>
+            {
+                var duration = b.EndTime - b.StartTime;
+                if (duration <= TimeSpan.Zero)
+                {
+                    duration += TimeSpan.FromDays(1);
+                }
+
+                var offset = duration * position;
+                return new ScheduledBreakDto(b.Kind, b.StartTime.Add(offset), b.EndTime.Add(offset));
+            })
+            .ToList();
+
+    private static ShiftAssignmentDto ToDto(ShiftAssignment a, int position) => new(
         a.Id,
         a.ShiftId,
         a.Shift!.Name,
         a.Shift.StartTime,
         a.Shift.EndTime,
-        a.Shift.ScheduledBreaks
-            .OrderBy(b => b.StartTime)
-            .Select(b => new ScheduledBreakDto(b.Kind, b.StartTime, b.EndTime))
-            .ToList(),
+        StaggerBreaks(a.Shift.ScheduledBreaks, position),
         ComputeHours(a.Shift.StartTime, a.Shift.EndTime, a.Shift.ScheduledBreaks),
         a.AccountId,
         a.Account!.FirstName,
