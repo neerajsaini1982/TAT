@@ -1,0 +1,47 @@
+<div class="week-timeline">
+  <div class="week-timeline-header">
+    <div class="time-axis-spacer"></div>
+    @for (day of days(); track day.label) {
+      <div class="day-header">
+        <span class="day-header-label">{{ day.label }}</span>
+        <span class="day-header-date">{{ day.dateLabel }}</span>
+      </div>
+    }
+  </div>
+
+  <div class="week-timeline-body">
+    <div class="time-axis" [style.height.px]="totalHeightPx">
+      @for (hour of hours(); track hour) {
+        <div class="hour-row" [style.height.px]="hourHeightPx()">
+          <span class="hour-label">{{ hourLabel(hour) }}</span>
+        </div>
+      }
+    </div>
+
+    @for (day of laidOutDays(); track $index) {
+      <div class="day-column" [style.height.px]="totalHeightPx">
+        @for (hour of hours(); track hour) {
+          <div class="hour-gridline" [style.height.px]="hourHeightPx()"></div>
+        }
+        @for (laidOut of day; track laidOut.event.id) {
+          @let style = eventStyle(laidOut);
+          <div
+            class="event-card"
+            [style]="style"
+            [style.background]="employeeColor(laidOut.event.accountId)"
+            [class.draft]="!laidOut.event.isPublished"
+            [class.absent]="laidOut.event.isAbsent"
+          >
+            <span class="event-title">{{ laidOut.event.accountFirstName }} {{ laidOut.event.accountLastName }}</span>
+            <span class="event-shift">{{ laidOut.event.shiftName }}</span>
+            <span class="event-time">{{ timeRangeLabel(laidOut.event) }}</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  @if (days().length > 0 && !days().some((d) => d.assignments.length > 0)) {
+    <p class="empty-note">No shifts scheduled this week.</p>
+  }
+</div>

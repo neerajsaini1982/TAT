@@ -90,6 +90,39 @@
   text-align: center;
 }
 
+// Stands in for .header/.publish-bar (both hidden in print, see the
+// @media print block below) so the printed page still identifies which
+// location and week it's for.
+.print-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.print-button {
+  display: flex;
+  margin: 0 auto 12px;
+}
+
+// Everything marked .no-print is admin-only chrome (nav controls, filters,
+// drag palette, status banners) that adds nothing to a physical printout
+// and would just burn page space better spent on the schedule itself.
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  :host {
+    padding: 0;
+  }
+}
+
 .dev-mode-note {
   display: flex;
   align-items: center;

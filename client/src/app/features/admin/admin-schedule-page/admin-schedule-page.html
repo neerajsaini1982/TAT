@@ -1,4 +1,4 @@
-<div class="header">
+<div class="header no-print">
   <a mat-icon-button [routerLink]="['/', locationCode, 'admin']" aria-label="Back">
     <mat-icon>arrow_back</mat-icon>
   </a>
@@ -6,26 +6,27 @@
 </div>
 
 <div class="week-nav">
-  <button mat-icon-button (click)="previousWeek()" aria-label="Previous week">
+  <button mat-icon-button class="no-print" (click)="previousWeek()" aria-label="Previous week">
     <mat-icon>chevron_left</mat-icon>
   </button>
   <span class="week-label">{{ weekRangeLabel() }}</span>
-  <button mat-icon-button (click)="nextWeek()" aria-label="Next week">
+  <button mat-icon-button class="no-print" (click)="nextWeek()" aria-label="Next week">
     <mat-icon>chevron_right</mat-icon>
   </button>
 
   <mat-button-toggle-group
-    class="view-toggle"
+    class="view-toggle no-print"
     [value]="viewMode()"
     (change)="viewMode.set($event.value)"
     aria-label="View mode"
   >
     <mat-button-toggle value="week">Week</mat-button-toggle>
     <mat-button-toggle value="day">Day</mat-button-toggle>
+    <mat-button-toggle value="print">Week (Print)</mat-button-toggle>
   </mat-button-toggle-group>
 </div>
 
-<div class="publish-bar">
+<div class="publish-bar no-print">
   @if (isFullyPublished()) {
     <span class="status-badge published">
       <mat-icon>check_circle</mat-icon>
@@ -49,18 +50,18 @@
 </div>
 
 @if (error()) {
-  <p class="error">{{ error() }}</p>
+  <p class="error no-print">{{ error() }}</p>
 }
 
 @if (developmentMode()) {
-  <p class="dev-mode-note">
+  <p class="dev-mode-note no-print">
     <mat-icon>science</mat-icon>
     Development Mode is on — shifts can be assigned regardless of submitted availability.
   </p>
 }
 
 @if (viewMode() === 'day') {
-  <div class="day-tabs">
+  <div class="day-tabs no-print">
     @for (col of dayColumns(); track col.label; let i = $index) {
       <button
         type="button"
@@ -80,6 +81,18 @@
     (clearAbsent)="clearAbsent($event)"
     (editTimes)="editTimesForDay($event)"
   />
+} @else if (viewMode() === 'print') {
+  <div class="print-header">
+    <h3>Schedule — {{ locationCode }}</h3>
+    <span>{{ weekRangeLabel() }}</span>
+  </div>
+
+  <button type="button" mat-stroked-button class="print-button no-print" (click)="printSchedule()">
+    <mat-icon>print</mat-icon>
+    Print
+  </button>
+
+  <app-schedule-week-timeline [days]="weekTimelineDays()" />
 } @else {
 
 <div cdkDropListGroup class="schedule">

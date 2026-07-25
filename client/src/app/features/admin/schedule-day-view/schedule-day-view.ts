@@ -5,7 +5,7 @@ import { MatMenuModule } from '@angular/material/menu';
 
 import { ShiftAssignmentDto } from '../../../core/shift-assignments-api';
 import { employeeColor } from '../../../core/employee-colors';
-import { LaidOutEvent, layoutDayEvents, toMinutes } from '../../../core/day-view-layout';
+import { LaidOutEvent, formatClockTime, hourLabel, layoutDayEvents, toMinutes } from '../../../core/day-view-layout';
 
 // The whole timeline always renders at this height, however many hours the
 // day spans — see hourHeightPx below — so the day's full start-to-end range
@@ -88,24 +88,9 @@ export class ScheduleDayView {
     };
   }
 
-  hourLabel(hour: number): string {
-    const h = hour % 24;
-    const period = h < 12 ? 'AM' : 'PM';
-    const display = h % 12 === 0 ? 12 : h % 12;
-    return `${display} ${period}`;
-  }
+  protected readonly hourLabel = hourLabel;
 
   timeRangeLabel(a: ShiftAssignmentDto): string {
     return `${formatClockTime(a.shiftStartTime)} – ${formatClockTime(a.shiftEndTime)}`;
   }
-}
-
-// "13:30:00" -> "1:30pm"; drops :00 minutes the way Google Calendar's day
-// view does ("12 – 1pm" rather than "12:00pm – 1:00pm").
-function formatClockTime(time: string): string {
-  const [hStr, mStr] = time.split(':');
-  const h24 = Number(hStr);
-  const period = h24 < 12 ? 'am' : 'pm';
-  const h = h24 % 12 === 0 ? 12 : h24 % 12;
-  return mStr === '00' ? `${h}${period}` : `${h}:${mStr}${period}`;
 }

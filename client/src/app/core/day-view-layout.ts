@@ -22,6 +22,25 @@ export interface LaidOutEvent<T> {
   columnCount: number;
 }
 
+// Shared by ScheduleDayView and ScheduleWeekTimeline, which both render
+// hour gridlines/labels down a time axis.
+export function hourLabel(hour: number): string {
+  const h = hour % 24;
+  const period = h < 12 ? 'AM' : 'PM';
+  const display = h % 12 === 0 ? 12 : h % 12;
+  return `${display} ${period}`;
+}
+
+// "13:30:00" -> "1:30pm"; drops :00 minutes the way Google Calendar's day
+// view does ("12 – 1pm" rather than "12:00pm – 1:00pm").
+export function formatClockTime(time: string): string {
+  const [hStr, mStr] = time.split(':');
+  const h24 = Number(hStr);
+  const period = h24 < 12 ? 'am' : 'pm';
+  const h = h24 % 12 === 0 ? 12 : h24 % 12;
+  return mStr === '00' ? `${h}${period}` : `${h}:${mStr}${period}`;
+}
+
 // Lays out potentially-overlapping events into side-by-side lanes for a
 // single-day timeline. Events that don't overlap anything share lane 0 at
 // full width; a run of mutually-overlapping events split into as many

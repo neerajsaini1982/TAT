@@ -24,6 +24,7 @@ import { addDays, combineDateAndTime, formatDate, formatWeekRange, mondayOf } fr
 import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
 import { ScheduleDayView } from '../schedule-day-view/schedule-day-view';
+import { ScheduleWeekTimeline, WeekTimelineDay } from '../schedule-week-timeline/schedule-week-timeline';
 
 interface DayCell {
   date: string;
@@ -66,6 +67,7 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     CdkDropList,
     CdkDrag,
     ScheduleDayView,
+    ScheduleWeekTimeline,
   ],
   templateUrl: './admin-schedule-page.html',
   styleUrl: './admin-schedule-page.scss',
@@ -141,10 +143,23 @@ export class AdminSchedulePage implements OnInit {
   });
 
   // Week grid vs. a single day's Google-Calendar-style timeline (see
-  // ScheduleDayView) — the latter is for spotting coverage gaps (is
-  // someone opening/closing, are there enough shifts) at a glance, rather
-  // than reading times out of the grid's chips one by one.
-  protected readonly viewMode = signal<'week' | 'day'>('week');
+  // ScheduleDayView) vs. that same timeline style spread across all 7 days
+  // (see ScheduleWeekTimeline) — the day timeline is for spotting coverage
+  // gaps (is someone opening/closing, are there enough shifts) at a
+  // glance, rather than reading times out of the grid's chips one by one;
+  // the week timeline is a read-only, one-page-printable version of that.
+  protected readonly viewMode = signal<'week' | 'day' | 'print'>('week');
+
+  // Every employee's assignments for each day, flattened into one list per
+  // day (ScheduleWeekTimeline lays employees out by time, not by row, so
+  // it doesn't need them grouped by employee the way the week table does).
+  protected readonly weekTimelineDays = computed<WeekTimelineDay[]>(() =>
+    this.dayColumns().map((col, i) => ({
+      label: col.label,
+      dateLabel: col.dateLabel,
+      assignments: this.rows().flatMap((row) => row.days[i]?.assignments ?? []),
+    })),
+  );
   // Index into DAY_HEADERS/dayColumns (0 = Monday). Defaults to today if
   // today falls in the visible week, otherwise Monday; deliberately not
   // recomputed on previous/next-week navigation so flipping weeks keeps
@@ -281,6 +296,10 @@ export class AdminSchedulePage implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  printSchedule(): void {
+    window.print();
   }
 
   previousWeek(): void {

@@ -1,0 +1,139 @@
+// Deliberately no horizontal scrolling here, unlike ScheduleDayView — each
+// day column is a fixed 1/7th of the container width, so an overlapping
+// shift just shrinks to share that width rather than the timeline growing
+// wider. That keeps the whole week's total width fixed and printable on
+// one page instead of needing a print-time reflow.
+.week-timeline {
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.week-timeline-header,
+.week-timeline-body {
+  display: flex;
+}
+
+.week-timeline-header {
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface-container-low);
+}
+
+.time-axis-spacer {
+  flex: 0 0 48px;
+}
+
+.day-header {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 2px;
+  border-left: 1px solid var(--mat-sys-outline-variant);
+
+  &:first-child {
+    border-left: none;
+  }
+}
+
+.day-header-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.day-header-date {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.time-axis {
+  flex: 0 0 48px;
+  border-right: 1px solid var(--mat-sys-outline-variant);
+  background: var(--mat-sys-surface);
+}
+
+.hour-row {
+  box-sizing: border-box;
+  padding: 1px 6px 0 0;
+  text-align: right;
+}
+
+.hour-label {
+  font-size: 10px;
+  color: var(--mat-sys-on-surface-variant);
+  transform: translateY(-50%);
+  display: inline-block;
+}
+
+.day-column {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  border-left: 1px solid var(--mat-sys-outline-variant);
+
+  &:first-child {
+    border-left: none;
+  }
+}
+
+.hour-gridline {
+  box-sizing: border-box;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+.event-card {
+  position: absolute;
+  box-sizing: border-box;
+  overflow: hidden;
+  border-radius: 4px;
+  padding: 2px 4px;
+  color: #fff;
+  font-size: 10px;
+  line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+
+  &.draft {
+    opacity: 0.75;
+    border: 1px dashed rgba(255, 255, 255, 0.8);
+  }
+
+  &.absent {
+    opacity: 0.5;
+
+    .event-title,
+    .event-shift {
+      text-decoration: line-through;
+    }
+  }
+}
+
+.event-title {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-shift,
+.event-time {
+  opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty-note {
+  margin: 12px 0 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}
