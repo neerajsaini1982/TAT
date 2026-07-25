@@ -21,6 +21,16 @@
   <p class="error">{{ error() }}</p>
 }
 
+<!-- Plain text, not <input type="time"> — see the comment above startTime
+     in the component for why. list="availabilityEditorTimeSuggestions" just
+     offers autocomplete off this shared <datalist>; it doesn't restrict
+     what can be typed. -->
+<datalist id="availabilityEditorTimeSuggestions">
+  @for (t of timeSuggestions; track t) {
+    <option [value]="t"></option>
+  }
+</datalist>
+
 <div class="days">
   @for (day of days(); track day.date) {
     <mat-card class="day-card" [class.available]="day.isAvailable">
@@ -47,7 +57,9 @@
                 <mat-label>Start</mat-label>
                 <input
                   matInput
-                  type="time"
+                  type="text"
+                  list="availabilityEditorTimeSuggestions"
+                  placeholder="h:mm AM/PM"
                   [(ngModel)]="day.startTime"
                   [ngModelOptions]="{ updateOn: 'blur' }"
                   [disabled]="locked()"
@@ -59,7 +71,9 @@
                 <mat-label>End</mat-label>
                 <input
                   matInput
-                  type="time"
+                  type="text"
+                  list="availabilityEditorTimeSuggestions"
+                  placeholder="h:mm AM/PM"
                   [(ngModel)]="day.endTime"
                   [ngModelOptions]="{ updateOn: 'blur' }"
                   [disabled]="locked()"

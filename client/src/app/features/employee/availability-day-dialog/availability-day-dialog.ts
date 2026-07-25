@@ -6,6 +6,8 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
+import { TIME_SUGGESTIONS, formatDisplayTime, parseTimeInput } from '../../../core/week-utils';
+
 export interface AvailabilityDayDialogData {
   dayLabel: string;
   dateLabel: string;
@@ -31,14 +33,20 @@ export interface AvailabilityDayDialogResult {
 export class AvailabilityDayDialog {
   protected isAvailable: boolean;
   protected allDay: boolean;
+  // Whatever text the employee has typed (e.g. "3:35 PM"), not necessarily
+  // a valid parsed time yet — see parseTimeInput in week-utils.ts, run
+  // fresh on both fields at save() time. Plain text, not <input type="time">
+  // — that native picker's segments can visually show a complete value
+  // while its own .value getter still reports "" (most often when typing
+  // over a value that was already there), which is how Start/End have
+  // silently collapsed to "All day" before.
   protected startTime: string;
   protected endTime: string;
+  protected readonly timeSuggestions = TIME_SUGGESTIONS;
 
-  // Set once the employee focuses Start/End — a native <input type="time">
-  // reports '' for a half-typed value (e.g. hour and minute set but AM/PM
-  // never touched) exactly the same as "never touched", and blank Start/End
-  // here is silently read as "All day" by the pages that consume this
-  // dialog's result, so save() confirms rather than saving that silently.
+  // Set once the employee focuses Start/End — lets save() tell "never
+  // touched, available all day" apart from "started typing a time but
+  // didn't finish it", since both look identical as an empty string.
   protected startTouched = false;
   protected endTouched = false;
 
@@ -48,29 +56,48 @@ export class AvailabilityDayDialog {
   ) {
     this.isAvailable = data.isAvailable;
     this.allDay = data.allDay;
-    this.startTime = data.startTime;
-    this.endTime = data.endTime;
+    this.startTime = formatDisplayTime(data.startTime);
+    this.endTime = formatDisplayTime(data.endTime);
   }
 
   save(): void {
-    if (this.isAvailable && !this.allDay) {
-      if (this.startTouched && !this.startTime) {
-        if (!confirm('Start time is blank even though you edited it. Save anyway?')) {
-          return;
-        }
+    if (!this.isAvailable || this.allDay) {
+      this.dialogRef.close({
+        isAvailable: this.isAvailable,
+        allDay: this.allDay,
+        startTime: '',
+        endTime: '',
+      });
+      return;
+    }
+
+    const startTime = parseTimeInput(this.startTime);
+    if (startTime === null) {
+      alert('Start isn’t a valid time — try a format like 3:35 PM.');
+      return;
+    }
+    const endTime = parseTimeInput(this.endTime);
+    if (endTime === null) {
+      alert('End isn’t a valid time — try a format like 3:35 PM.');
+      return;
+    }
+
+    if (this.startTouched && !startTime) {
+      if (!confirm('Start time is blank even though you edited it. Save anyway?')) {
+        return;
       }
-      if (this.endTouched && !this.endTime) {
-        if (!confirm('End time is blank even though you edited it. Save anyway?')) {
-          return;
-        }
+    }
+    if (this.endTouched && !endTime) {
+      if (!confirm('End time is blank even though you edited it. Save anyway?')) {
+        return;
       }
     }
 
     this.dialogRef.close({
       isAvailable: this.isAvailable,
       allDay: this.allDay,
-      startTime: this.startTime,
-      endTime: this.endTime,
+      startTime,
+      endTime,
     });
   }
 

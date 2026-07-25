@@ -10,12 +10,15 @@ import { MatInputModule } from '@angular/material/input';
 
 import { AvailabilityApi, AvailabilityDto } from '../../../core/availability-api';
 import {
+  TIME_SUGGESTIONS,
   availabilitySubmissionDeadline,
   dayOfWeekLabel,
   editableAvailabilityWeekStart,
   formatDate,
+  formatDisplayTime,
   formatWeekRange,
   isAvailabilitySubmissionOpen,
+  parseTimeInput,
   toApiTime,
   toInputTime,
   toMmDdYyyy,
@@ -27,13 +30,18 @@ interface DayModel {
   dateLabel: string;
   isAvailable: boolean;
   allDay: boolean;
+  // Whatever text the employee has typed (e.g. "3:35 PM"), not necessarily
+  // a valid parsed time yet — see parseTimeInput in week-utils.ts, run
+  // fresh on every day at save() time. Plain text, not <input type="time">
+  // — that native picker's segments can visually show a complete value
+  // while its own .value getter still reports "" (most often when typing
+  // over a value that was already there), which is how Start/End have
+  // silently collapsed to "All day" before.
   startTime: string;
   endTime: string;
-  // Set once the employee focuses Start/End — a native <input type="time">
-  // reports '' for a half-typed value (e.g. hour and minute set but AM/PM
-  // never touched) exactly the same as "never touched", and blank Start/End
-  // is silently read as "All day" by save() below, so save() confirms
-  // rather than saving that silently.
+  // Set once the employee focuses Start/End — lets save() tell "never
+  // touched, available all day" apart from "started typing a time but
+  // didn't finish it", since both look identical as an empty string.
   startTouched: boolean;
   endTouched: boolean;
 }
@@ -62,6 +70,7 @@ export class AvailabilityEditor implements OnInit {
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly days = signal<DayModel[]>([]);
+  protected readonly timeSuggestions = TIME_SUGGESTIONS;
 
   // Submitting doesn't lock anything by itself — only the Saturday
   // deadline does — so the employee can keep adjusting right up to it.
@@ -93,8 +102,8 @@ export class AvailabilityEditor implements OnInit {
         dateLabel: toMmDdYyyy(d.date),
         isAvailable: d.isAvailable,
         allDay: d.isAvailable && !d.startTime && !d.endTime,
-        startTime: toInputTime(d.startTime),
-        endTime: toInputTime(d.endTime ?? '17:00:00'),
+        startTime: formatDisplayTime(toInputTime(d.startTime)),
+        endTime: formatDisplayTime(toInputTime(d.endTime ?? '17:00:00')),
         startTouched: false,
         endTouched: false,
       })),
@@ -103,16 +112,38 @@ export class AvailabilityEditor implements OnInit {
   }
 
   private save(submit: boolean): void {
+    // Parsed once up front so both the confirm-blank checks below and the
+    // actual API payload use the same "HH:mm" values, rather than the raw
+    // display text (e.g. "3:35 PM") the days() signal holds.
+    const parsed = new Map<string, { start: string; end: string }>();
     for (const d of this.days()) {
       if (!d.isAvailable || d.allDay) {
         continue;
       }
-      if (d.startTouched && !d.startTime) {
+      const start = parseTimeInput(d.startTime);
+      if (start === null) {
+        this.error.set(`${d.label}'s start isn’t a valid time — try a format like 3:35 PM.`);
+        return;
+      }
+      const end = parseTimeInput(d.endTime);
+      if (end === null) {
+        this.error.set(`${d.label}'s end isn’t a valid time — try a format like 3:35 PM.`);
+        return;
+      }
+      parsed.set(d.date, { start, end });
+    }
+
+    for (const d of this.days()) {
+      const p = parsed.get(d.date);
+      if (!p) {
+        continue;
+      }
+      if (d.startTouched && !p.start) {
         if (!confirm(`${d.label}'s start time is blank even though you edited it. Save anyway?`)) {
           return;
         }
       }
-      if (d.endTouched && !d.endTime) {
+      if (d.endTouched && !p.end) {
         if (!confirm(`${d.label}'s end time is blank even though you edited it. Save anyway?`)) {
           return;
         }
@@ -123,12 +154,15 @@ export class AvailabilityEditor implements OnInit {
     this.api
       .saveMine({
         weekStartDate: formatDate(this.weekStart),
-        days: this.days().map((d) => ({
-          date: d.date,
-          isAvailable: d.isAvailable,
-          startTime: d.isAvailable && !d.allDay ? toApiTime(d.startTime) : null,
-          endTime: d.isAvailable && !d.allDay ? toApiTime(d.endTime) : null,
-        })),
+        days: this.days().map((d) => {
+          const p = parsed.get(d.date);
+          return {
+            date: d.date,
+            isAvailable: d.isAvailable,
+            startTime: p?.start ? toApiTime(p.start) : null,
+            endTime: p?.end ? toApiTime(p.end) : null,
+          };
+        }),
         submit,
       })
       .subscribe({

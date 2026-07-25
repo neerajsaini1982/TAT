@@ -92,6 +92,84 @@ export function formatHHmm(date: Date): string {
   return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
+// Every plain-text time field in the app (Edit Punch Times, availability's
+// day dialog and weekly editor) uses these three together: type what you
+// want (parseTimeInput), get it normalized back for display
+// (formatDisplayTime), and a <datalist> of common times (TIME_SUGGESTIONS)
+// for autocomplete — a real native <input type="time"> is deliberately not
+// used here. That control has a well-documented, unfixable-from-JS quirk:
+// its three segments (hour/minute/AM-PM) can visually show a complete value
+// while the browser's own .value getter still reports "", most often when
+// typing over a value that was already there. That's how Clock Out times
+// (and, by the same mechanism, availability Start/End) have silently gone
+// missing or gotten stuck behind a confusing "looks filled in but isn't"
+// state. A plain text field has no such hidden state: whatever's typed is
+// exactly what .value reports, always.
+
+// Accepts "3:35 PM", "3:35pm", or 24-hour "15:35". Returns "HH:mm" (24-hour,
+// the canonical form used for storage/comparison), '' for a blank field, or
+// null if the text doesn't parse as a time at all.
+export function parseTimeInput(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  const twelveHour = trimmed.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+  if (twelveHour) {
+    const minute = Number(twelveHour[2]);
+    let hour = Number(twelveHour[1]);
+    if (hour < 1 || hour > 12 || minute > 59) {
+      return null;
+    }
+    const isPm = twelveHour[3].toLowerCase() === 'pm';
+    if (isPm && hour !== 12) {
+      hour += 12;
+    } else if (!isPm && hour === 12) {
+      hour = 0;
+    }
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  }
+
+  const twentyFourHour = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (twentyFourHour) {
+    const hour = Number(twentyFourHour[1]);
+    const minute = Number(twentyFourHour[2]);
+    if (hour > 23 || minute > 59) {
+      return null;
+    }
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  }
+
+  return null;
+}
+
+// "HH:mm" (24-hour) -> "h:mm AM/PM" (what's actually shown in the text field).
+export function formatDisplayTime(hhmm: string): string {
+  if (!hhmm) {
+    return '';
+  }
+  const [h, m] = hhmm.split(':').map(Number);
+  const period = h < 12 ? 'AM' : 'PM';
+  const displayHour = h % 12 === 0 ? 12 : h % 12;
+  return `${displayHour}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+// Every quarter-hour across a day, in the same "h:mm AM/PM" form
+// parseTimeInput/formatDisplayTime use — bound to each time field's
+// <datalist> for autocomplete. This is a suggestion list, not a constraint:
+// a <datalist> never blocks typing something that isn't in it (unlike a
+// <select>), so an exact time like 7:32 PM is always still enterable by hand.
+export const TIME_SUGGESTIONS: string[] = (() => {
+  const options: string[] = [];
+  for (let totalMinutes = 0; totalMinutes < 24 * 60; totalMinutes += 15) {
+    const hour24 = Math.floor(totalMinutes / 60);
+    const minute = totalMinutes % 60;
+    options.push(formatDisplayTime(`${String(hour24).padStart(2, '0')}:${String(minute).padStart(2, '0')}`));
+  }
+  return options;
+})();
+
 export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
