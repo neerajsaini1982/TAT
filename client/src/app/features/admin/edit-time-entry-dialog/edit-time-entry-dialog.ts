@@ -9,14 +9,19 @@ import { MatSelectModule } from '@angular/material/select';
 
 import { TimeEntryDto } from '../../../core/time-entries-api';
 import { BreakKind, ScheduledBreakDto } from '../../../core/shifts-api';
-import { formatHHmm, isPastDate } from '../../../core/week-utils';
+import { TIME_SUGGESTIONS, formatDisplayTime, formatHHmm, isPastDate, parseTimeInput } from '../../../core/week-utils';
 
 export interface EditTimeEntryDialogData {
   employeeName: string;
   entry: TimeEntryDto | null;
   // Shown as read-only reference at the top of the dialog so the admin can
-  // see what was scheduled while entering what actually happened.
+  // see what was scheduled while entering what actually happened. Also
+  // doubles as the default Clock In/Out when nobody's punched in at all yet
+  // (see the constructor) — the same "start from what was scheduled"
+  // treatment scheduledBreaks already gets below.
   scheduledBreaks: ScheduledBreakDto[];
+  shiftStartTime: string;
+  shiftEndTime: string;
   // The shift's own date (not today's) — "still clocked in" only makes
   // sense for today; a blank Clock Out on a day that's already over is
   // never correct, so save() blocks on it below regardless of whether the
@@ -41,11 +46,11 @@ export interface EditTimeEntryResult {
   note: string;
 }
 
-const toInput = (iso: string | null): string => (iso ? formatHHmm(new Date(iso)) : '');
+const toInput = (iso: string | null): string => (iso ? formatDisplayTime(formatHHmm(new Date(iso))) : '');
 
 const DEFAULT_WINDOW: Record<BreakKind, { start: string; end: string }> = {
-  Break: { start: '10:00', end: '10:15' },
-  Lunch: { start: '12:00', end: '12:30' },
+  Break: { start: '10:00 AM', end: '10:15 AM' },
+  Lunch: { start: '12:00 PM', end: '12:30 PM' },
 };
 
 // Lets an admin set every punch on today's TimeEntry directly — correcting
@@ -61,11 +66,15 @@ const DEFAULT_WINDOW: Record<BreakKind, { start: string; end: string }> = {
   styleUrl: './edit-time-entry-dialog.scss',
 })
 export class EditTimeEntryDialog {
+  // These hold whatever text the admin has typed (e.g. "3:35 PM"), not
+  // necessarily a valid parsed time yet — see parseTimeInput, run fresh on
+  // every field at save() time rather than trusted from some earlier parse.
   protected clockInAt: string;
   protected clockOutAt: string;
   protected segments: SegmentRow[];
   protected note = '';
   protected error: string | null = null;
+  protected readonly timeSuggestions = TIME_SUGGESTIONS;
 
   // Same reasoning as SegmentRow.endTouched — Clock Out is optional (someone
   // still clocked in has none), so an empty value is only worth confirming
@@ -77,13 +86,16 @@ export class EditTimeEntryDialog {
     @Inject(MAT_DIALOG_DATA) protected readonly data: EditTimeEntryDialogData,
   ) {
     const entry = data.entry;
-    this.clockInAt = toInput(entry?.clockInAt ?? null) || formatHHmm(new Date());
-    this.clockOutAt = toInput(entry?.clockOutAt ?? null);
     // Nobody's punched in yet, so there's nothing actually recorded to
-    // default to — start from what was scheduled instead of an empty list,
-    // since that's almost always what actually happens. Once real
-    // clock/segment data exists, it takes over as the source of truth and
-    // scheduledBreaks goes back to being just the reference line above.
+    // default to — start from what was scheduled (shift start/end here,
+    // scheduledBreaks below) instead of blank fields, since that's almost
+    // always what actually happens and the admin only needs to adjust it
+    // rather than build it from scratch. Once a real clock-in exists, it
+    // and whatever clock-out/segments came with it take over as the source
+    // of truth entirely — including a still-blank Clock Out, since that
+    // genuinely means still clocked in rather than "not filled in yet".
+    this.clockInAt = entry ? toInput(entry.clockInAt) : formatDisplayTime(data.shiftStartTime.slice(0, 5));
+    this.clockOutAt = entry ? toInput(entry.clockOutAt) : formatDisplayTime(data.shiftEndTime.slice(0, 5));
     this.segments = entry
       ? entry.segments
           .slice()
@@ -92,7 +104,12 @@ export class EditTimeEntryDialog {
       : data.scheduledBreaks
           .slice()
           .sort((a, b) => a.startTime.localeCompare(b.startTime))
-          .map((b) => ({ kind: b.kind, start: b.startTime.slice(0, 5), end: b.endTime.slice(0, 5), endTouched: false }));
+          .map((b) => ({
+            kind: b.kind,
+            start: formatDisplayTime(b.startTime.slice(0, 5)),
+            end: formatDisplayTime(b.endTime.slice(0, 5)),
+            endTouched: false,
+          }));
   }
 
   addSegment(kind: BreakKind): void {
@@ -107,27 +124,51 @@ export class EditTimeEntryDialog {
   save(): void {
     this.error = null;
 
-    if (!this.clockInAt) {
+    const clockInAt = parseTimeInput(this.clockInAt);
+    if (clockInAt === null) {
+      this.error = 'Clock in isn’t a valid time — try a format like 3:35 PM.';
+      return;
+    }
+    if (!clockInAt) {
       this.error = 'Clock in time is required.';
       return;
     }
+
+    const clockOutAt = parseTimeInput(this.clockOutAt);
+    if (clockOutAt === null) {
+      this.error = 'Clock out isn’t a valid time — try a format like 3:35 PM.';
+      return;
+    }
+
     if (!this.note.trim()) {
       this.error = 'A note explaining the edit is required.';
       return;
     }
 
+    const parsedSegments: { kind: BreakKind; start: string; end: string; endTouched: boolean }[] = [];
     for (const s of this.segments) {
-      if (!s.start) {
+      const start = parseTimeInput(s.start);
+      if (start === null) {
+        this.error = `${s.kind} start isn’t a valid time — try a format like 3:35 PM.`;
+        return;
+      }
+      if (!start) {
         this.error = `${s.kind} needs a start time.`;
         return;
       }
-      if (s.end && s.end < s.start) {
+      const end = parseTimeInput(s.end);
+      if (end === null) {
+        this.error = `${s.kind} end isn’t a valid time — try a format like 3:35 PM.`;
+        return;
+      }
+      if (end && end < start) {
         this.error = `${s.kind} end can't be before its start.`;
         return;
       }
+      parsedSegments.push({ kind: s.kind, start, end, endTouched: s.endTouched });
     }
 
-    const sorted = [...this.segments].sort((a, b) => a.start.localeCompare(b.start));
+    const sorted = [...parsedSegments].sort((a, b) => a.start.localeCompare(b.start));
     for (let i = 0; i < sorted.length; i++) {
       for (let j = i + 1; j < sorted.length; j++) {
         const aEnd = sorted[i].end || '23:59';
@@ -139,50 +180,37 @@ export class EditTimeEntryDialog {
       }
     }
 
-    if (this.clockOutAt && this.clockOutAt < this.clockInAt) {
+    if (clockOutAt && clockOutAt < clockInAt) {
       this.error = "Clock out can't be before clock in.";
       return;
     }
 
     // Clock Out and segment End are both optional — someone still clocked
-    // in, or still on their current break, legitimately has none. But a
-    // native <input type="time"> reports '' for a half-typed value (e.g.
-    // hour and minute set but AM/PM never touched) exactly the same as for
-    // "never touched", so a blank value the admin actually clicked into is
-    // worth a confirmation rather than silently saving as "still clocked
-    // in" — that's how Clock Out times have gone missing before. Worth
-    // noting for whoever's reading this next: the field can still *look*
-    // fully filled in (a real "3:35 PM" across all three segments) when
-    // this fires — the browser's own .value getter can report empty for an
-    // edit over a pre-filled value even though every segment displays a
-    // real digit, which is exactly the state the "Clear clock out" button
-    // exists to force out of (see the always-shown button in the template).
-    if (this.clockOutTouched && !this.clockOutAt) {
-      if (!confirm('Clock Out shows blank to the browser (even if it looks filled in on screen). Click the X next to it to reset, then retype the full time. Save without a clock-out time for now?')) {
+    // in, or still on their current break, legitimately has none — so a
+    // blank value only needs confirming when the admin actually put their
+    // cursor there, or when the shift is from a day that's already over
+    // (see isPastDate below): "still clocked in" only makes sense for today.
+    if (this.clockOutTouched && !clockOutAt) {
+      if (!confirm('Clock Out is blank. Save without a clock-out time?')) {
         return;
       }
-    } else if (!this.clockOutAt && isPastDate(this.data.date)) {
-      // Untouched isn't enough to excuse this one: "still clocked in" only
-      // makes sense for today. A past shift left blank here is never
-      // correct (it read as a live, ongoing punch on every report), even
-      // if the admin only opened this dialog to fix a break/lunch time and
-      // never meant to touch Clock Out at all.
+    } else if (!clockOutAt && isPastDate(this.data.date)) {
       if (!confirm('This shift is from a past day. Leaving Clock Out blank will show as still clocked in on reports. Save without a clock-out time?')) {
         return;
       }
     }
-    for (const s of this.segments) {
+    for (const s of parsedSegments) {
       if (s.endTouched && !s.end) {
-        if (!confirm(`${s.kind} end time shows blank to the browser (even if it looks filled in on screen). Click the X next to it to reset, then retype the full time. Save without an end time for now?`)) {
+        if (!confirm(`${s.kind} end time is blank. Save without an end time?`)) {
           return;
         }
       }
     }
 
     this.dialogRef.close({
-      clockInAt: this.clockInAt,
-      clockOutAt: this.clockOutAt || null,
-      segments: this.segments.map((s) => ({ kind: s.kind, start: s.start, end: s.end || null })),
+      clockInAt,
+      clockOutAt: clockOutAt || null,
+      segments: parsedSegments.map((s) => ({ kind: s.kind, start: s.start, end: s.end || null })),
       note: this.note.trim(),
     });
   }
@@ -191,23 +219,15 @@ export class EditTimeEntryDialog {
     this.dialogRef.close();
   }
 
-  clearClockOut(input: HTMLInputElement): void {
+  clearClockOut(): void {
     this.clockOutAt = '';
     // An explicit clear is unambiguous — no need to confirm it again in save().
     this.clockOutTouched = false;
-    // Angular only re-writes the native element's value when the *bound*
-    // model actually changes — if it was already '' (the browser's own
-    // .value, regardless of what's visually in its segments), assigning ''
-    // above is a no-op as far as Angular is concerned, and stale digits
-    // would keep showing. Reset the DOM directly so what's on screen always
-    // matches the truth.
-    input.value = '';
   }
 
-  clearSegmentEnd(segment: SegmentRow, input: HTMLInputElement): void {
+  clearSegmentEnd(segment: SegmentRow): void {
     segment.end = '';
     segment.endTouched = false;
-    input.value = '';
   }
 
   get scheduledLabel(): string {

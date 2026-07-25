@@ -434,6 +434,8 @@ export class CurrentWeekSchedule implements OnInit {
           employeeName: shift.employeeName,
           entry: shift.entry,
           scheduledBreaks: shift.assignment.scheduledBreaks,
+          shiftStartTime: shift.assignment.shiftStartTime,
+          shiftEndTime: shift.assignment.shiftEndTime,
           date: shift.assignment.date,
         },
       })

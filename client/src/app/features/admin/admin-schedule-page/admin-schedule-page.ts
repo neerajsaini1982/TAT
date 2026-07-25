@@ -521,6 +521,8 @@ export class AdminSchedulePage implements OnInit {
           employeeName: `${assignment.accountFirstName} ${assignment.accountLastName}`,
           entry,
           scheduledBreaks: assignment.scheduledBreaks,
+          shiftStartTime: assignment.shiftStartTime,
+          shiftEndTime: assignment.shiftEndTime,
           date: assignment.date,
         },
       })

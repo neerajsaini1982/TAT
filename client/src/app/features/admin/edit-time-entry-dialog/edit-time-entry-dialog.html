@@ -2,23 +2,29 @@
 <mat-dialog-content class="content">
   <p class="scheduled-ref"><strong>Scheduled:</strong> {{ scheduledLabel }}</p>
 
+  <!-- Plain text, not <input type="time"> — see the comment above
+       parseTimeInput in week-utils.ts for why. list="editTimeSuggestions"
+       just offers autocomplete off a shared <datalist>; it doesn't
+       restrict what can be typed. -->
+  <datalist id="editTimeSuggestions">
+    @for (t of timeSuggestions; track t) {
+      <option [value]="t"></option>
+    }
+  </datalist>
+
   <div class="time-grid">
     <mat-form-field appearance="outline">
       <mat-label>Clock In</mat-label>
-      <input matInput type="time" [(ngModel)]="clockInAt" [ngModelOptions]="{ updateOn: 'blur' }" required />
+      <input matInput type="text" list="editTimeSuggestions" [(ngModel)]="clockInAt" [ngModelOptions]="{ updateOn: 'blur' }" placeholder="h:mm AM/PM" required />
     </mat-form-field>
     <mat-form-field appearance="outline">
       <mat-label>Clock Out</mat-label>
-      <input matInput type="time" #clockOutInput [(ngModel)]="clockOutAt" [ngModelOptions]="{ updateOn: 'blur' }" (focus)="clockOutTouched = true" />
-      <!-- Always shown, not just when clockOutAt has a value: a native time
-           input can display a full-looking "3:35 PM" in its hour/minute/AM-PM
-           segments while its own .value still reports empty (a real browser
-           quirk, not a typo) — the admin needs a reliable way to force the
-           field back to a clean, genuinely-empty state before retyping, even
-           though the bound model already reads '' in that situation. -->
-      <button type="button" mat-icon-button matSuffix (click)="clearClockOut(clockOutInput)" aria-label="Clear clock out">
-        <mat-icon>close</mat-icon>
-      </button>
+      <input matInput type="text" list="editTimeSuggestions" [(ngModel)]="clockOutAt" [ngModelOptions]="{ updateOn: 'blur' }" placeholder="h:mm AM/PM" (focus)="clockOutTouched = true" />
+      @if (clockOutAt) {
+        <button type="button" mat-icon-button matSuffix (click)="clearClockOut()" aria-label="Clear clock out">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
     </mat-form-field>
   </div>
 
@@ -38,16 +44,16 @@
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Start</mat-label>
-          <input matInput type="time" [(ngModel)]="s.start" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentStart' + $index" required />
+          <input matInput type="text" list="editTimeSuggestions" [(ngModel)]="s.start" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentStart' + $index" placeholder="h:mm AM/PM" required />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>End</mat-label>
-          <input matInput type="time" #segmentEndInput [(ngModel)]="s.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentEnd' + $index" (focus)="s.endTouched = true" />
-          <!-- See the Clock Out clear button above for why this is always
-               shown rather than gated on s.end having a value. -->
-          <button type="button" mat-icon-button matSuffix (click)="clearSegmentEnd(s, segmentEndInput)" aria-label="Clear end time">
-            <mat-icon>close</mat-icon>
-          </button>
+          <input matInput type="text" list="editTimeSuggestions" [(ngModel)]="s.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentEnd' + $index" placeholder="h:mm AM/PM" (focus)="s.endTouched = true" />
+          @if (s.end) {
+            <button type="button" mat-icon-button matSuffix (click)="clearSegmentEnd(s)" aria-label="Clear end time">
+              <mat-icon>close</mat-icon>
+            </button>
+          }
         </mat-form-field>
         <button mat-icon-button type="button" (click)="removeSegment($index)" aria-label="Remove">
           <mat-icon>close</mat-icon>
