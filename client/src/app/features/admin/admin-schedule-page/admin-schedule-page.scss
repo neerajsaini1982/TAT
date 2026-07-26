@@ -105,6 +105,21 @@
   }
 }
 
+// Unlike .print-header (only ever in the DOM while viewMode is 'print'),
+// this sits in the Day view's DOM at all times — hidden on screen since the
+// day-tabs above already show the selected date, and only meant to identify
+// the single day a Day-view printout covers once those tabs are hidden by
+// .no-print. Kept to just the date, and small — the Day view's own timeline
+// already eats most of a landscape page, so this shouldn't be what pushes a
+// tightly-fitted printout onto a second page.
+.day-print-header {
+  display: none;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
 .print-button {
   display: flex;
   margin: 0 auto 12px;
@@ -118,7 +133,21 @@
     display: none !important;
   }
 
+  .day-print-header {
+    display: block;
+  }
+
   :host {
+    // The 100vw breakout above is sized against the *screen* viewport to
+    // escape the app shell's centered column — irrelevant on a printed
+    // page (there's no shell/sidebar to break out of), and left/transform
+    // here would otherwise be computed against the page's full box
+    // (including the @page margin), not its printable area, throwing the
+    // content off-center or clipped at the edge.
+    position: static;
+    left: auto;
+    transform: none;
+    width: auto;
     padding: 0;
   }
 }

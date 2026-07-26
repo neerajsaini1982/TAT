@@ -4,8 +4,22 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 
 import { ShiftAssignmentDto } from '../../../core/shift-assignments-api';
+import { BreakKind } from '../../../core/shifts-api';
 import { employeeColor } from '../../../core/employee-colors';
 import { LaidOutEvent, formatClockTime, hourLabel, layoutDayEvents, toMinutes } from '../../../core/day-view-layout';
+
+// Minimum height for a break/lunch marker — tall enough to fit its own
+// label centered inside it (see .break-label), not just a visible sliver.
+// A short break on a long shift (a 15min break on an 8hr shift is ~2% of
+// the card) would otherwise size down to just a couple px.
+const MIN_MARKER_HEIGHT_PX = 13;
+
+interface BreakMarker {
+  topPx: number;
+  heightPx: number;
+  kind: BreakKind;
+  label: string;
+}
 
 // The whole timeline always renders at this height, however many hours the
 // day spans — see hourHeightPx below — so the day's full start-to-end range
@@ -92,5 +106,54 @@ export class ScheduleDayView {
 
   timeRangeLabel(a: ShiftAssignmentDto): string {
     return `${formatClockTime(a.shiftStartTime)} – ${formatClockTime(a.shiftEndTime)}`;
+  }
+
+  // One marker per scheduled break/lunch on this assignment, positioned as a
+  // px offset/height within the event card (same startMinutes-relative
+  // coordinate space as the card itself, just scaled to the card's own
+  // height rather than the whole timeline's). Each employee's assignment
+  // already carries its own staggered break times (see
+  // ShiftAssignmentsController.ComputeBreakWindows), so two employees on the
+  // same shift naturally get markers at different positions. label carries
+  // its own time range text so the template can print it right at the line
+  // instead of bunched in with the card's header text.
+  breakMarkers(laidOut: LaidOutEvent<ShiftAssignmentDto>): BreakMarker[] {
+    const span = laidOut.endMinutes - laidOut.startMinutes;
+    if (span <= 0) {
+      return [];
+    }
+
+    const cardHeightPx = (span / 60) * this.hourHeightPx();
+    return laidOut.event.scheduledBreaks.map((b) => {
+      let start = toMinutes(b.startTime) - laidOut.startMinutes;
+      if (start < 0) {
+        start += 1440;
+      }
+      let end = toMinutes(b.endTime) - laidOut.startMinutes;
+      if (end <= start) {
+        end += 1440;
+      }
+
+      return {
+        topPx: (start / span) * cardHeightPx,
+        heightPx: Math.max(((end - start) / span) * cardHeightPx, MIN_MARKER_HEIGHT_PX),
+        kind: b.kind,
+        label: `${b.kind} ${formatClockTime(b.startTime)}–${formatClockTime(b.endTime)}`,
+      };
+    });
+  }
+
+  // Native tooltip for the card as a whole — the markers themselves are
+  // decorative (pointer-events: none, so they never sit above the settings
+  // button), so this is what actually surfaces the exact break/lunch times
+  // on hover.
+  breakSummary(a: ShiftAssignmentDto): string | null {
+    if (a.scheduledBreaks.length === 0) {
+      return null;
+    }
+
+    return a.scheduledBreaks
+      .map((b) => `${b.kind}: ${formatClockTime(b.startTime)} – ${formatClockTime(b.endTime)}`)
+      .join('\n');
   }
 }

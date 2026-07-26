@@ -27,4 +27,15 @@ mat-toolbar {
   padding: 24px;
   max-width: 960px;
   margin: 0 auto;
+
+  // The toolbar above is already hidden in print (see styles.scss), but
+  // this wrapper's own padding/max-width survive independently of that —
+  // 48px of top+bottom padding alone is enough to push a tightly-fitted
+  // printout (e.g. the schedule Day view) onto a second page for no
+  // visible reason.
+  @media print {
+    padding: 0;
+    max-width: none;
+    margin: 0;
+  }
 }

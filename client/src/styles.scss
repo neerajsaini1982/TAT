@@ -85,11 +85,12 @@ body {
   box-shadow: var(--mat-sys-level1);
 }
 
-// Printing currently only matters for the admin schedule's Week (Print)
-// view (see AdminSchedulePage), which lays 7 day columns out side by side
-// — landscape gives it much more usable width than portrait's default. If
-// another printable view is added later with different needs, this
-// should move to be scoped per-page instead of applying app-wide.
+// Printing currently only matters for the admin schedule's Week (Print) and
+// Day views (see AdminSchedulePage/ScheduleDayView), both of which lay
+// several columns out side by side — landscape gives them much more usable
+// width than portrait's default. If another printable view is added later
+// with different needs, this should move to be scoped per-page instead of
+// applying app-wide.
 @media print {
   .mat-toolbar {
     display: none;

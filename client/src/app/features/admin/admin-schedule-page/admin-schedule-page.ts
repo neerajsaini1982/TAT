@@ -171,6 +171,19 @@ export class AdminSchedulePage implements OnInit {
     return this.rows().flatMap((row) => row.days[dayIndex]?.assignments ?? []);
   });
 
+  // Full weekday + date for the Day view's print-only header (e.g.
+  // "Saturday, July 25, 2026") — the on-screen day-tabs already show which
+  // day is selected, but those are .no-print, so the printed page needs
+  // its own unambiguous label for which single day this printout covers.
+  protected readonly selectedDayDateLabel = computed(() =>
+    addDays(this.weekStart(), this.selectedDayIndex()).toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    }),
+  );
+
   private defaultDayIndex(): number {
     const start = mondayOf(new Date());
     for (let i = 0; i < 7; i++) {
