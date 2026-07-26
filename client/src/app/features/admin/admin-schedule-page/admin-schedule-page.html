@@ -9,7 +9,7 @@
   <button mat-icon-button class="no-print" (click)="previousWeek()" aria-label="Previous week">
     <mat-icon>chevron_left</mat-icon>
   </button>
-  <span class="week-label">{{ weekRangeLabel() }}</span>
+  <span class="week-label no-print">{{ weekRangeLabel() }}</span>
   <button mat-icon-button class="no-print" (click)="nextWeek()" aria-label="Next week">
     <mat-icon>chevron_right</mat-icon>
   </button>
@@ -74,6 +74,13 @@
       </button>
     }
   </div>
+
+  <div class="day-print-header">{{ selectedDayDateLabel() }}</div>
+
+  <button type="button" mat-stroked-button class="print-button no-print" (click)="printSchedule()">
+    <mat-icon>print</mat-icon>
+    Print
+  </button>
 
   <app-schedule-day-view
     [assignments]="selectedDayAssignments()"

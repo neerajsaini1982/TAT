@@ -12,6 +12,15 @@
   // to fit (see hourHeightPx), so there's never a vertical scrollbar here.
   overflow-x: auto;
   overflow-y: hidden;
+
+  // Browsers drop background colors by default when printing, but the
+  // per-employee card color (see employeeColor()) and the break-marker
+  // stripes are the whole point of this view — without this, a printout
+  // would come out as unlabeled white boxes.
+  @media print {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 .time-axis {
@@ -56,10 +65,17 @@
   // positioning — top/left/width/height here come from eventStyle()'s
   // [style] binding, positioning the card itself within .timeline.
   position: absolute;
+  // Gives this card its own stacking context (position + a real z-index,
+  // rather than the default auto) so .break-marker's negative z-index below
+  // stays scoped to sitting behind *this card's* text — without this, a
+  // negative z-index would escape to the .timeline level and could paint
+  // behind other cards/gridlines instead.
+  z-index: 0;
   box-sizing: border-box;
   overflow: hidden;
   border-radius: 6px;
   padding: 6px 30px 6px 10px;
+  background: var(--employee-color);
   color: #fff;
   font-size: 14px;
   line-height: 1.3;
@@ -74,13 +90,76 @@
   }
 
   &.absent {
-    opacity: 0.5;
+    opacity: 0.75;
 
-    .event-title,
-    .event-shift {
+    .event-title {
       text-decoration: line-through;
     }
+
+    .event-badge {
+      color: #ff1744;
+    }
   }
+}
+
+// A thin diagonal-striped band across the card marking a scheduled
+// break/lunch window — decorative only (pointer-events: none) and behind
+// the card's own text/badges (negative z-index, within the stacking context
+// .event-card now establishes above) so it never obscures them or blocks
+// the settings button even when a break falls right at the top of a shift.
+// Break vs Lunch read as light-on-dark vs dark-on-light stripes so the two
+// are distinguishable at a glance regardless of the card's own (per-employee)
+// background color.
+.break-marker {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.9);
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.4),
+    rgba(255, 255, 255, 0.4) 4px,
+    rgba(255, 255, 255, 0.12) 4px,
+    rgba(255, 255, 255, 0.12) 8px
+  );
+
+  &.lunch {
+    border-color: rgba(0, 0, 0, 0.55);
+    background: repeating-linear-gradient(
+      45deg,
+      rgba(0, 0, 0, 0.4),
+      rgba(0, 0, 0, 0.4) 4px,
+      rgba(0, 0, 0, 0.12) 4px,
+      rgba(0, 0, 0, 0.12) 8px
+    );
+  }
+}
+
+// The break/lunch time, sitting right inside its own .break-marker band
+// (same top/height, see the .html) rather than bunched in with the card's
+// header text or floating below the line — a card spans the shift's full
+// duration, so a break in the middle/end of a long shift reads much more
+// naturally labeled right on the line marking it than listed up top
+// disconnected from it. A text-shadow keeps it legible over the marker's
+// diagonal stripes regardless of whether a given letter lands on a light or
+// dark stripe.
+.break-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding: 0 3px;
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
 }
 
 // Placeholder for future per-shift actions beyond Mark/Clear Absent — kept
@@ -108,11 +187,6 @@
   font-weight: 700;
 }
 
-.event-shift {
-  font-weight: 500;
-  opacity: 0.95;
-}
-
 .event-time {
   opacity: 0.95;
 }
@@ -134,4 +208,117 @@
   left: 16px;
   color: var(--mat-sys-on-surface-variant);
   font-size: 13px;
+}
+
+// Google Calendar's print view spends almost no ink on each event — a
+// white box, a thin neutral border, and just a small color swatch/accent
+// identifying which calendar (here, which employee) it belongs to — rather
+// than the solid saturated fill used on screen. Same content throughout
+// (nothing here changes what text renders, see the .html), just restyled
+// for paper: dark text on white instead of white text on a color fill.
+@media print {
+  .day-view {
+    overflow: visible;
+  }
+
+  // Both only exist to reserve room for on-screen affordances that don't
+  // apply on paper — 480px is a comfortable minimum for a scrollable
+  // 1-2 column screen view, but forces exactly the kind of page-width
+  // overflow (columns sliced across separate printed pages) this whole
+  // block exists to avoid once there are several employees on the same
+  // shift. Letting it shrink means every column instead compresses to
+  // fit the page, same as the row/column count already does on screen.
+  .timeline {
+    min-width: 0;
+  }
+
+  .time-axis {
+    flex-basis: 40px;
+  }
+
+  .hour-label {
+    font-size: 10px;
+  }
+
+  .event-card {
+    // The settings button that reserved this right-hand padding is itself
+    // display: none below, and there's no room to spare once several
+    // employees' columns are compressed to fit one landscape page.
+    padding: 3px 5px;
+    background: #fff !important;
+    color: #202124;
+    font-size: 10.5px;
+    line-height: 1.25;
+    border-color: var(--mat-sys-outline-variant);
+    border-style: solid;
+    border-width: 1px;
+    border-left: 4px solid var(--employee-color);
+    box-shadow: none;
+
+    &.draft {
+      border-style: dashed;
+      border-left-style: solid;
+    }
+  }
+
+  // The settings menu is a screen-only action — nothing to click on paper.
+  .event-menu-trigger {
+    display: none;
+  }
+
+  // A small colored square ahead of the name is the print stand-in for the
+  // solid color fill used on screen — same idea as the calendar-color dot
+  // Google Calendar's print view puts next to each event title.
+  .event-title {
+    color: var(--employee-color);
+    font-size: 11px;
+
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-right: 3px;
+      background: var(--employee-color);
+      vertical-align: middle;
+    }
+  }
+
+  .event-time {
+    opacity: 1;
+    color: #5f6368;
+    font-size: 9.5px;
+  }
+
+  .break-label {
+    color: #5f6368;
+    font-size: 8.5px;
+    // Tuned for legibility over the on-screen diagonal stripes — print's
+    // marker is a flat, much lighter tint (see .break-marker below), where
+    // the shadow just looks like a smudge.
+    text-shadow: none;
+  }
+
+  .event-badge {
+    background: transparent;
+    padding-left: 0;
+    font-size: 9px;
+  }
+
+  .event-card.absent .event-badge {
+    color: #d93025;
+  }
+
+  // The on-screen diagonal stripe pattern is tuned for contrast against a
+  // saturated color fill — against white paper it either disappears or
+  // just looks like noise, so print gets a plain, subdued bar instead.
+  .break-marker {
+    border-top: 1px solid #5f6368;
+    border-bottom: 1px solid #5f6368;
+    background: rgba(95, 99, 104, 0.12);
+
+    &.lunch {
+      background: rgba(95, 99, 104, 0.28);
+    }
+  }
 }

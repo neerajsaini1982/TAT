@@ -17,10 +17,23 @@
       <div
         class="event-card"
         [style]="style"
-        [style.background]="employeeColor(laidOut.event.accountId)"
+        [style.--employee-color]="employeeColor(laidOut.event.accountId)"
         [class.draft]="!laidOut.event.isPublished"
         [class.absent]="laidOut.event.isAbsent"
+        [attr.title]="breakSummary(laidOut.event)"
       >
+        @for (marker of breakMarkers(laidOut); track $index) {
+          <div
+            class="break-marker"
+            [class.lunch]="marker.kind === 'Lunch'"
+            [style.top.px]="marker.topPx"
+            [style.height.px]="marker.heightPx"
+          ></div>
+          <span class="break-label" [style.top.px]="marker.topPx" [style.height.px]="marker.heightPx">{{
+            marker.label
+          }}</span>
+        }
+
         <button
           type="button"
           mat-icon-button
@@ -40,7 +53,6 @@
         </mat-menu>
 
         <span class="event-title">{{ laidOut.event.accountFirstName }} {{ laidOut.event.accountLastName }}</span>
-        <span class="event-shift">{{ laidOut.event.shiftName }}</span>
         <span class="event-time">{{ timeRangeLabel(laidOut.event) }}</span>
         @if (laidOut.event.isAbsent) {
           <span class="event-badge">Absent</span>

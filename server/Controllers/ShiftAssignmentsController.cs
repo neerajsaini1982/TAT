@@ -39,7 +39,8 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .ThenBy(a => a.Account!.LastName)
             .ToList();
 
-        return Ok(assignments.Select(ToDto));
+        var breakWindows = ComputeBreakWindows(assignments);
+        return Ok(assignments.Select(a => ToDto(a, breakWindows)));
     }
 
     // Bulk-marks every assignment in a location/week as published so it
@@ -95,7 +96,8 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .ThenBy(a => a.Account!.LastName)
             .ToList();
 
-        return Ok(assignments.Select(ToDto));
+        var breakWindows = ComputeBreakWindows(assignments);
+        return Ok(assignments.Select(a => ToDto(a, breakWindows)));
     }
 
     [HttpPost]
@@ -138,8 +140,9 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
 
         assignment.Shift = shift;
         assignment.Account = account;
+        var breakWindows = ComputeBreakWindows([assignment]);
         await notifier.NotifyLocationChanged(shift.Location!.LocationCode);
-        return Ok(ToDto(assignment));
+        return Ok(ToDto(assignment, breakWindows));
     }
 
     [HttpPut("{id:int}/move")]
@@ -183,8 +186,9 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         db.SaveChanges();
 
         assignment.Account = account;
+        var breakWindows = ComputeBreakWindows([assignment]);
         await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
-        return Ok(ToDto(assignment));
+        return Ok(ToDto(assignment, breakWindows));
     }
 
     [HttpDelete("{id:int}")]
@@ -246,8 +250,9 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         assignment.AbsentMarkedAt = DateTime.UtcNow;
         db.SaveChanges();
 
+        var breakWindows = ComputeBreakWindows([assignment]);
         await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
-        return Ok(ToDto(assignment));
+        return Ok(ToDto(assignment, breakWindows));
     }
 
     private Location? ResolveLocation(string? locationCode)
@@ -322,7 +327,95 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         return Math.Round(span.TotalHours, 2);
     }
 
-    private static ShiftAssignmentDto ToDto(ShiftAssignment a) => new(
+    // Computes an actual non-overlapping window for every ScheduledBreak on
+    // every assignment sharing a location + date — deliberately *not*
+    // scoped to a single Shift template: two employees on entirely
+    // different shifts (e.g. a mid shift and a closing shift both covering
+    // 3-4pm) collide just as badly if their templates happen to default to
+    // the same break time, and the whole point (#30) is nobody's ever away
+    // from the floor at the same moment as anyone else. Only breaks of the
+    // same Kind push each other — a Break overlapping a different
+    // employee's Lunch is fine, only same-kind overlaps are avoided.
+    //
+    // Greedy placement, processed in original-start-time order (earliest
+    // CreatedAt/Id as a stable tiebreaker for two breaks that start
+    // identically): each candidate keeps its template's own time unless
+    // that overlaps an already-placed same-kind window, in which case it's
+    // pushed to start right as the conflicting one ends — repeating against
+    // the full placed set until clear, since one push can land it inside a
+    // second window it didn't originally conflict with.
+    //
+    // Takes its own DB pass rather than trusting the caller's list to
+    // contain every sibling — GetMine, for instance, only loads one
+    // account's assignments, but staggering needs everyone sharing that
+    // location + date.
+    private Dictionary<(int AssignmentId, int ScheduledBreakId), (TimeOnly Start, TimeOnly End)> ComputeBreakWindows(
+        IReadOnlyCollection<ShiftAssignment> assignments)
+    {
+        var keys = assignments.Select(a => (a.Shift!.LocationId, a.Date)).Distinct().ToList();
+        if (keys.Count == 0)
+        {
+            return [];
+        }
+
+        var locationIds = keys.Select(k => k.LocationId).Distinct().ToList();
+        var dates = keys.Select(k => k.Date).Distinct().ToList();
+
+        var scope = db.ShiftAssignments
+            .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
+            .Where(a => dates.Contains(a.Date) && locationIds.Contains(a.Shift!.LocationId))
+            .ToList()
+            .Where(a => keys.Contains((a.Shift!.LocationId, a.Date)));
+
+        var candidates = scope.SelectMany(a => a.Shift!.ScheduledBreaks.Select(b => new
+        {
+            AssignmentId = a.Id,
+            ScheduledBreakId = b.Id,
+            b.Kind,
+            a.Date,
+            LocationId = a.Shift!.LocationId,
+            OriginalStart = b.StartTime,
+            OriginalEnd = b.EndTime,
+            a.CreatedAt,
+        }));
+
+        var result = new Dictionary<(int, int), (TimeOnly, TimeOnly)>();
+        foreach (var group in candidates.GroupBy(c => (c.Kind, c.Date, c.LocationId)))
+        {
+            var placed = new List<(TimeOnly Start, TimeOnly End)>();
+            var ordered = group
+                .OrderBy(c => c.OriginalStart)
+                .ThenBy(c => c.CreatedAt)
+                .ThenBy(c => c.AssignmentId)
+                .ThenBy(c => c.ScheduledBreakId);
+
+            foreach (var candidate in ordered)
+            {
+                var duration = candidate.OriginalEnd - candidate.OriginalStart;
+                if (duration <= TimeSpan.Zero)
+                {
+                    duration += TimeSpan.FromDays(1);
+                }
+
+                var start = candidate.OriginalStart;
+                int conflictIndex;
+                while ((conflictIndex = placed.FindIndex(p => start < p.End && p.Start < start.Add(duration))) != -1)
+                {
+                    start = placed[conflictIndex].End;
+                }
+
+                var end = start.Add(duration);
+                placed.Add((start, end));
+                result[(candidate.AssignmentId, candidate.ScheduledBreakId)] = (start, end);
+            }
+        }
+
+        return result;
+    }
+
+    private static ShiftAssignmentDto ToDto(
+        ShiftAssignment a,
+        IReadOnlyDictionary<(int AssignmentId, int ScheduledBreakId), (TimeOnly Start, TimeOnly End)> breakWindows) => new(
         a.Id,
         a.ShiftId,
         a.Shift!.Name,
@@ -330,7 +423,13 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         a.Shift.EndTime,
         a.Shift.ScheduledBreaks
             .OrderBy(b => b.StartTime)
-            .Select(b => new ScheduledBreakDto(b.Kind, b.StartTime, b.EndTime))
+            .Select(b =>
+            {
+                var (start, end) = breakWindows.TryGetValue((a.Id, b.Id), out var window)
+                    ? window
+                    : (b.StartTime, b.EndTime);
+                return new ScheduledBreakDto(b.Kind, start, end);
+            })
             .ToList(),
         ComputeHours(a.Shift.StartTime, a.Shift.EndTime, a.Shift.ScheduledBreaks),
         a.AccountId,
