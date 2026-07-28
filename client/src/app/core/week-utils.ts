@@ -170,6 +170,17 @@ export const TIME_SUGGESTIONS: string[] = (() => {
   return options;
 })();
 
+// H.MM display for a decimal-hours total (e.g. 17.25 decimal hours -> "17.15"
+// for 17h15m) — matches how shift names are already written (e.g. "4.45 hrs"
+// for 4h45m). Plain decimal hours reads as "17 hours 25" at a glance, which
+// is wrong.
+export function hoursMinutesLabel(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}.${m.toString().padStart(2, '0')}`;
+}
+
 export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }

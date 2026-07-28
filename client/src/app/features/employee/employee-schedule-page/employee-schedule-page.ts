@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
-import { dayOfWeekLabel, toMmDdYyyy } from '../../../core/week-utils';
+import { dayOfWeekLabel, hoursMinutesLabel, toMmDdYyyy } from '../../../core/week-utils';
 
 interface DayGroup {
   date: string;
@@ -40,6 +40,7 @@ export class EmployeeSchedulePage implements OnInit {
   protected readonly totalHours = computed(() =>
     round2(this.days().reduce((sum, d) => sum + d.hours, 0)),
   );
+  protected readonly hoursLabel = hoursMinutesLabel;
 
   ngOnInit(): void {
     this.load();

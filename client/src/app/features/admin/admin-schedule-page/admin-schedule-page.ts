@@ -20,7 +20,7 @@ import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { employeeColor } from '../../../core/employee-colors';
 import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-flags';
-import { addDays, combineDateAndTime, formatDate, formatWeekRange, mondayOf } from '../../../core/week-utils';
+import { addDays, combineDateAndTime, formatDate, formatWeekRange, hoursMinutesLabel, mondayOf } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
 import { ScheduleDayView } from '../schedule-day-view/schedule-day-view';
@@ -217,6 +217,7 @@ export class AdminSchedulePage implements OnInit {
   protected readonly weekTotalHours = computed(() =>
     Math.round(this.dailyTotals().reduce((sum, hours) => sum + hours, 0) * 100) / 100,
   );
+  protected readonly hoursLabel = hoursMinutesLabel;
 
   // The whole week is a draft/preview, invisible to employees, until the
   // admin posts it. Any create/move against a published week reverts to

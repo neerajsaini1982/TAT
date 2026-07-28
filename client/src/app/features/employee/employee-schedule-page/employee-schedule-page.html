@@ -15,7 +15,7 @@
     @if (days().length > 0) {
       <span>
         {{ days().length }} {{ days().length === 1 ? 'day' : 'days' }} scheduled,
-        <strong>{{ totalHours() }} total hours</strong>
+        <strong>{{ hoursLabel(totalHours()) }} total hours</strong>
       </span>
     } @else {
       <span>No upcoming shifts scheduled yet.</span>
@@ -32,7 +32,7 @@
             <span class="day-name">{{ day.dayLabel }}</span>
             <span class="day-date">{{ day.dateLabel }}</span>
           </div>
-          <span class="day-hours">{{ day.hours }} hrs</span>
+          <span class="day-hours">{{ hoursLabel(day.hours) }} hrs</span>
         </div>
         @for (shift of day.shifts; track shift.id) {
           <div class="shift-row">
