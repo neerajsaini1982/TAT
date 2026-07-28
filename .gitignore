@@ -31,6 +31,10 @@ yarn-error.log*
 [Bb]in/
 [Oo]bj/
 
+# Windows LAN deploy output (see publish-win.sh)
+/server/wwwroot/
+/publish/
+
 # Local SQLite databases
 *.db
 *.db-shm

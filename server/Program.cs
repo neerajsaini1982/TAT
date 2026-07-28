@@ -22,10 +22,15 @@ builder.Services.AddOpenApi();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(AngularDevClient, policy =>
-        // :4300 is the client-verify config in .claude/launch.json, used to
-        // run a second local session side by side with :4200 for manual
-        // testing (e.g. two roles at once).
-        policy.WithOrigins("http://localhost:4200", "http://127.0.0.1:4200", "http://localhost:4300", "http://127.0.0.1:4300")
+        // Dev-only: employees reach the Angular dev server from many
+        // different LAN devices/hostnames on port 4200 (or 4300, used by
+        // .claude/launch.json for a second side-by-side session), so the
+        // origin can't be pinned to a fixed list. Auth is a bearer token
+        // (not cookies), so allowing any origin here doesn't expose
+        // credentialed requests.
+        policy.SetIsOriginAllowed(origin =>
+                  Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+                  (uri.Port == 4200 || uri.Port == 4300))
               .AllowAnyHeader()
               .AllowAnyMethod());
 });
@@ -77,12 +82,23 @@ if (app.Environment.IsDevelopment())
     app.UseCors(AngularDevClient);
 }
 
-app.UseHttpsRedirection();
+// No app.UseHttpsRedirection(): this deploys over plain HTTP on the
+// internal LAN only, with no certificate configured, so that middleware
+// would just fail to find an HTTPS port and warn on every request.
+
+// Serves the built Angular app (client/dist/client/browser, copied into
+// wwwroot at publish time — see publish-win.sh) so a single process/port
+// can host both the API and the UI for LAN deployment. In local dev,
+// wwwroot doesn't exist, so these no-op and the Angular dev server on
+// :4200 is used instead.
+app.UseDefaultFiles();
+app.UseStaticFiles();
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 app.MapHub<ScheduleHub>("/hubs/schedule");
+app.MapFallbackToFile("index.html");
 
 app.Run();
