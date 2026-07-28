@@ -38,6 +38,16 @@ interface DayGroup {
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+// H.MM display, matching how shift names are already written (e.g. "4.45
+// hrs" for 4h45m) — plain decimal hours would show 17.25 for 17h15m, which
+// reads as "17 hours 25" at a glance and is wrong.
+function hoursMinutesLabel(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}.${m.toString().padStart(2, '0')}`;
+}
 const DEFAULT_SETTINGS = {
   timeFormat: 'TwelveHour' as TimeFormat,
   timeZone: 'America/Los_Angeles',
@@ -282,6 +292,10 @@ export class CurrentWeekSchedule implements OnInit {
   // happened yet.
   punchTime(iso: string | null | undefined): string {
     return iso ? formatInstant(iso, this.timeZone, this.timeFormat) : '-';
+  }
+
+  hoursLabel(hours: number): string {
+    return hoursMinutesLabel(hours);
   }
 
   segmentsFor(shift: DayShift): TimeEntrySegmentDto[] {
