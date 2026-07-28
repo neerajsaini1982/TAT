@@ -46,7 +46,7 @@
   >
     Post Schedule
   </button>
-  <span class="week-total">{{ weekTotalHours() }} hrs scheduled this week</span>
+  <span class="week-total">{{ hoursLabel(weekTotalHours()) }} hrs scheduled this week</span>
 </div>
 
 @if (error()) {
@@ -231,7 +231,7 @@
                 }
               </td>
             }
-            <td class="total-col">{{ row.totalHours }}</td>
+            <td class="total-col">{{ hoursLabel(row.totalHours) }}</td>
           </tr>
         }
         @if (visibleRows().length === 0) {
@@ -267,9 +267,9 @@
             <tr>
               <td class="employee-col">Daily Total</td>
               @for (total of dailyTotals(); track $index) {
-                <td>{{ total }}</td>
+                <td>{{ hoursLabel(total) }}</td>
               }
-              <td class="total-col">{{ weekTotalHours() }}</td>
+              <td class="total-col">{{ hoursLabel(weekTotalHours()) }}</td>
             </tr>
           </tfoot>
         </table>
