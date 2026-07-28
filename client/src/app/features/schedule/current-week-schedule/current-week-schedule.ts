@@ -33,10 +33,21 @@ interface DayGroup {
   dateLabel: string;
   isToday: boolean;
   shifts: DayShift[];
-  hours: number;
+  workedHours: number;
+  scheduledHours: number;
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+// H.MM display, matching how shift names are already written (e.g. "4.45
+// hrs" for 4h45m) — plain decimal hours would show 17.25 for 17h15m, which
+// reads as "17 hours 25" at a glance and is wrong.
+function hoursMinutesLabel(hours: number): string {
+  const totalMinutes = Math.round(hours * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${h}.${m.toString().padStart(2, '0')}`;
+}
 const DEFAULT_SETTINGS = {
   timeFormat: 'TwelveHour' as TimeFormat,
   timeZone: 'America/Los_Angeles',
@@ -107,8 +118,11 @@ export class CurrentWeekSchedule implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly showEmployeeNames = computed(() => this.scope === 'location');
   protected readonly employeeColor = employeeColor;
-  protected readonly totalHours = computed(() =>
-    round2(this.days().reduce((sum, d) => sum + d.hours, 0)),
+  protected readonly totalWorkedHours = computed(() =>
+    round2(this.days().reduce((sum, d) => sum + d.workedHours, 0)),
+  );
+  protected readonly totalScheduledHours = computed(() =>
+    round2(this.days().reduce((sum, d) => sum + d.scheduledHours, 0)),
   );
 
   // Browsing other weeks is an admin/lead thing — an employee's own
@@ -254,9 +268,13 @@ export class CurrentWeekSchedule implements OnInit {
                   // Actual worked hours (matches the per-row "H Hrs M Mins"
                   // label), not scheduled shift length — a shift that's still
                   // clocked in, never started, or absent contributes 0 here.
-                  hours: round2(
+                  workedHours: round2(
                     shifts.reduce((sum, s) => (s.entry?.clockOutAt ? sum + workedMinutes(s.entry) / 60 : sum), 0),
                   ),
+                  // What was scheduled regardless of attendance, so an admin
+                  // can see logged-vs-scheduled drift (no-shows, early
+                  // clock-outs) at a glance instead of just the worked total.
+                  scheduledHours: round2(shifts.reduce((sum, s) => sum + s.assignment.hours, 0)),
                 };
               }),
           );
@@ -274,6 +292,10 @@ export class CurrentWeekSchedule implements OnInit {
   // happened yet.
   punchTime(iso: string | null | undefined): string {
     return iso ? formatInstant(iso, this.timeZone, this.timeFormat) : '-';
+  }
+
+  hoursLabel(hours: number): string {
+    return hoursMinutesLabel(hours);
   }
 
   segmentsFor(shift: DayShift): TimeEntrySegmentDto[] {
