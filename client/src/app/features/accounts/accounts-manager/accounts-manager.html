@@ -31,17 +31,20 @@
   <mat-card class="form-card">
     <mat-card-content>
       <form (ngSubmit)="save()" class="form" autocomplete="off">
-        @if (form.role !== 'Employee') {
+        @if (form.role !== 'Employee' && (editingId() === null || promotingFromEmployee())) {
           <mat-form-field appearance="outline">
             <mat-label>Username</mat-label>
-            <input matInput name="username" [(ngModel)]="form.username" [disabled]="editingId() !== null" required />
+            <input matInput name="username" [(ngModel)]="form.username" required />
           </mat-form-field>
-          @if (editingId() === null) {
-            <mat-form-field appearance="outline">
-              <mat-label>Password</mat-label>
-              <input matInput type="password" name="password" [(ngModel)]="form.password" required />
-            </mat-form-field>
-          }
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" name="password" [(ngModel)]="form.password" required />
+          </mat-form-field>
+        } @else if (form.role !== 'Employee') {
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput name="username" [(ngModel)]="form.username" disabled />
+          </mat-form-field>
         }
         <mat-form-field appearance="outline">
           <mat-label>First Name</mat-label>
@@ -59,16 +62,15 @@
           <mat-label>Phone</mat-label>
           <input matInput name="phone" [(ngModel)]="form.phone" />
         </mat-form-field>
-        @if (editingId() === null) {
-          <mat-form-field appearance="outline">
-            <mat-label>Role</mat-label>
-            <mat-select name="role" [(ngModel)]="form.role">
-              @for (r of roles; track r) {
-                <mat-option [value]="r">{{ r }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
-        } @else {
+        <mat-form-field appearance="outline">
+          <mat-label>Role</mat-label>
+          <mat-select name="role" [(ngModel)]="form.role">
+            @for (r of roles; track r) {
+              <mat-option [value]="r">{{ r }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        @if (editingId() !== null) {
           <mat-slide-toggle name="isActive" [(ngModel)]="form.isActive">Active</mat-slide-toggle>
         }
         @if (error()) {

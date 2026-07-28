@@ -47,6 +47,10 @@ export interface UpdateAccountRequest {
   email: string;
   phone: string;
   isActive: boolean;
+  role: Role;
+  // Only required when role moves away from Employee.
+  username?: string;
+  password?: string;
 }
 
 @Service()

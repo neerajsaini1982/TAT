@@ -44,7 +44,13 @@ public record UpdateAccountRequest(
     string LastName,
     string Email,
     string Phone,
-    bool IsActive);
+    bool IsActive,
+    AccountRole Role,
+    // Only required when Role moves away from Employee (the account has no
+    // real password on file yet — Employee accounts log in with a UserCode
+    // and get a random, unknown PasswordHash at creation time).
+    string? Username,
+    string? Password);
 
 // LoginLink is built client-side (it already knows its own origin) and
 // passed through rather than the server guessing its hostname.

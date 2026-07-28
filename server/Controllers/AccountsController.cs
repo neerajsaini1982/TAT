@@ -235,11 +235,36 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender) : Con
             return NotFound();
         }
 
+        if ((request.Role == AccountRole.Sa || account.Role == AccountRole.Sa) && !User.IsInRole(nameof(AccountRole.Sa)))
+        {
+            return Forbid();
+        }
+
+        // Promoting away from Employee: the account's PasswordHash is a
+        // random, unknown value generated at creation (Employees log in with
+        // a UserCode instead), so real login credentials must be supplied now.
+        if (account.Role == AccountRole.Employee && request.Role != AccountRole.Employee)
+        {
+            if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+            {
+                return BadRequest("Username and password are required when changing role away from Employee.");
+            }
+
+            if (db.Accounts.Any(a => a.Id != id && a.Username == request.Username))
+            {
+                return Conflict($"Username '{request.Username}' is already in use.");
+            }
+
+            account.Username = request.Username;
+            account.PasswordHash = PasswordHasher.Hash(request.Password);
+        }
+
         account.FirstName = request.FirstName;
         account.LastName = request.LastName;
         account.Email = request.Email;
         account.Phone = request.Phone;
         account.IsActive = request.IsActive;
+        account.Role = request.Role;
         db.SaveChanges();
 
         return Ok(ToDto(account));

@@ -67,6 +67,10 @@ export class AccountsManager implements OnInit {
   protected readonly locations = signal<LocationDto[]>([]);
   protected readonly selectedLocation = signal<LocationDto | null>(null);
   protected readonly editingId = signal<number | null>(null);
+  // The role the account had when the edit form was opened — used to tell
+  // whether the admin is promoting away from Employee, which needs fresh
+  // login credentials (see startEdit/save).
+  protected readonly originalRole = signal<Role | null>(null);
   protected readonly showForm = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly resettingId = signal<number | null>(null);
@@ -118,6 +122,7 @@ export class AccountsManager implements OnInit {
 
   startCreate(): void {
     this.editingId.set(null);
+    this.originalRole.set(null);
     this.form = emptyForm();
     this.error.set(null);
     this.showForm.set(true);
@@ -125,9 +130,16 @@ export class AccountsManager implements OnInit {
 
   startEdit(account: AccountDto): void {
     this.editingId.set(account.id);
+    this.originalRole.set(account.role);
     this.form = { ...emptyForm(), ...account, password: '' };
     this.error.set(null);
     this.showForm.set(true);
+  }
+
+  // True once the admin has changed the role away from Employee — the
+  // account needs a real username/password at that point (see save()).
+  protected promotingFromEmployee(): boolean {
+    return this.originalRole() === 'Employee' && this.form.role !== 'Employee';
   }
 
   // Pre-fills the create form from an existing account so the admin can
@@ -184,6 +196,11 @@ export class AccountsManager implements OnInit {
       return;
     }
 
+    if (this.promotingFromEmployee() && (!this.form.username || !this.form.password)) {
+      this.error.set('Username and password are required when changing role away from Employee.');
+      return;
+    }
+
     this.accountsApi
       .update(id, {
         firstName: this.form.firstName,
@@ -191,6 +208,9 @@ export class AccountsManager implements OnInit {
         email: this.form.email,
         phone: this.form.phone,
         isActive: this.form.isActive,
+        role: this.form.role,
+        username: this.promotingFromEmployee() ? this.form.username : undefined,
+        password: this.promotingFromEmployee() ? this.form.password : undefined,
       })
       .subscribe({
         next: () => {
