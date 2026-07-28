@@ -27,6 +27,12 @@ export interface EditTimeEntryDialogData {
   // never correct, so save() blocks on it below regardless of whether the
   // admin actually touched the field (see isPastDate usage in save()).
   date: string;
+  // The location's configured break/lunch length — used to auto-advance a
+  // segment's End time when the admin edits its Start (see
+  // onSegmentStartBlur). Not otherwise validated against; an admin can
+  // still type any End time by hand.
+  breakLimitMinutes: number;
+  lunchLimitMinutes: number;
 }
 
 interface SegmentRow {
@@ -37,6 +43,10 @@ interface SegmentRow {
   // touched, still on this break" apart from "started typing an end time
   // but didn't finish it", since both look identical as an empty string.
   endTouched: boolean;
+  // Set once the admin types into the End field — once true, editing Start
+  // no longer overwrites End (see onSegmentStartBlur): a manually-entered
+  // End always wins over the auto-computed one.
+  endManual: boolean;
 }
 
 export interface EditTimeEntryResult {
@@ -48,9 +58,18 @@ export interface EditTimeEntryResult {
 
 const toInput = (iso: string | null): string => (iso ? formatDisplayTime(formatHHmm(new Date(iso))) : '');
 
-const DEFAULT_WINDOW: Record<BreakKind, { start: string; end: string }> = {
-  Break: { start: '10:00 AM', end: '10:15 AM' },
-  Lunch: { start: '12:00 PM', end: '12:30 PM' },
+// Wraps at midnight (e.g. 11:50 PM + 20 min -> 12:10 AM) rather than
+// overflowing into the next day, matching how a break/lunch is always
+// understood to land on the same shift.
+const addMinutesToHHmm = (hhmm: string, minutes: number): string => {
+  const [h, m] = hhmm.split(':').map(Number);
+  const total = ((h * 60 + m + minutes) % 1440 + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+};
+
+const DEFAULT_START: Record<BreakKind, string> = {
+  Break: '10:00 AM',
+  Lunch: '12:00 PM',
 };
 
 // Lets an admin set every punch on today's TimeEntry directly — correcting
@@ -100,7 +119,7 @@ export class EditTimeEntryDialog {
       ? entry.segments
           .slice()
           .sort((a, b) => a.startAt.localeCompare(b.startAt))
-          .map((s) => ({ kind: s.kind, start: toInput(s.startAt), end: toInput(s.endAt), endTouched: false }))
+          .map((s) => ({ kind: s.kind, start: toInput(s.startAt), end: toInput(s.endAt), endTouched: false, endManual: false }))
       : data.scheduledBreaks
           .slice()
           .sort((a, b) => a.startTime.localeCompare(b.startTime))
@@ -109,12 +128,34 @@ export class EditTimeEntryDialog {
             start: formatDisplayTime(b.startTime.slice(0, 5)),
             end: formatDisplayTime(b.endTime.slice(0, 5)),
             endTouched: false,
+            endManual: false,
           }));
   }
 
   addSegment(kind: BreakKind): void {
-    const { start, end } = DEFAULT_WINDOW[kind];
-    this.segments = [...this.segments, { kind, start, end, endTouched: false }];
+    const start = DEFAULT_START[kind];
+    const durationMinutes = kind === 'Break' ? this.data.breakLimitMinutes : this.data.lunchLimitMinutes;
+    const end = formatDisplayTime(addMinutesToHHmm(parseTimeInput(start)!, durationMinutes));
+    this.segments = [...this.segments, { kind, start, end, endTouched: false, endManual: false }];
+  }
+
+  // Keeps End in step with Start for a segment the admin hasn't manually
+  // set an End for yet — e.g. a break scheduled 1:10-1:20 (10 min) becomes
+  // 1:15-1:25 when Start is moved to 1:15, using the location's configured
+  // break/lunch length rather than preserving the original 10-minute span.
+  // Reads the input directly rather than trusting the (blur-deferred)
+  // ngModel value, since both update on the same event and ordering
+  // between them isn't guaranteed.
+  onSegmentStartBlur(row: SegmentRow, event: FocusEvent): void {
+    if (row.endManual) {
+      return;
+    }
+    const start = parseTimeInput((event.target as HTMLInputElement).value);
+    if (!start) {
+      return;
+    }
+    const durationMinutes = row.kind === 'Break' ? this.data.breakLimitMinutes : this.data.lunchLimitMinutes;
+    row.end = formatDisplayTime(addMinutesToHHmm(start, durationMinutes));
   }
 
   removeSegment(index: number): void {
@@ -228,6 +269,7 @@ export class EditTimeEntryDialog {
   clearSegmentEnd(segment: SegmentRow): void {
     segment.end = '';
     segment.endTouched = false;
+    segment.endManual = false;
   }
 
   get scheduledLabel(): string {

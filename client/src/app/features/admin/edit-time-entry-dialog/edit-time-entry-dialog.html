@@ -44,11 +44,11 @@
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>Start</mat-label>
-          <input matInput type="text" list="editTimeSuggestions" [(ngModel)]="s.start" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentStart' + $index" placeholder="h:mm AM/PM" required />
+          <input matInput type="text" list="editTimeSuggestions" [(ngModel)]="s.start" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentStart' + $index" placeholder="h:mm AM/PM" required (blur)="onSegmentStartBlur(s, $event)" />
         </mat-form-field>
         <mat-form-field appearance="outline">
           <mat-label>End</mat-label>
-          <input matInput type="text" list="editTimeSuggestions" [(ngModel)]="s.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentEnd' + $index" placeholder="h:mm AM/PM" (focus)="s.endTouched = true" />
+          <input matInput type="text" list="editTimeSuggestions" [(ngModel)]="s.end" [ngModelOptions]="{ updateOn: 'blur' }" [name]="'segmentEnd' + $index" placeholder="h:mm AM/PM" (focus)="s.endTouched = true" (input)="s.endManual = true" />
           @if (s.end) {
             <button type="button" mat-icon-button matSuffix (click)="clearSegmentEnd(s)" aria-label="Clear end time">
               <mat-icon>close</mat-icon>

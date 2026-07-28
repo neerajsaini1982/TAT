@@ -556,6 +556,8 @@ export class AdminSchedulePage implements OnInit {
           shiftStartTime: assignment.shiftStartTime,
           shiftEndTime: assignment.shiftEndTime,
           date: assignment.date,
+          breakLimitMinutes: this.breakLimitMinutes(),
+          lunchLimitMinutes: this.lunchLimitMinutes(),
         },
       })
       .afterClosed()
