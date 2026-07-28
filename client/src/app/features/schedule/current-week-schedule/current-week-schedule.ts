@@ -437,6 +437,8 @@ export class CurrentWeekSchedule implements OnInit {
           shiftStartTime: shift.assignment.shiftStartTime,
           shiftEndTime: shift.assignment.shiftEndTime,
           date: shift.assignment.date,
+          breakLimitMinutes: this.breakLimitMinutes,
+          lunchLimitMinutes: this.lunchLimitMinutes,
         },
       })
       .afterClosed()
