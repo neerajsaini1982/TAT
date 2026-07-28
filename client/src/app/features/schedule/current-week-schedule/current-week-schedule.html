@@ -19,7 +19,7 @@
     @if (days().length > 0) {
       <span>
         {{ days().length }} {{ days().length === 1 ? 'day' : 'days' }} scheduled,
-        <strong>{{ totalHours() }} total hours</strong>
+        <strong>{{ totalWorkedHours() }} / {{ totalScheduledHours() }} hours</strong> logged / scheduled
       </span>
     } @else if (isCurrentWeek()) {
       <span>No shifts scheduled for the rest of this week.</span>
@@ -45,7 +45,7 @@
               <span class="today-badge">Today</span>
             }
           </div>
-          <span class="day-hours">{{ day.hours }} hrs</span>
+          <span class="day-hours" title="Logged / Scheduled">{{ day.workedHours }} / {{ day.scheduledHours }} hrs</span>
         </div>
 
         <div class="table-scroll">
