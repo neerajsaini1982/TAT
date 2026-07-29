@@ -64,6 +64,21 @@ export class Auth {
 
   private readStored(): AuthResponse | null {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as AuthResponse) : null;
+    if (!raw) {
+      return null;
+    }
+
+    // A session cached before accountId was added to AuthResponse (see
+    // #36) would otherwise silently resolve accountId() to null, making
+    // every isMine check in CurrentWeekSchedule false — discard it and
+    // fall back to signed-out so the user re-logs-in and gets a complete
+    // session instead.
+    const parsed = JSON.parse(raw) as Partial<AuthResponse>;
+    if (typeof parsed.accountId !== 'number') {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+
+    return parsed as AuthResponse;
   }
 }
