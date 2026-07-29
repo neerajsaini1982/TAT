@@ -110,6 +110,34 @@
       </mat-card-content>
     </mat-card>
 
+    <mat-card class="section">
+      <mat-card-header>
+        <mat-card-title>Schedule Visibility</mat-card-title>
+        <mat-card-subtitle
+          >Controls whether roles can see everyone's shifts on the My Schedule page, or only their own.</mat-card-subtitle
+        >
+      </mat-card-header>
+      <mat-card-content class="section-content">
+        <mat-slide-toggle [(ngModel)]="form.scheduleVisibilityEnabled" name="scheduleVisibilityEnabled">
+          Schedule Visibility
+        </mat-slide-toggle>
+
+        @if (form.scheduleVisibilityEnabled) {
+          <div class="role-visibility-options">
+            <mat-checkbox [(ngModel)]="form.adminSeesAllSchedules" name="adminSeesAllSchedules">
+              Admin can see everyone's schedule
+            </mat-checkbox>
+            <mat-checkbox [(ngModel)]="form.leadSeesAllSchedules" name="leadSeesAllSchedules">
+              Lead can see everyone's schedule
+            </mat-checkbox>
+            <mat-checkbox [(ngModel)]="form.employeeSeesAllSchedules" name="employeeSeesAllSchedules">
+              Employee can see everyone's schedule
+            </mat-checkbox>
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
     <div class="section-group">
       <h3 class="group-label">Email</h3>
 

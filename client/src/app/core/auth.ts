@@ -8,6 +8,7 @@ export type Role = 'Sa' | 'Admin' | 'Lead' | 'Employee';
 
 export interface AuthResponse {
   token: string;
+  accountId: number;
   username: string;
   firstName: string;
   lastName: string;
@@ -24,6 +25,7 @@ export class Auth {
 
   readonly session = signal<AuthResponse | null>(this.readStored());
   readonly isAuthenticated = computed(() => this.session() !== null);
+  readonly accountId = computed(() => this.session()?.accountId ?? null);
   readonly role = computed(() => this.session()?.role ?? null);
   readonly locationCode = computed(() => this.session()?.locationCode ?? null);
   readonly locationName = computed(() => this.session()?.locationName ?? null);

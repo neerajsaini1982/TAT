@@ -100,6 +100,17 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
+.shift-employee {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.shift-row.not-mine {
+  opacity: 0.7;
+}
+
 .attendance-badge {
   display: inline-block;
   padding: 2px 8px;

@@ -20,6 +20,9 @@
       <span>
         {{ days().length }} {{ days().length === 1 ? 'day' : 'days' }} scheduled,
         <strong>{{ hoursLabel(totalWorkedHours()) }} / {{ hoursLabel(totalScheduledHours()) }} hours</strong> logged / scheduled
+        @if (hoursAreJustMine()) {
+          for you
+        }
       </span>
     } @else if (isCurrentWeek()) {
       <span>No shifts scheduled for the rest of this week.</span>
@@ -59,7 +62,7 @@
                 <th>Clock In / Clock Out</th>
                 <th>Breaks</th>
                 <th>Status</th>
-                @if (showEmployeeNames()) {
+                @if (showEmployeeNames() && canManageOthers()) {
                   <th></th>
                 }
               </tr>
@@ -155,7 +158,7 @@
                     }
                   </td>
 
-                  @if (showEmployeeNames()) {
+                  @if (showEmployeeNames() && canManageOthers()) {
                     <td class="actions-cell">
                       @if (shift.assignment.isAbsent) {
                         <button type="button" mat-icon-button (click)="clearAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Clear absent">

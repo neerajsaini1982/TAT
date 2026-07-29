@@ -66,6 +66,10 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         settings.BreakLimitMinutes = request.BreakLimitMinutes;
         settings.LunchLimitMinutes = request.LunchLimitMinutes;
         settings.DevelopmentMode = request.DevelopmentMode;
+        settings.ScheduleVisibilityEnabled = request.ScheduleVisibilityEnabled;
+        settings.AdminSeesAllSchedules = request.AdminSeesAllSchedules;
+        settings.LeadSeesAllSchedules = request.LeadSeesAllSchedules;
+        settings.EmployeeSeesAllSchedules = request.EmployeeSeesAllSchedules;
         settings.SmtpHost = request.SmtpHost;
         settings.SmtpPort = request.SmtpPort;
         settings.SmtpUsername = request.SmtpUsername;
@@ -123,6 +127,10 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         s.BreakLimitMinutes,
         s.LunchLimitMinutes,
         s.DevelopmentMode,
+        s.ScheduleVisibilityEnabled,
+        s.AdminSeesAllSchedules,
+        s.LeadSeesAllSchedules,
+        s.EmployeeSeesAllSchedules,
         s.SmtpHost,
         s.SmtpPort,
         s.SmtpUsername,

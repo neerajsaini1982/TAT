@@ -11,6 +11,7 @@ import { TimeEntriesApi, TimeEntryDto, TimeEntrySegmentDto } from '../../../core
 import { BreakKind } from '../../../core/shifts-api';
 import { LocationSettingsApi, TimeFormat } from '../../../core/location-settings-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
+import { Auth } from '../../../core/auth';
 import { employeeColor } from '../../../core/employee-colors';
 import { formatInstant, formatTimeOnly } from '../../../core/location-time';
 import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-flags';
@@ -63,19 +64,24 @@ function workedMinutes(entry: TimeEntryDto): number {
   return Math.round(ms / 60_000);
 }
 
-// Shown on the Employee/Admin/Lead home page right after login. In the
-// default 'mine' scope it's just the caller's own upcoming shifts (used on
-// the Employee home page). In 'location' scope (Admin/Lead home page) it
-// shows every account's shifts for the location, each labeled with the
-// employee's name since more than one person can be working the same day.
-// Rendered as one aligned table per day. Clock In/Out get their own
-// columns; any number of breaks/lunches share a single "Breaks" column
-// (see ScheduledBreak/TimeEntrySegment — a shift can have any number of
-// scheduled windows, and an employee can take any number of actual ones,
-// at most one open at a time). Self-punch actions (Clock In/+Break/+Lunch/
-// End/Clock Out) only ever render for the caller's own shift, since
-// punching is self-service; Mark/Clear Absent and Edit Times are
-// location-scope-only admin actions on any employee's row.
+// Shown on the Employee/Admin/Lead home page right after login. In
+// 'location' scope (Admin/Lead home page) it always shows every account's
+// shifts for the location. In the default 'mine' scope (Employee home
+// page) GetMine decides this per request: normally just the caller's own
+// upcoming shifts, but if this location's Schedule Visibility setting
+// grants the caller's role a roster view (see LocationSettings/
+// ShiftAssignmentsController.GetMine), GetMine returns everyone's shifts
+// instead — showEmployeeNames reacts to whichever actually came back,
+// rather than to which scope was requested. Rendered as one aligned table
+// per day. Clock In/Out get their own columns; any number of breaks/lunches
+// share a single "Breaks" column (see ScheduledBreak/TimeEntrySegment — a
+// shift can have any number of scheduled windows, and an employee can take
+// any number of actual ones, at most one open at a time). Self-punch
+// actions (Clock In/+Break/+Lunch/End/Clock Out) only ever render for the
+// caller's own shift, since punching is self-service; Mark/Clear Absent and
+// Edit Times additionally require the caller to actually hold Lead/Admin
+// privilege server-side (LeadOrAbove) — a plain Employee whose role was
+// granted schedule visibility can see the roster but not act on it.
 // Defaults to the Monday-Sunday of the current week, today onward (i.e.
 // "what's left of this week") — location scope can additionally browse to
 // any other week (see canBrowseWeeks/previousWeek/nextWeek), at which
@@ -100,13 +106,32 @@ export class CurrentWeekSchedule implements OnInit {
   private readonly realtime = inject(ScheduleRealtime);
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(Auth);
+  private readonly myAccountId = this.auth.accountId();
 
   protected readonly loading = signal(true);
   protected readonly days = signal<DayGroup[]>([]);
   protected readonly busyShiftId = signal<number | null>(null);
   protected readonly markingId = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);
-  protected readonly showEmployeeNames = computed(() => this.scope === 'location');
+  // True once any *visible* shift belongs to someone else — driven by what
+  // GetMine actually returned, not by which scope was requested, since
+  // Schedule Visibility can grant a roster view in 'mine' scope too.
+  protected readonly showEmployeeNames = computed(() =>
+    this.days().some((d) => d.shifts.some((s) => !s.isMine)),
+  );
+  // Mark/Clear Absent and Edit Times hit LeadOrAbove server endpoints —
+  // hide them for a plain Employee who can see the roster but can't act on
+  // it, so the buttons never appear only to 403 on click.
+  protected readonly canManageOthers = computed(() => {
+    const role = this.auth.role();
+    return role === 'Sa' || role === 'Admin' || role === 'Lead';
+  });
+  // Whether the logged/scheduled totals above are just the caller's own —
+  // true whenever 'mine' scope is showing a roster, since hoursScope (see
+  // load()) restricts those totals to the caller there; 'location' scope
+  // always totals everyone on purpose, so it's never qualified.
+  protected readonly hoursAreJustMine = computed(() => this.scope === 'mine' && this.showEmployeeNames());
   protected readonly employeeColor = employeeColor;
   protected readonly totalWorkedHours = computed(() =>
     round2(this.days().reduce((sum, d) => sum + d.workedHours, 0)),
@@ -170,12 +195,11 @@ export class CurrentWeekSchedule implements OnInit {
     const isLocationScope = this.scope === 'location' && this.locationCode;
 
     forkJoin({
-      mine: this.api.getMine(),
       assignments: isLocationScope ? this.api.getForWeek(weekStart, this.locationCode!) : this.api.getMine(),
       settings: this.settingsApi.getMine().pipe(catchError(() => of(DEFAULT_SETTINGS))),
     })
       .pipe(
-        switchMap(({ mine, assignments, settings }) => {
+        switchMap(({ assignments, settings }) => {
           // This widget is "what's scheduled" for the selected week — the
           // rest-of-week trim only makes sense for the actual current week;
           // a past or future week shows in full regardless of today's date.
@@ -202,11 +226,11 @@ export class CurrentWeekSchedule implements OnInit {
               : of([])
             : this.timeEntriesApi.getMine(today).pipe(catchError(() => of([])));
 
-          return entries$.pipe(map((entries) => ({ mine, assignments, settings, entries, visibleDates })));
+          return entries$.pipe(map((entries) => ({ assignments, settings, entries, visibleDates })));
         }),
       )
       .subscribe({
-        next: ({ mine, assignments, settings, entries, visibleDates }) => {
+        next: ({ assignments, settings, entries, visibleDates }) => {
           this.timeFormat = settings.timeFormat;
           this.timeZone = settings.timeZone;
           this.lateClockInGraceMinutes = settings.lateClockInGraceMinutes;
@@ -214,7 +238,6 @@ export class CurrentWeekSchedule implements OnInit {
           this.lunchLimitMinutes = settings.lunchLimitMinutes;
 
           const entryByShiftId = new Map(entries.map((e) => [e.shiftAssignmentId, e]));
-          const mineIds = new Set(mine.map((a) => a.id));
           const now = new Date();
           const visibleDateSet = new Set(visibleDates);
 
@@ -232,7 +255,7 @@ export class CurrentWeekSchedule implements OnInit {
               .map(([date, assignmentsForDay]) => {
                 const isToday = date === today;
                 const shifts: DayShift[] = assignmentsForDay.map((assignment) => {
-                  const isMine = mineIds.has(assignment.id);
+                  const isMine = assignment.accountId === this.myAccountId;
                   const earliestClockInAt = combineDateAndTime(assignment.date, assignment.shiftStartTime);
                   earliestClockInAt.setMinutes(earliestClockInAt.getMinutes() - settings.clockInWindowMinutes);
                   // Location scope shows every employee's punches (see the
@@ -249,6 +272,14 @@ export class CurrentWeekSchedule implements OnInit {
                   };
                 });
 
+                // True 'location' scope (AdminHome) totals the whole
+                // location's labor on purpose — that's its point. 'mine'
+                // scope showing a roster (Schedule Visibility granted) is a
+                // different case: the caller still wants their own hours as
+                // the headline number, not everyone's combined, since they
+                // can only see the extra rows, not act on them.
+                const hoursScope = (s: DayShift) => this.scope === 'location' || s.isMine;
+
                 return {
                   date,
                   dayLabel: dayOfWeekLabel(date),
@@ -259,12 +290,14 @@ export class CurrentWeekSchedule implements OnInit {
                   // label), not scheduled shift length — a shift that's still
                   // clocked in, never started, or absent contributes 0 here.
                   workedHours: round2(
-                    shifts.reduce((sum, s) => (s.entry?.clockOutAt ? sum + workedMinutes(s.entry) / 60 : sum), 0),
+                    shifts
+                      .filter(hoursScope)
+                      .reduce((sum, s) => (s.entry?.clockOutAt ? sum + workedMinutes(s.entry) / 60 : sum), 0),
                   ),
                   // What was scheduled regardless of attendance, so an admin
                   // can see logged-vs-scheduled drift (no-shows, early
                   // clock-outs) at a glance instead of just the worked total.
-                  scheduledHours: round2(shifts.reduce((sum, s) => sum + s.assignment.hours, 0)),
+                  scheduledHours: round2(shifts.filter(hoursScope).reduce((sum, s) => sum + s.assignment.hours, 0)),
                 };
               }),
           );

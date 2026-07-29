@@ -64,6 +64,14 @@
   }
 }
 
+.role-visibility-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-basis: 100%;
+  margin-left: 24px;
+}
+
 .save-row {
   display: flex;
   justify-content: center;

@@ -20,19 +20,29 @@ namespace Server.Controllers;
 [Authorize]
 public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notifier) : ControllerBase
 {
-    // Self-service: whoever is logged in sees only their own upcoming
-    // schedule, so an Employee/Lead/Admin can answer "when am I working
-    // next, and for how long" without needing the admin roster view.
+    // Self-service: whoever is logged in sees their own upcoming schedule,
+    // and everyone else's too if their role has been granted Schedule
+    // Visibility for this location (see LocationSettings/CanSeeAllSchedules)
+    // — otherwise an Employee/Lead/Admin can still always answer "when am I
+    // working next, and for how long" without needing the admin roster view.
     [HttpGet("mine")]
     public ActionResult<IEnumerable<ShiftAssignmentDto>> GetMine()
     {
         var accountId = CallerAccountId();
         var today = DateOnly.FromDateTime(DateTime.Now);
 
-        var assignments = db.ShiftAssignments
+        var location = db.Locations.SingleOrDefault(l => l.LocationCode == CallerLocationCode());
+        var seeAllSchedules = location is not null && CanSeeAllSchedules(location.Id);
+
+        var query = db.ShiftAssignments
             .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
             .Include(a => a.Account)
-            .Where(a => a.AccountId == accountId && a.Date >= today && a.IsPublished)
+            .Where(a => a.Date >= today && a.IsPublished);
+        query = seeAllSchedules
+            ? query.Where(a => a.Shift!.LocationId == location!.Id)
+            : query.Where(a => a.AccountId == accountId);
+
+        var assignments = query
             .OrderBy(a => a.Date)
             .ThenBy(a => a.Shift!.StartTime)
             .ThenBy(a => a.Account!.FirstName)
@@ -285,6 +295,23 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .Where(s => s.LocationId == locationId)
             .Select(s => (bool?)s.DevelopmentMode)
             .SingleOrDefault() ?? false;
+
+    // Resolves the Schedule Visibility setting against the caller's own
+    // role: disabled entirely (or no settings row yet) means everyone is
+    // restricted to their own shifts regardless of the per-role flags.
+    private bool CanSeeAllSchedules(int locationId)
+    {
+        var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == locationId);
+        if (settings is null || !settings.ScheduleVisibilityEnabled)
+        {
+            return false;
+        }
+
+        if (User.IsInRole(nameof(AccountRole.Admin))) return settings.AdminSeesAllSchedules;
+        if (User.IsInRole(nameof(AccountRole.Lead))) return settings.LeadSeesAllSchedules;
+        if (User.IsInRole(nameof(AccountRole.Employee))) return settings.EmployeeSeesAllSchedules;
+        return false;
+    }
 
     private bool CanAccess(string? locationCode) =>
         User.IsInRole(nameof(AccountRole.Sa)) || (locationCode is not null && locationCode == CallerLocationCode());
