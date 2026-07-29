@@ -7,6 +7,10 @@
   h2 {
     margin: 0;
   }
+
+  button {
+    margin-left: auto;
+  }
 }
 
 .week-nav {
@@ -25,6 +29,11 @@
 
 .error {
   color: var(--mat-sys-error);
+  text-align: center;
+}
+
+.copy-result {
+  color: var(--mat-sys-primary);
   text-align: center;
 }
 

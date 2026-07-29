@@ -28,6 +28,11 @@ export interface SaveAvailabilityRequest {
   submit: boolean;
 }
 
+export interface CopyPreviousWeekResult {
+  copied: number;
+  skipped: number;
+}
+
 @Service()
 export class AvailabilityApi {
   private readonly http = inject(HttpClient);
@@ -52,5 +57,17 @@ export class AvailabilityApi {
       params.set('locationCode', locationCode);
     }
     return this.http.get<AvailabilityDto[]>(`${this.base}?${params.toString()}`);
+  }
+
+  // Admin bulk action: fills every schedulable employee's weekStartDate
+  // availability from the week before, in one call. Already-submitted
+  // target weeks are left untouched server-side; see CopyPreviousWeek in
+  // AvailabilityController.
+  copyPreviousWeekForLocation(weekStartDate: string, locationCode?: string) {
+    const params = new URLSearchParams({ weekStartDate });
+    if (locationCode) {
+      params.set('locationCode', locationCode);
+    }
+    return this.http.post<CopyPreviousWeekResult>(`${this.base}/copy-previous-week?${params.toString()}`, {});
   }
 }
