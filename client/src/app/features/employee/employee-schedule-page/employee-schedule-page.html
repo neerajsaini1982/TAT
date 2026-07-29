@@ -16,6 +16,9 @@
       <span>
         {{ days().length }} {{ days().length === 1 ? 'day' : 'days' }} scheduled,
         <strong>{{ hoursLabel(totalHours()) }} total hours</strong>
+        @if (showsEveryone()) {
+          for you
+        }
       </span>
     } @else {
       <span>No upcoming shifts scheduled yet.</span>
@@ -35,10 +38,15 @@
           <span class="day-hours">{{ hoursLabel(day.hours) }} hrs</span>
         </div>
         @for (shift of day.shifts; track shift.id) {
-          <div class="shift-row">
+          <div class="shift-row" [class.not-mine]="showsEveryone() && !isMine(shift)">
             <mat-icon class="shift-icon">work</mat-icon>
             <span class="shift-name">{{ shift.shiftName }}</span>
             <span class="shift-time">{{ shiftTime(shift) }}</span>
+            @if (showsEveryone()) {
+              <span class="shift-employee">{{
+                isMine(shift) ? 'You' : shift.accountFirstName + ' ' + shift.accountLastName
+              }}</span>
+            }
             @if (shift.isAbsent) {
               <span class="attendance-badge absent" [title]="shift.absenceNote ?? ''">Absent</span>
             }

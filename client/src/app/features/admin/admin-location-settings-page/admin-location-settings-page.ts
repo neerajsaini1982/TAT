@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog } from '@angular/material/dialog';
 import { forkJoin } from 'rxjs';
 
@@ -81,6 +82,10 @@ interface FormModel {
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
   developmentMode: boolean;
+  scheduleVisibilityEnabled: boolean;
+  adminSeesAllSchedules: boolean;
+  leadSeesAllSchedules: boolean;
+  employeeSeesAllSchedules: boolean;
   smtpHost: string;
   smtpPort: number | null;
   smtpUsername: string;
@@ -100,6 +105,10 @@ const emptyForm = (): FormModel => ({
   breakLimitMinutes: 15,
   lunchLimitMinutes: 30,
   developmentMode: false,
+  scheduleVisibilityEnabled: true,
+  adminSeesAllSchedules: true,
+  leadSeesAllSchedules: false,
+  employeeSeesAllSchedules: false,
   smtpHost: '',
   smtpPort: null,
   smtpUsername: '',
@@ -121,6 +130,7 @@ const emptyForm = (): FormModel => ({
     MatInputModule,
     MatSelectModule,
     MatSlideToggleModule,
+    MatCheckboxModule,
   ],
   templateUrl: './admin-location-settings-page.html',
   styleUrl: './admin-location-settings-page.scss',
@@ -178,6 +188,10 @@ export class AdminLocationSettingsPage implements OnInit {
       breakLimitMinutes: settings.breakLimitMinutes,
       lunchLimitMinutes: settings.lunchLimitMinutes,
       developmentMode: settings.developmentMode,
+      scheduleVisibilityEnabled: settings.scheduleVisibilityEnabled,
+      adminSeesAllSchedules: settings.adminSeesAllSchedules,
+      leadSeesAllSchedules: settings.leadSeesAllSchedules,
+      employeeSeesAllSchedules: settings.employeeSeesAllSchedules,
       smtpHost: settings.smtpHost ?? '',
       smtpPort: settings.smtpPort,
       smtpUsername: settings.smtpUsername ?? '',
@@ -204,6 +218,10 @@ export class AdminLocationSettingsPage implements OnInit {
           breakLimitMinutes: this.form.breakLimitMinutes,
           lunchLimitMinutes: this.form.lunchLimitMinutes,
           developmentMode: this.form.developmentMode,
+          scheduleVisibilityEnabled: this.form.scheduleVisibilityEnabled,
+          adminSeesAllSchedules: this.form.adminSeesAllSchedules,
+          leadSeesAllSchedules: this.form.leadSeesAllSchedules,
+          employeeSeesAllSchedules: this.form.employeeSeesAllSchedules,
           smtpHost: this.form.smtpHost || null,
           smtpPort: this.form.smtpPort,
           smtpUsername: this.form.smtpUsername || null,

@@ -51,6 +51,16 @@ public class LocationSettings
     // When on, exposes extra diagnostics/test affordances for this location.
     public bool DevelopmentMode { get; set; } = false;
 
+    // Governs whether roles other than Admin can see everyone's shifts (not
+    // just their own) on the "My Schedule" page — the admin roster/management
+    // page always shows everyone regardless of this. When disabled, every
+    // role only ever sees their own shifts there, ignoring the three flags
+    // below entirely.
+    public bool ScheduleVisibilityEnabled { get; set; } = true;
+    public bool AdminSeesAllSchedules { get; set; } = true;
+    public bool LeadSeesAllSchedules { get; set; } = false;
+    public bool EmployeeSeesAllSchedules { get; set; } = false;
+
     public string? SmtpHost { get; set; }
     public int? SmtpPort { get; set; }
     public string? SmtpUsername { get; set; }

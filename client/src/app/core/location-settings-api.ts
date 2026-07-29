@@ -16,6 +16,10 @@ export interface LocationSettingsDto {
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
   developmentMode: boolean;
+  scheduleVisibilityEnabled: boolean;
+  adminSeesAllSchedules: boolean;
+  leadSeesAllSchedules: boolean;
+  employeeSeesAllSchedules: boolean;
   smtpHost: string | null;
   smtpPort: number | null;
   smtpUsername: string | null;
@@ -35,6 +39,10 @@ export interface UpdateLocationSettingsRequest {
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
   developmentMode: boolean;
+  scheduleVisibilityEnabled: boolean;
+  adminSeesAllSchedules: boolean;
+  leadSeesAllSchedules: boolean;
+  employeeSeesAllSchedules: boolean;
   smtpHost: string | null;
   smtpPort: number | null;
   smtpUsername: string | null;

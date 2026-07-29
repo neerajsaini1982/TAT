@@ -8,6 +8,7 @@ public record EmployeeLoginRequest(string LocationCode, string UserCode);
 
 public record AuthResponse(
     string Token,
+    int AccountId,
     string Username,
     string FirstName,
     string LastName,
