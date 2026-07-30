@@ -38,6 +38,8 @@ export class AdminAvailabilityPage implements OnInit {
   protected readonly weekRangeLabel = () => formatWeekRange(this.weekStart());
   protected readonly error = signal<string | null>(null);
   protected readonly roster = signal<AvailabilityDto[]>([]);
+  protected readonly copyingPreviousWeek = signal(false);
+  protected readonly copyResultMessage = signal<string | null>(null);
 
   ngOnInit(): void {
     this.load();
@@ -88,6 +90,30 @@ export class AdminAvailabilityPage implements OnInit {
           this.saveDay(person, day.date, result);
         }
       });
+  }
+
+  // Bulk-fills every schedulable employee's availability for the currently
+  // viewed week from the week before, in one click. Server-side, anyone
+  // already submitted for this week is left untouched — see
+  // AvailabilityController.CopyPreviousWeek.
+  copyPreviousWeekForAll(): void {
+    if (!confirm(`Copy last week's availability into ${this.weekRangeLabel()} for every employee? Already-submitted employees are left as-is.`)) {
+      return;
+    }
+    this.copyingPreviousWeek.set(true);
+    this.error.set(null);
+    this.copyResultMessage.set(null);
+    this.api.copyPreviousWeekForLocation(formatDate(this.weekStart()), this.locationCode).subscribe({
+      next: ({ copied, skipped }) => {
+        this.copyResultMessage.set(`Copied ${copied} employee${copied === 1 ? '' : 's'}, skipped ${skipped}.`);
+        this.copyingPreviousWeek.set(false);
+        this.load();
+      },
+      error: (err) => {
+        this.error.set(err?.error ?? 'Failed to copy previous week.');
+        this.copyingPreviousWeek.set(false);
+      },
+    });
   }
 
   private saveDay(person: AvailabilityDto, date: string, result: AvailabilityDayDialogResult): void {

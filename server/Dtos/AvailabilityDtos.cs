@@ -17,3 +17,5 @@ public record SaveAvailabilityRequest(
     DateOnly WeekStartDate,
     List<AvailabilityDayDto> Days,
     bool Submit);
+
+public record CopyPreviousWeekResult(int Copied, int Skipped);

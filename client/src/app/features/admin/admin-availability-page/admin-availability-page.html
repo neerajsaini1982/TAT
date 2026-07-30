@@ -3,6 +3,10 @@
     <mat-icon>arrow_back</mat-icon>
   </a>
   <h2>Availability — {{ locationCode }}</h2>
+  <button mat-stroked-button (click)="copyPreviousWeekForAll()" [disabled]="copyingPreviousWeek()">
+    <mat-icon>content_copy</mat-icon>
+    Copy Previous Week for All
+  </button>
 </div>
 
 <div class="week-nav">
@@ -17,6 +21,10 @@
 
 @if (error()) {
   <p class="error">{{ error() }}</p>
+}
+
+@if (copyResultMessage()) {
+  <p class="copy-result">{{ copyResultMessage() }}</p>
 }
 
 <div class="table-scroll">

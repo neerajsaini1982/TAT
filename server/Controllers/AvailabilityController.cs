@@ -150,6 +150,96 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
         return Ok(result);
     }
 
+    // Bulk-fills every schedulable employee's availability for weekStartDate
+    // from their availability the week before, in one click, so an admin
+    // doesn't have to open each employee's day dialog individually.
+    // Employees who haven't submitted anything for the target week get
+    // overwritten (including any draft already there); an already-submitted
+    // target week is left untouched so this can't clobber something final.
+    // Anyone with no availability on file for the previous week at all
+    // defaults to available all day every day, rather than being skipped.
+    [HttpPost("copy-previous-week")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public ActionResult<CopyPreviousWeekResult> CopyPreviousWeek(
+        [FromQuery] string? locationCode, [FromQuery] DateOnly weekStartDate)
+    {
+        var accountsQuery = db.Accounts
+            .Include(a => a.Location)
+            .Where(a => a.Role == AccountRole.Employee || a.Role == AccountRole.Lead || a.Role == AccountRole.Admin)
+            .Where(a => a.IsActive);
+
+        if (User.IsInRole(nameof(AccountRole.Sa)))
+        {
+            if (!string.IsNullOrWhiteSpace(locationCode))
+            {
+                accountsQuery = accountsQuery.Where(a => a.Location != null && a.Location.LocationCode == locationCode);
+            }
+        }
+        else
+        {
+            var callerLocationCode = CallerLocationCode();
+            accountsQuery = accountsQuery.Where(a => a.Location != null && a.Location.LocationCode == callerLocationCode);
+        }
+
+        var accountIds = accountsQuery.Select(a => a.Id).ToList();
+        var previousWeekStart = weekStartDate.AddDays(-7);
+
+        var previousWeeks = db.Availabilities
+            .Include(a => a.Days)
+            .Where(a => accountIds.Contains(a.AccountId) && a.WeekStartDate == previousWeekStart)
+            .ToDictionary(a => a.AccountId);
+
+        var targetWeeks = db.Availabilities
+            .Include(a => a.Days)
+            .Where(a => accountIds.Contains(a.AccountId) && a.WeekStartDate == weekStartDate)
+            .ToDictionary(a => a.AccountId);
+
+        var copied = 0;
+        var skipped = 0;
+
+        foreach (var accountId in accountIds)
+        {
+            if (targetWeeks.TryGetValue(accountId, out var existingTarget) && existingTarget.IsSubmitted)
+            {
+                skipped++;
+                continue;
+            }
+
+            List<AvailabilityDayDto> days;
+            if (previousWeeks.TryGetValue(accountId, out var previous))
+            {
+                days = previous.Days
+                    .Select(d => new AvailabilityDayDto(
+                        weekStartDate.AddDays(d.Date.DayNumber - previousWeekStart.DayNumber),
+                        d.IsAvailable,
+                        d.StartTime,
+                        d.EndTime))
+                    .ToList();
+            }
+            else
+            {
+                days = Enumerable.Range(0, 7)
+                    .Select(offset => new AvailabilityDayDto(weekStartDate.AddDays(offset), true, null, null))
+                    .ToList();
+            }
+
+            var target = existingTarget ?? NewAvailability(accountId, weekStartDate);
+            ApplyDays(target, days, isLocked: false);
+            target.IsSubmitted = false;
+            target.SubmittedAt = null;
+            if (target.Id == 0)
+            {
+                db.Availabilities.Add(target);
+            }
+
+            copied++;
+        }
+
+        db.SaveChanges();
+
+        return Ok(new CopyPreviousWeekResult(copied, skipped));
+    }
+
     private static Availability NewAvailability(int accountId, DateOnly weekStartDate) =>
         new() { AccountId = accountId, WeekStartDate = weekStartDate };
 

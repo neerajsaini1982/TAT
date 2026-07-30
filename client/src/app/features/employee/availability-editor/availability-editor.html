@@ -91,6 +91,10 @@
 @if (!locked()) {
   <div class="actions">
     <button mat-button (click)="resetWeek()">Reset</button>
+    <button mat-button (click)="copyPreviousWeek()" [disabled]="copyingPreviousWeek()">
+      <mat-icon>content_copy</mat-icon>
+      Copy Last Week
+    </button>
     <button mat-stroked-button (click)="saveDraft()">Save Draft</button>
     <button mat-flat-button color="primary" (click)="submit()">Submit</button>
   </div>

@@ -11,6 +11,7 @@ import { MatInputModule } from '@angular/material/input';
 import { AvailabilityApi, AvailabilityDto } from '../../../core/availability-api';
 import {
   TIME_SUGGESTIONS,
+  addDays,
   availabilitySubmissionDeadline,
   dayOfWeekLabel,
   editableAvailabilityWeekStart,
@@ -68,6 +69,7 @@ export class AvailabilityEditor implements OnInit {
   protected readonly submittedAt = signal<string | null>(null);
   protected readonly isSubmitted = signal(false);
   protected readonly loading = signal(false);
+  protected readonly copyingPreviousWeek = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly days = signal<DayModel[]>([]);
   protected readonly timeSuggestions = TIME_SUGGESTIONS;
@@ -188,5 +190,58 @@ export class AvailabilityEditor implements OnInit {
     }
     this.days.update((days) => days.map((d) => ({ ...d, isAvailable: false, allDay: false })));
     this.save(false);
+  }
+
+  // Fills the form with last week's values, matched up by weekday (index),
+  // not by date. Deliberately doesn't save — the employee reviews/adjusts
+  // and still has to click Save Draft or Submit themselves. If nothing was
+  // ever submitted for last week (dto.id === 0, the API's "blank" marker —
+  // see AvailabilityController.ToDto), there's nothing meaningful to copy,
+  // so every day defaults to available all day instead of blank/unavailable.
+  copyPreviousWeek(): void {
+    if (!confirm("Copy last week's availability into this form? This replaces what's currently shown here (not yet saved).")) {
+      return;
+    }
+    this.copyingPreviousWeek.set(true);
+    this.error.set(null);
+    this.api.getMine(formatDate(addDays(this.weekStart, -7))).subscribe({
+      next: (dto) => {
+        const hasPrevious = dto.id !== 0;
+        const source = dto.days;
+        this.days.update((days) =>
+          days.map((d, i) => {
+            if (!hasPrevious) {
+              return {
+                ...d,
+                isAvailable: true,
+                allDay: true,
+                startTime: formatDisplayTime(toInputTime(null)),
+                endTime: formatDisplayTime(toInputTime('17:00:00')),
+                startTouched: false,
+                endTouched: false,
+              };
+            }
+            const s = source[i];
+            if (!s) {
+              return d;
+            }
+            return {
+              ...d,
+              isAvailable: s.isAvailable,
+              allDay: s.isAvailable && !s.startTime && !s.endTime,
+              startTime: formatDisplayTime(toInputTime(s.startTime)),
+              endTime: formatDisplayTime(toInputTime(s.endTime ?? '17:00:00')),
+              startTouched: false,
+              endTouched: false,
+            };
+          }),
+        );
+        this.copyingPreviousWeek.set(false);
+      },
+      error: () => {
+        this.error.set('Failed to load previous week.');
+        this.copyingPreviousWeek.set(false);
+      },
+    });
   }
 }
