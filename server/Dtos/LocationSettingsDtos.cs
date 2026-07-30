@@ -24,7 +24,11 @@ public record LocationSettingsDto(
     string? SmtpFromName,
     // Never round-trips the stored password; true only tells the UI one is
     // already on file so it can show a placeholder instead of a blank box.
-    bool HasSmtpPassword);
+    bool HasSmtpPassword,
+    DateOnly? PayDayStartDate,
+    int? PayPeriodDays,
+    // Computed from PayDayStartDate/PayPeriodDays (see LocationSettings.GetNextPayDate) — not stored.
+    DateOnly? NextPayDate);
 
 public record UpdateLocationSettingsRequest(
     TimeFormat TimeFormat,
@@ -48,7 +52,9 @@ public record UpdateLocationSettingsRequest(
     string? SmtpPassword,
     bool SmtpUseSsl,
     string? SmtpFromAddress,
-    string? SmtpFromName);
+    string? SmtpFromName,
+    DateOnly? PayDayStartDate,
+    int? PayPeriodDays);
 
 // Minimal subset any signed-in account (not just Admin/Sa) can read, so an
 // Employee's client can compute when its own Clock In buttons unlock,
@@ -61,4 +67,6 @@ public record EmployeeLocationSettingsDto(
     int ClockInWindowMinutes,
     int LateClockInGraceMinutes,
     int BreakLimitMinutes,
-    int LunchLimitMinutes);
+    int LunchLimitMinutes,
+    // Computed from LocationSettings.GetNextPayDate; null when pay day tracking isn't configured.
+    DateOnly? NextPayDate);

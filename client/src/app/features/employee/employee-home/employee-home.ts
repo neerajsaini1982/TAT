@@ -12,6 +12,7 @@ import { Auth } from '../../../core/auth';
 import { AccountsApi } from '../../../core/accounts-api';
 import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/current-week-schedule';
+import { PayDayBanner } from '../../schedule/pay-day-banner/pay-day-banner';
 
 @Component({
   selector: 'app-employee-home',
@@ -24,6 +25,7 @@ import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/curren
     MatButtonModule,
     MatIconModule,
     CurrentWeekSchedule,
+    PayDayBanner,
   ],
   templateUrl: './employee-home.html',
   styleUrl: './employee-home.scss',

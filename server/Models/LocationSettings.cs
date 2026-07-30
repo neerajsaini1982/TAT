@@ -68,4 +68,29 @@ public class LocationSettings
     public bool SmtpUseSsl { get; set; } = true;
     public string? SmtpFromAddress { get; set; }
     public string? SmtpFromName { get; set; }
+
+    // A single known pay day plus the recurrence interval, from which every
+    // future pay date is derived on read (see GetNextPayDate) — avoids
+    // needing an ever-growing list of pay day entries. Null means pay day
+    // tracking isn't configured for this location.
+    public DateOnly? PayDayStartDate { get; set; }
+    public int? PayPeriodDays { get; set; }
+
+    // Next pay date on/after `today`, walking forward from PayDayStartDate
+    // in PayPeriodDays-sized steps. Returns `today` itself when today is a
+    // pay day.
+    public DateOnly? GetNextPayDate(DateOnly today)
+    {
+        if (PayDayStartDate is not { } start || PayPeriodDays is not { } period || period <= 0)
+        {
+            return null;
+        }
+        if (start > today)
+        {
+            return start;
+        }
+        var elapsedDays = today.DayNumber - start.DayNumber;
+        var remainder = elapsedDays % period;
+        return remainder == 0 ? today : today.AddDays(period - remainder);
+    }
 }

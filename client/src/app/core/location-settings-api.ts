@@ -27,6 +27,9 @@ export interface LocationSettingsDto {
   smtpFromAddress: string | null;
   smtpFromName: string | null;
   hasSmtpPassword: boolean;
+  payDayStartDate: string | null;
+  payPeriodDays: number | null;
+  nextPayDate: string | null;
 }
 
 export interface UpdateLocationSettingsRequest {
@@ -50,6 +53,8 @@ export interface UpdateLocationSettingsRequest {
   smtpUseSsl: boolean;
   smtpFromAddress: string | null;
   smtpFromName: string | null;
+  payDayStartDate: string | null;
+  payPeriodDays: number | null;
 }
 
 // Minimal subset any signed-in account can read (see LocationSettingsController.GetMine).
@@ -60,6 +65,7 @@ export interface EmployeeLocationSettingsDto {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
+  nextPayDate: string | null;
 }
 
 @Service()

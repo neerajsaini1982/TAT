@@ -1,0 +1,22 @@
+:host {
+  display: block;
+  margin: 0 0 16px;
+}
+
+.pay-day-banner {
+  mat-card-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px !important;
+    font-size: 15px;
+  }
+
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+
+  &.today {
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+  }
+}

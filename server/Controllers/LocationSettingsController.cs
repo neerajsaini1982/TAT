@@ -43,7 +43,8 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
             settings.ClockInWindowMinutes,
             settings.LateClockInGraceMinutes,
             settings.BreakLimitMinutes,
-            settings.LunchLimitMinutes));
+            settings.LunchLimitMinutes,
+            settings.GetNextPayDate(DateOnly.FromDateTime(DateTime.Now))));
     }
 
     [HttpPut]
@@ -76,6 +77,8 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         settings.SmtpUseSsl = request.SmtpUseSsl;
         settings.SmtpFromAddress = request.SmtpFromAddress;
         settings.SmtpFromName = request.SmtpFromName;
+        settings.PayDayStartDate = request.PayDayStartDate;
+        settings.PayPeriodDays = request.PayPeriodDays;
 
         // GET never sends the real password back down, so a blank field
         // here means "unchanged", not "clear it".
@@ -137,5 +140,8 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
         s.SmtpUseSsl,
         s.SmtpFromAddress,
         s.SmtpFromName,
-        !string.IsNullOrEmpty(s.SmtpPassword));
+        !string.IsNullOrEmpty(s.SmtpPassword),
+        s.PayDayStartDate,
+        s.PayPeriodDays,
+        s.GetNextPayDate(DateOnly.FromDateTime(DateTime.Now)));
 }
