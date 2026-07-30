@@ -1,5 +1,10 @@
 <mat-toolbar color="primary">
-  <span class="title">{{ title() }}</span>
+  <span class="title">
+    @if (titleIcon()) {
+      <mat-icon class="title-icon">{{ titleIcon() }}</mat-icon>
+    }
+    {{ title() }}
+  </span>
   <span class="spacer"></span>
 
   @if (isAdminMenu()) {
