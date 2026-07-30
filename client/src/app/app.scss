@@ -6,10 +6,17 @@ mat-toolbar {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: min(60vw, 480px);
+
+  .title-icon {
+    flex: 0 0 auto;
+  }
 }
 
 .spacer {

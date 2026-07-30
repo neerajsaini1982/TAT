@@ -1,5 +1,9 @@
-import { Component, computed, inject } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { Component, computed, effect, inject } from '@angular/core';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map } from 'rxjs';
+import { DOCUMENT } from '@angular/common';
+import { Title } from '@angular/platform-browser';
 import { MatToolbarModule } from '@angular/material/toolbar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,6 +12,33 @@ import { MatDividerModule } from '@angular/material/divider';
 
 import { Theme, THEMES } from './core/theme';
 import { Auth } from './core/auth';
+
+type Portal = 'admin' | 'employee' | null;
+
+const DEFAULT_FAVICON = 'favicon.ico';
+
+// Small inline favicons so the two portals are distinguishable by their
+// browser tab alone, without shipping extra binary assets — a shield for
+// Admin, an ID badge for Employee, echoing the admin_panel_settings/badge
+// icons shown next to the toolbar title.
+const ADMIN_FAVICON =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+      '<path fill="#1e3a8a" d="M12 1 3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/>' +
+      '<path fill="#ffffff" d="m10.9 14.2-2.1-2.1-1.1 1.1 3.2 3.2 6-6-1.1-1.1z"/>' +
+      '</svg>',
+  );
+const EMPLOYEE_FAVICON =
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+      '<rect x="3" y="5" width="18" height="15" rx="3" fill="#0f766e"/>' +
+      '<circle cx="12" cy="6" r="1.6" fill="#0f766e"/>' +
+      '<circle cx="12" cy="11.3" r="2.3" fill="#fff"/>' +
+      '<path fill="#fff" d="M7.6 17.4c.7-2.1 2.3-3.2 4.4-3.2s3.7 1.1 4.4 3.2c-1.2.9-2.7 1.4-4.4 1.4s-3.2-.5-4.4-1.4z"/>' +
+      '</svg>',
+  );
 
 @Component({
   selector: 'app-root',
@@ -19,10 +50,70 @@ export class App {
   protected readonly themeService = inject(Theme);
   protected readonly themes = THEMES;
   protected readonly auth = inject(Auth);
+  private readonly router = inject(Router);
+  private readonly titleService = inject(Title);
+  private readonly document = inject(DOCUMENT);
+
+  // Which portal the URL is currently in — an Admin/Lead account can also
+  // browse its own /employee/* pages (see employeeGuard), so this has to
+  // follow the route, not the account's role.
+  private readonly portal = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => this.portalFromUrl(e.urlAfterRedirects)),
+    ),
+    { initialValue: this.portalFromUrl(this.router.url) },
+  );
+
+  constructor() {
+    // The toolbar heading only helps while the tab is focused — the browser
+    // tab itself (title + favicon) is what's visible with several tabs open
+    // side by side, so it needs the same Admin/Employee Portal distinction.
+    effect(() => this.titleService.setTitle(this.title()));
+    effect(() => {
+      const href = this.portal() === 'admin' ? ADMIN_FAVICON : this.portal() === 'employee' ? EMPLOYEE_FAVICON : DEFAULT_FAVICON;
+      const link =
+        this.document.querySelector<HTMLLinkElement>('link[rel="icon"]') ??
+        this.document.head.appendChild(this.document.createElement('link'));
+      link.setAttribute('rel', 'icon');
+      link.setAttribute('href', href);
+    });
+  }
+
+  private portalFromUrl(url: string): Portal {
+    if (/^\/[^/]+\/admin(\/|$)/.test(url)) {
+      return 'admin';
+    }
+    if (/^\/[^/]+\/employee(\/|$)/.test(url)) {
+      return 'employee';
+    }
+    return null;
+  }
 
   protected readonly title = computed(() => {
     const locationName = this.auth.locationName();
-    return locationName ? `${locationName} Time & Attendance tracking` : 'TAT — Time & Attendance';
+    if (!locationName) {
+      return 'TAT — Time & Attendance';
+    }
+    switch (this.portal()) {
+      case 'admin':
+        return `${locationName} — Admin Portal`;
+      case 'employee':
+        return `${locationName} — Employee Portal`;
+      default:
+        return `${locationName} Time & Attendance tracking`;
+    }
+  });
+
+  protected readonly titleIcon = computed(() => {
+    switch (this.portal()) {
+      case 'admin':
+        return 'admin_panel_settings';
+      case 'employee':
+        return 'badge';
+      default:
+        return null;
+    }
   });
 
   // Admin/Lead get their per-location nav folded into one gear+name menu in
