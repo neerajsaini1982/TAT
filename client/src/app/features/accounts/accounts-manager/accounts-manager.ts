@@ -10,7 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCardModule } from '@angular/material/card';
 
-import { AccountsApi, AccountDto } from '../../../core/accounts-api';
+import { AccountsApi, AccountDto, EmploymentType } from '../../../core/accounts-api';
 import { LocationsApi, LocationDto } from '../../../core/locations-api';
 import { Role } from '../../../core/auth';
 
@@ -23,6 +23,15 @@ interface FormModel {
   phone: string;
   role: Role;
   isActive: boolean;
+  hourlyRate: number | null;
+  // Write-only — always reset to '' when editing (see startEdit); never
+  // pre-filled with the real value. Blank means "leave unchanged" on update.
+  ssn: string;
+  // Read-only display value from the server, e.g. "***-**-1234".
+  ssnMasked: string | null;
+  dateOfBirth: string | null;
+  hireDate: string | null;
+  employmentType: EmploymentType | null;
 }
 
 const emptyForm = (): FormModel => ({
@@ -34,6 +43,12 @@ const emptyForm = (): FormModel => ({
   phone: '',
   role: 'Employee',
   isActive: true,
+  hourlyRate: null,
+  ssn: '',
+  ssnMasked: null,
+  dateOfBirth: null,
+  hireDate: null,
+  employmentType: null,
 });
 
 // Used both at /sa/accounts (lockedLocationCode = null, shows a location
@@ -63,6 +78,7 @@ export class AccountsManager implements OnInit {
   private readonly locationsApi = inject(LocationsApi);
 
   protected readonly roles: Role[] = ['Admin', 'Lead', 'Employee'];
+  protected readonly employmentTypes: EmploymentType[] = ['FullTime', 'PartTime'];
   protected readonly accounts = signal<AccountDto[]>([]);
   protected readonly locations = signal<LocationDto[]>([]);
   protected readonly selectedLocation = signal<LocationDto | null>(null);
@@ -131,7 +147,7 @@ export class AccountsManager implements OnInit {
   startEdit(account: AccountDto): void {
     this.editingId.set(account.id);
     this.originalRole.set(account.role);
-    this.form = { ...emptyForm(), ...account, password: '' };
+    this.form = { ...emptyForm(), ...account, password: '', ssn: '' };
     this.error.set(null);
     this.showForm.set(true);
   }
@@ -185,6 +201,11 @@ export class AccountsManager implements OnInit {
           phone: this.form.phone,
           role: this.form.role,
           locationId,
+          hourlyRate: this.form.hourlyRate,
+          ssn: this.form.ssn || undefined,
+          dateOfBirth: this.form.dateOfBirth,
+          hireDate: this.form.hireDate,
+          employmentType: this.form.employmentType,
         })
         .subscribe({
           next: () => {
@@ -211,6 +232,11 @@ export class AccountsManager implements OnInit {
         role: this.form.role,
         username: this.promotingFromEmployee() ? this.form.username : undefined,
         password: this.promotingFromEmployee() ? this.form.password : undefined,
+        hourlyRate: this.form.hourlyRate,
+        ssn: this.form.ssn || undefined,
+        dateOfBirth: this.form.dateOfBirth,
+        hireDate: this.form.hireDate,
+        employmentType: this.form.employmentType,
       })
       .subscribe({
         next: () => {

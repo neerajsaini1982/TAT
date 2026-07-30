@@ -4,6 +4,8 @@ import { HttpClient } from '@angular/common/http';
 import { API_BASE_URL } from './api-config';
 import { Role } from './auth';
 
+export type EmploymentType = 'FullTime' | 'PartTime';
+
 export interface AccountDto {
   id: number;
   username: string;
@@ -26,6 +28,12 @@ export interface AccountDto {
   zipcode: string | null;
   supervisor: string | null;
   adpStatus: string | null;
+  hourlyRate: number | null;
+  // Masked ("***-**-1234") — the real SSN never leaves the server.
+  ssnMasked: string | null;
+  dateOfBirth: string | null;
+  hireDate: string | null;
+  employmentType: EmploymentType | null;
 }
 
 export interface CreateAccountRequest {
@@ -39,6 +47,12 @@ export interface CreateAccountRequest {
   phone: string;
   role: Role;
   locationId: number | null;
+  hourlyRate: number | null;
+  // 9 digits, or blank/undefined to leave unset.
+  ssn?: string;
+  dateOfBirth: string | null;
+  hireDate: string | null;
+  employmentType: EmploymentType | null;
 }
 
 export interface UpdateAccountRequest {
@@ -51,6 +65,12 @@ export interface UpdateAccountRequest {
   // Only required when role moves away from Employee.
   username?: string;
   password?: string;
+  hourlyRate: number | null;
+  // 9 digits to replace the stored SSN; blank/undefined leaves it unchanged.
+  ssn?: string;
+  dateOfBirth: string | null;
+  hireDate: string | null;
+  employmentType: EmploymentType | null;
 }
 
 @Service()
@@ -61,6 +81,10 @@ export class AccountsApi {
   getAll(locationCode?: string) {
     const url = locationCode ? `${this.base}?locationCode=${encodeURIComponent(locationCode)}` : this.base;
     return this.http.get<AccountDto[]>(url);
+  }
+
+  getOne(id: number) {
+    return this.http.get<AccountDto>(`${this.base}/${id}`);
   }
 
   create(request: CreateAccountRequest) {

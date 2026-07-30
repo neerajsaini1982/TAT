@@ -18,6 +18,13 @@ public record EmployeeImportRowDto(
     string? Supervisor,
     string? AdpStatus,
     bool IsActive,
+    // Optional columns, present only if the workbook has a matching header
+    // ("Hourly Rate"/"Hire Date"/"Employment Type") — null otherwise, never
+    // a parse failure. EmploymentType stays a raw string through preview
+    // (mirrors AdpStatus) and is parsed leniently into the enum at commit.
+    decimal? HourlyRate,
+    string? HireDate,
+    string? EmploymentType,
     bool WillCreate,
     string? SkipReason);
 

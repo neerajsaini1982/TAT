@@ -9,6 +9,7 @@ import { SaShiftsPage } from './features/sa/sa-shifts-page/sa-shifts-page';
 import { AdminHome } from './features/admin/admin-home/admin-home';
 import { AdminAccountsPage } from './features/admin/admin-accounts-page/admin-accounts-page';
 import { EmployeeImportPage } from './features/admin/employee-import-page/employee-import-page';
+import { EmployeeDocumentsPage } from './features/admin/employee-documents-page/employee-documents-page';
 import { AdminShiftsPage } from './features/admin/admin-shifts-page/admin-shifts-page';
 import { AdminAvailabilityPage } from './features/admin/admin-availability-page/admin-availability-page';
 import { AdminSchedulePage } from './features/admin/admin-schedule-page/admin-schedule-page';
@@ -18,6 +19,7 @@ import { EmployeeHome } from './features/employee/employee-home/employee-home';
 import { AvailabilityPage } from './features/employee/availability-page/availability-page';
 import { AvailabilityCalendarPage } from './features/employee/availability-calendar-page/availability-calendar-page';
 import { EmployeeSchedulePage } from './features/employee/employee-schedule-page/employee-schedule-page';
+import { MyDocumentsPage } from './features/employee/my-documents-page/my-documents-page';
 import { saGuard, adminGuard, employeeGuard } from './core/guards';
 
 export const routes: Routes = [
@@ -34,6 +36,7 @@ export const routes: Routes = [
   { path: ':locationCode/admin', component: AdminHome },
   { path: ':locationCode/admin/accounts', component: AdminAccountsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/accounts/import', component: EmployeeImportPage, canActivate: [adminGuard] },
+  { path: ':locationCode/admin/accounts/:id/documents', component: EmployeeDocumentsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/shifts', component: AdminShiftsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/availability', component: AdminAvailabilityPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/schedule', component: AdminSchedulePage, canActivate: [adminGuard] },
@@ -44,6 +47,7 @@ export const routes: Routes = [
   { path: ':locationCode/employee/availability', component: AvailabilityPage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/availability2', component: AvailabilityCalendarPage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/schedule', component: EmployeeSchedulePage, canActivate: [employeeGuard] },
+  { path: ':locationCode/employee/documents', component: MyDocumentsPage, canActivate: [employeeGuard] },
 
   { path: ':locationCode', component: LocationHome, pathMatch: 'full' },
 ];

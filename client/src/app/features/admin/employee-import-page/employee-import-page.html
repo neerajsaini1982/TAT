@@ -52,6 +52,9 @@
           <th>Address</th>
           <th>Phone</th>
           <th>Supervisor</th>
+          <th>Hourly Rate</th>
+          <th>Hire Date</th>
+          <th>Employment Type</th>
           <th>Note</th>
         </tr>
       </thead>
@@ -74,6 +77,9 @@
             <td>{{ address(row) }}</td>
             <td>{{ row.phone ?? '—' }}</td>
             <td>{{ row.supervisor ?? '—' }}</td>
+            <td>{{ row.hourlyRate ?? '—' }}</td>
+            <td>{{ row.hireDate ?? '—' }}</td>
+            <td>{{ row.employmentType ?? '—' }}</td>
             <td class="note">{{ row.skipReason ?? '' }}</td>
           </tr>
         }

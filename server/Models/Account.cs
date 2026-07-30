@@ -38,4 +38,23 @@ public class Account
     // Raw ADP Status string ("Active"/"Terminated"), kept alongside IsActive
     // even though they mean the same thing today.
     public string? AdpStatus { get; set; }
+
+    public decimal? HourlyRate { get; set; }
+
+    // Full DOB entered by hand, separate from the ADP-imported BirthDate
+    // ("MM/DD", no year) which doubles as an import dedupe key and must not
+    // change shape.
+    public DateOnly? DateOfBirth { get; set; }
+
+    // "Current" hire date, maintained directly on the account. Rehires keep
+    // a full history in EmploymentPeriod instead of overwriting this.
+    public DateOnly? HireDate { get; set; }
+
+    public EmploymentType? EmploymentType { get; set; }
+
+    // Ciphertext (ASP.NET Core Data Protection) and the plaintext last 4
+    // digits used to render a mask ("***-**-1234") without decrypting. There
+    // is no code path that decrypts SsnEncrypted back to plaintext.
+    public string? SsnEncrypted { get; set; }
+    public string? SsnLast4 { get; set; }
 }

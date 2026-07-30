@@ -27,6 +27,7 @@
         <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'employee', 'schedule']">My Schedule</a>
         <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'availability']">My Availability</a>
         <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'availability2']">Calendar View</a>
+        <a mat-stroked-button [routerLink]="['/', locationCode, 'employee', 'documents']">My Documents</a>
         <button mat-stroked-button (click)="resetCode()" [disabled]="resettingCode()">Reset My Code</button>
         <button mat-stroked-button (click)="logout()">Log Out</button>
       </div>
