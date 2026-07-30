@@ -1,0 +1,12 @@
+@if (nextPayDate()) {
+  <mat-card class="pay-day-banner" [class.today]="isToday()">
+    <mat-card-content>
+      <mat-icon>paid</mat-icon>
+      @if (isToday()) {
+        <span>Today is pay day!</span>
+      } @else {
+        <span>Next pay day: <strong>{{ toMmDdYyyy(nextPayDate()!) }}</strong></span>
+      }
+    </mat-card-content>
+  </mat-card>
+}

@@ -9,6 +9,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { Auth } from '../../../core/auth';
 import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/current-week-schedule';
+import { PayDayBanner } from '../../schedule/pay-day-banner/pay-day-banner';
 
 @Component({
   selector: 'app-admin-home',
@@ -19,6 +20,7 @@ import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/curren
     MatInputModule,
     MatButtonModule,
     CurrentWeekSchedule,
+    PayDayBanner,
   ],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',

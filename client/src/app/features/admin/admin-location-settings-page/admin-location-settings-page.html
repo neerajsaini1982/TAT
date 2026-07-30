@@ -112,6 +112,27 @@
 
     <mat-card class="section">
       <mat-card-header>
+        <mat-card-title>Pay Day</mat-card-title>
+        <mat-card-subtitle>
+          Enter any past or future pay day and how many days between pay days (e.g. 14 for every 2 weeks). The system
+          always shows the next upcoming date on the home page — leave blank to disable the notification.
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content class="section-content">
+        <mat-form-field appearance="outline">
+          <mat-label>Pay Day</mat-label>
+          <input matInput type="date" [(ngModel)]="form.payDayStartDate" name="payDayStartDate" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Pay Period Length (days)</mat-label>
+          <input matInput type="number" min="1" [(ngModel)]="form.payPeriodDays" name="payPeriodDays" />
+        </mat-form-field>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="section">
+      <mat-card-header>
         <mat-card-title>Schedule Visibility</mat-card-title>
         <mat-card-subtitle
           >Controls whether roles can see everyone's shifts on the My Schedule page, or only their own.</mat-card-subtitle

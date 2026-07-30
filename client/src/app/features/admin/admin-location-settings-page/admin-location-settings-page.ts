@@ -93,6 +93,8 @@ interface FormModel {
   smtpUseSsl: boolean;
   smtpFromAddress: string;
   smtpFromName: string;
+  payDayStartDate: string;
+  payPeriodDays: number | null;
 }
 
 const emptyForm = (): FormModel => ({
@@ -116,6 +118,8 @@ const emptyForm = (): FormModel => ({
   smtpUseSsl: true,
   smtpFromAddress: '',
   smtpFromName: '',
+  payDayStartDate: '',
+  payPeriodDays: null,
 });
 
 @Component({
@@ -199,6 +203,8 @@ export class AdminLocationSettingsPage implements OnInit {
       smtpUseSsl: settings.smtpUseSsl,
       smtpFromAddress: settings.smtpFromAddress ?? '',
       smtpFromName: settings.smtpFromName ?? '',
+      payDayStartDate: settings.payDayStartDate ?? '',
+      payPeriodDays: settings.payPeriodDays,
     };
   }
 
@@ -229,6 +235,8 @@ export class AdminLocationSettingsPage implements OnInit {
           smtpUseSsl: this.form.smtpUseSsl,
           smtpFromAddress: this.form.smtpFromAddress || null,
           smtpFromName: this.form.smtpFromName || null,
+          payDayStartDate: this.form.payDayStartDate || null,
+          payPeriodDays: this.form.payPeriodDays,
         },
         this.locationCode,
       )

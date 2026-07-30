@@ -22,6 +22,8 @@
     </mat-card-content>
   </mat-card>
 } @else {
+  <app-pay-day-banner />
+
   <div class="schedule-section">
     <h2 class="section-title">This Week's Schedule</h2>
     <app-current-week-schedule scope="location" [locationCode]="locationCode" />
