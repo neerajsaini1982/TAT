@@ -23,7 +23,14 @@ public record AccountDto(
     string? State,
     string? Zipcode,
     string? Supervisor,
-    string? AdpStatus);
+    string? AdpStatus,
+    decimal? HourlyRate,
+    // Masked ("***-**-1234") — the real SSN never leaves the server.
+    string? SsnMasked,
+    string? DateOfBirth,
+    string? HireDate,
+    string? EmploymentType,
+    bool HasPhoto);
 
 public record CreateAccountRequest(
     // Required unless Role is Employee — employees log in with a UserCode
@@ -37,7 +44,13 @@ public record CreateAccountRequest(
     AccountRole Role,
     // Ignored for callers with the Admin role; they are always scoped to
     // their own location. Required for Sa when Role is not Sa.
-    int? LocationId);
+    int? LocationId,
+    decimal? HourlyRate,
+    // 9 digits, or null/empty to leave unset. Encrypted before storage.
+    string? Ssn,
+    DateOnly? DateOfBirth,
+    DateOnly? HireDate,
+    EmploymentType? EmploymentType);
 
 public record UpdateAccountRequest(
     string FirstName,
@@ -50,7 +63,13 @@ public record UpdateAccountRequest(
     // real password on file yet — Employee accounts log in with a UserCode
     // and get a random, unknown PasswordHash at creation time).
     string? Username,
-    string? Password);
+    string? Password,
+    decimal? HourlyRate,
+    // 9 digits to replace the stored SSN; null to leave it unchanged.
+    string? Ssn,
+    DateOnly? DateOfBirth,
+    DateOnly? HireDate,
+    EmploymentType? EmploymentType);
 
 // LoginLink is built client-side (it already knows its own origin) and
 // passed through rather than the server guessing its hostname.

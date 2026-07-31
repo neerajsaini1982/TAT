@@ -17,6 +17,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
     public DbSet<ScheduledBreak> ScheduledBreaks => Set<ScheduledBreak>();
     public DbSet<TimeEntrySegment> TimeEntrySegments => Set<TimeEntrySegment>();
+    public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
+    public DbSet<EmploymentPeriod> EmploymentPeriods => Set<EmploymentPeriod>();
 
     // SQLite has no native "datetime with offset" column type, so EF Core
     // round-trips every DateTime as Kind=Unspecified after a read — even
@@ -41,6 +43,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<Account>(entity =>
         {
             entity.Property(a => a.Role).HasConversion<string>();
+            entity.Property(a => a.EmploymentType).HasConversion<string>();
             entity.HasIndex(a => a.Username).IsUnique();
 
             // UserCode only needs to be unique within a location; Sa accounts
@@ -172,6 +175,31 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(t => t.Segments)
                 .HasForeignKey(s => s.TimeEntryId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EmployeeDocument>(entity =>
+        {
+            entity.HasOne(d => d.Account)
+                .WithMany()
+                .HasForeignKey(d => d.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(d => d.UploadedByAccount)
+                .WithMany()
+                .HasForeignKey(d => d.UploadedByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(d => d.AccountId);
+        });
+
+        modelBuilder.Entity<EmploymentPeriod>(entity =>
+        {
+            entity.HasOne(p => p.Account)
+                .WithMany()
+                .HasForeignKey(p => p.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(p => p.AccountId);
         });
     }
 

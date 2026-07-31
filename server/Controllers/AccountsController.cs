@@ -12,8 +12,14 @@ namespace Server.Controllers;
 
 [ApiController]
 [Route("api/accounts")]
-public class AccountsController(AppDbContext db, IEmailSender emailSender) : ControllerBase
+public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnProtector ssnProtector, IConfiguration config) : ControllerBase
 {
+    private const long MaxPhotoSizeBytes = 5 * 1024 * 1024;
+    private static readonly HashSet<string> AllowedPhotoExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".jpg", ".jpeg", ".png",
+    };
+
     [HttpGet]
     [Authorize(Policy = "AdminOrAbove")]
     public ActionResult<IEnumerable<AccountDto>> GetAll([FromQuery] string? locationCode)
@@ -74,6 +80,12 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender) : Con
             }
         }
 
+        var (ssnOk, ssnDigits, ssnError) = NormalizeSsn(request.Ssn);
+        if (!ssnOk)
+        {
+            return BadRequest(ssnError);
+        }
+
         string username;
         string passwordHash;
 
@@ -112,6 +124,12 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender) : Con
             IsActive = true,
             LocationId = location?.Id,
             UserCode = location is null ? null : AccountProvisioning.GenerateUniqueUserCode(db, location.Id),
+            HourlyRate = request.HourlyRate,
+            DateOfBirth = request.DateOfBirth,
+            HireDate = request.HireDate,
+            EmploymentType = request.EmploymentType,
+            SsnEncrypted = ssnDigits is null ? null : ssnProtector.Protect(ssnDigits),
+            SsnLast4 = ssnDigits is null ? null : ssnDigits[^4..],
         };
 
         db.Accounts.Add(account);
@@ -240,6 +258,12 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender) : Con
             return Forbid();
         }
 
+        var (ssnOk, ssnDigits, ssnError) = NormalizeSsn(request.Ssn);
+        if (!ssnOk)
+        {
+            return BadRequest(ssnError);
+        }
+
         // Promoting away from Employee: the account's PasswordHash is a
         // random, unknown value generated at creation (Employees log in with
         // a UserCode instead), so real login credentials must be supplied now.
@@ -265,7 +289,96 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender) : Con
         account.Phone = request.Phone;
         account.IsActive = request.IsActive;
         account.Role = request.Role;
+        account.HourlyRate = request.HourlyRate;
+        account.DateOfBirth = request.DateOfBirth;
+        account.HireDate = request.HireDate;
+        account.EmploymentType = request.EmploymentType;
+        if (ssnDigits is not null)
+        {
+            account.SsnEncrypted = ssnProtector.Protect(ssnDigits);
+            account.SsnLast4 = ssnDigits[^4..];
+        }
+
         db.SaveChanges();
+
+        return Ok(ToDto(account));
+    }
+
+    [HttpGet("{id:int}/photo")]
+    [Authorize]
+    public IActionResult GetPhoto(int id)
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == id);
+        if (account is null || !CanViewPhoto(account) || account.PhotoFileName is null)
+        {
+            return NotFound();
+        }
+
+        var path = Path.Combine(ResolvePhotosRoot(), id.ToString(), account.PhotoFileName);
+        if (!System.IO.File.Exists(path))
+        {
+            return NotFound();
+        }
+
+        return PhysicalFile(path, account.PhotoContentType ?? "application/octet-stream");
+    }
+
+    [HttpPost("{id:int}/photo")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public async Task<ActionResult<AccountDto>> UploadPhoto(int id, IFormFile file)
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == id);
+        if (account is null || !CanAccess(account))
+        {
+            return NotFound();
+        }
+
+        var validationError = ValidatePhoto(file);
+        if (validationError is not null)
+        {
+            return BadRequest(validationError);
+        }
+
+        var accountFolder = Path.Combine(ResolvePhotosRoot(), id.ToString());
+        Directory.CreateDirectory(accountFolder);
+
+        var extension = Path.GetExtension(file.FileName);
+        var storedFileName = $"{Guid.NewGuid():N}{extension}";
+        await using (var stream = System.IO.File.Create(Path.Combine(accountFolder, storedFileName)))
+        {
+            await file.CopyToAsync(stream);
+        }
+
+        var previousFileName = account.PhotoFileName;
+        account.PhotoFileName = storedFileName;
+        account.PhotoContentType = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
+        db.SaveChanges();
+
+        if (previousFileName is not null)
+        {
+            TryDeletePhotoFile(accountFolder, previousFileName);
+        }
+
+        return Ok(ToDto(account));
+    }
+
+    [HttpDelete("{id:int}/photo")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public ActionResult<AccountDto> DeletePhoto(int id)
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == id);
+        if (account is null || !CanAccess(account))
+        {
+            return NotFound();
+        }
+
+        if (account.PhotoFileName is not null)
+        {
+            TryDeletePhotoFile(Path.Combine(ResolvePhotosRoot(), id.ToString()), account.PhotoFileName);
+            account.PhotoFileName = null;
+            account.PhotoContentType = null;
+            db.SaveChanges();
+        }
 
         return Ok(ToDto(account));
     }
@@ -289,8 +402,67 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender) : Con
         User.IsInRole(nameof(AccountRole.Sa)) ||
         (account.Location is not null && account.Location.LocationCode == CallerLocationCode());
 
+    private bool CanViewPhoto(Account account) => CallerAccountId() == account.Id || CanAccess(account);
+
+    private int CallerAccountId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
     private string? CallerLocationCode() =>
         User.FindFirst(TokenService.LocationCodeClaimType)?.Value;
+
+    private string ResolvePhotosRoot() =>
+        config["Storage:PhotosRoot"]
+        ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TAT", "photos");
+
+    private static void TryDeletePhotoFile(string folder, string fileName)
+    {
+        try
+        {
+            System.IO.File.Delete(Path.Combine(folder, fileName));
+        }
+        catch (IOException)
+        {
+            // Best-effort: the DB row is still updated even if the file is
+            // already gone or locked.
+        }
+    }
+
+    private static string? ValidatePhoto(IFormFile? file)
+    {
+        if (file is null || file.Length == 0)
+        {
+            return "Choose a photo to upload.";
+        }
+
+        if (file.Length > MaxPhotoSizeBytes)
+        {
+            return "Photo is too large (5 MB max).";
+        }
+
+        if (!AllowedPhotoExtensions.Contains(Path.GetExtension(file.FileName)))
+        {
+            return "Only JPG and PNG photos are supported.";
+        }
+
+        return null;
+    }
+
+    // null/empty Ssn means "leave unchanged" (Update) or "not provided"
+    // (Create) — not an error. Anything else must be exactly 9 digits.
+    private static (bool Ok, string? Digits, string? Error) NormalizeSsn(string? ssn)
+    {
+        if (string.IsNullOrEmpty(ssn))
+        {
+            return (true, null, null);
+        }
+
+        var digits = ssn.Trim();
+        if (digits.Length != 9 || !digits.All(char.IsAsciiDigit))
+        {
+            return (false, null, "SSN must be exactly 9 digits.");
+        }
+
+        return (true, digits, null);
+    }
 
     private static string Render(string template, Dictionary<string, string> placeholders)
     {
@@ -321,5 +493,11 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender) : Con
         a.State,
         a.Zipcode,
         a.Supervisor,
-        a.AdpStatus);
+        a.AdpStatus,
+        a.HourlyRate,
+        a.SsnLast4 is null ? null : $"***-**-{a.SsnLast4}",
+        a.DateOfBirth?.ToString("yyyy-MM-dd"),
+        a.HireDate?.ToString("yyyy-MM-dd"),
+        a.EmploymentType?.ToString(),
+        a.PhotoFileName is not null);
 }

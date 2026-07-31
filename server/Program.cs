@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Server.Data;
@@ -39,6 +40,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
 
 builder.Services.AddScoped<TokenService>();
+
+// Keys live outside publish/wwwroot (both get rm -rf'd on every
+// publish-win.sh rebuild — see that script) so encrypted SSNs stay readable
+// across redeploys. LocalApplicationData is writable without elevation and
+// is per-machine, which matches this app's single-process LAN deployment.
+var dataProtectionKeysPath = builder.Configuration["Storage:DataProtectionKeysPath"]
+    ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TAT", "keys");
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
+    .SetApplicationName("TAT");
+builder.Services.AddSingleton<SsnProtector>();
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IScheduleNotifier, ScheduleNotifier>();

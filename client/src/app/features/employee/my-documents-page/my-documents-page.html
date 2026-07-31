@@ -1,0 +1,8 @@
+<div class="header">
+  <a mat-icon-button [routerLink]="['/', locationCode, 'employee']" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>My Documents</h2>
+</div>
+
+<app-employee-documents-manager [accountId]="accountId" [canDelete]="false" />

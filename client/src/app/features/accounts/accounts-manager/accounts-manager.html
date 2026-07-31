@@ -31,6 +31,36 @@
   <mat-card class="form-card">
     <mat-card-content>
       <form (ngSubmit)="save()" class="form" autocomplete="off">
+        <div class="photo-field">
+          <div class="photo-box">
+            <video #cameraVideo class="camera-video" [class.hidden]="!cameraActive()" playsinline autoplay muted></video>
+            @if (!cameraActive()) {
+              @if (photoPreviewUrl()) {
+                <img [src]="photoPreviewUrl()" alt="Employee photo" />
+              } @else {
+                <mat-icon>person</mat-icon>
+              }
+            }
+          </div>
+          <div class="photo-actions">
+            @if (cameraActive()) {
+              <button mat-flat-button color="primary" type="button" (click)="capturePhoto()">Capture</button>
+              <button mat-button type="button" (click)="closeCamera()">Cancel</button>
+            } @else {
+              <button mat-stroked-button type="button" (click)="photoInput.click()">
+                {{ photoPreviewUrl() ? 'Change Photo' : 'Add Photo' }}
+              </button>
+              <button mat-stroked-button type="button" (click)="openCamera()">Take Photo</button>
+              @if (photoPreviewUrl()) {
+                <button mat-button type="button" (click)="removePhoto()">Remove</button>
+              }
+              <input #photoInput type="file" accept="image/jpeg,image/png" hidden (change)="onPhotoSelected($event)" />
+            }
+            @if (cameraError()) {
+              <p class="error photo-error">{{ cameraError() }}</p>
+            }
+          </div>
+        </div>
         @if (form.role !== 'Employee' && (editingId() === null || promotingFromEmployee())) {
           <mat-form-field appearance="outline">
             <mat-label>Username</mat-label>
@@ -70,6 +100,34 @@
             }
           </mat-select>
         </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Hourly Rate</mat-label>
+          <input matInput type="number" step="0.01" min="0" name="hourlyRate" [(ngModel)]="form.hourlyRate" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ form.ssnMasked ? 'New SSN (leave blank to keep on file)' : 'SSN' }}</mat-label>
+          <input matInput name="ssn" [(ngModel)]="form.ssn" maxlength="9" placeholder="9 digits, no dashes" />
+          @if (form.ssnMasked) {
+            <mat-hint>On file: {{ form.ssnMasked }}</mat-hint>
+          }
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Date of Birth</mat-label>
+          <input matInput type="date" name="dateOfBirth" [(ngModel)]="form.dateOfBirth" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Hire Date</mat-label>
+          <input matInput type="date" name="hireDate" [(ngModel)]="form.hireDate" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Employment Type</mat-label>
+          <mat-select name="employmentType" [(ngModel)]="form.employmentType">
+            <mat-option [value]="null">—</mat-option>
+            @for (t of employmentTypes; track t) {
+              <mat-option [value]="t">{{ t === 'FullTime' ? 'Full Time' : 'Part Time' }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
         @if (editingId() !== null) {
           <mat-slide-toggle name="isActive" [(ngModel)]="form.isActive">Active</mat-slide-toggle>
         }
@@ -85,6 +143,7 @@
   </mat-card>
 }
 
+<div class="table-scroll">
 <table mat-table [dataSource]="filteredAccounts()" class="mat-elevation-z1">
   <ng-container matColumnDef="serial">
     <th mat-header-cell *matHeaderCellDef>#</th>
@@ -152,6 +211,16 @@
           <mat-icon>{{ sendingId() === a.id ? 'hourglass_top' : 'mail' }}</mat-icon>
         </button>
       }
+      @if (lockedLocationCode) {
+        <a
+          mat-icon-button
+          [routerLink]="['/', lockedLocationCode, 'admin', 'accounts', a.id, 'documents']"
+          aria-label="Documents"
+          title="Documents"
+        >
+          <mat-icon>folder</mat-icon>
+        </a>
+      }
       <button mat-icon-button (click)="startEdit(a)" aria-label="Edit">
         <mat-icon>edit</mat-icon>
       </button>
@@ -167,3 +236,4 @@
   <tr mat-header-row *matHeaderRowDef="columns"></tr>
   <tr mat-row *matRowDef="let row; columns: columns"></tr>
 </table>
+</div>

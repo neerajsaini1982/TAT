@@ -78,6 +78,7 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
             rows.Add(new EmployeeImportRowDto(
                 r.FirstName, r.LastName, r.BirthDate, r.JobTitle, r.Address1, r.Address2,
                 r.City, r.State, r.Zipcode, r.Phone, r.Supervisor, r.AdpStatus, r.IsActive,
+                r.HourlyRate, r.HireDate, r.EmploymentType,
                 willCreate, skipReason));
         }
 
@@ -135,6 +136,9 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
                 Zipcode = row.Zipcode,
                 Supervisor = row.Supervisor,
                 AdpStatus = row.AdpStatus,
+                HourlyRate = row.HourlyRate,
+                HireDate = DateOnly.TryParse(row.HireDate, out var hireDate) ? hireDate : null,
+                EmploymentType = ParseEmploymentType(row.EmploymentType),
             };
 
             db.Accounts.Add(account);
@@ -171,6 +175,17 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
         return null;
     }
 
+    // Optional columns this app cares about that ADP's own export doesn't
+    // include — found by header text rather than a fixed index, so a
+    // workbook without them just leaves the field null for every row
+    // instead of failing to parse.
+    private static readonly (string Header, int Field)[] OptionalColumns =
+    [
+        ("Hourly Rate", 0),
+        ("Hire Date", 1),
+        ("Employment Type", 2),
+    ];
+
     // ADP's report has a variable-length metadata block (company name,
     // report name, filters) above the real header row, so this scans for
     // the row whose first cell literally reads "Employee" rather than
@@ -186,6 +201,22 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
         if (headerRow is null)
         {
             throw new InvalidOperationException("Header row not found.");
+        }
+
+        // Field 0 = Hourly Rate column index, 1 = Hire Date, 2 = Employment
+        // Type; -1 means that column wasn't found in this workbook.
+        var optionalColumnIndexes = new int[3];
+        Array.Fill(optionalColumnIndexes, -1);
+        foreach (var cell in headerRow.CellsUsed())
+        {
+            var header = cell.GetString().Trim();
+            foreach (var (label, field) in OptionalColumns)
+            {
+                if (string.Equals(header, label, StringComparison.OrdinalIgnoreCase))
+                {
+                    optionalColumnIndexes[field] = cell.Address.ColumnNumber;
+                }
+            }
         }
 
         var rows = new List<ParsedRow>();
@@ -212,12 +243,72 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
                 CleanPhone(currentRow.Cell(9).GetString()),
                 NullIfEmpty(currentRow.Cell(11).GetString()),
                 NullIfEmpty(status),
-                string.Equals(status, "Active", StringComparison.OrdinalIgnoreCase)));
+                string.Equals(status, "Active", StringComparison.OrdinalIgnoreCase),
+                ParseOptionalDecimal(currentRow, optionalColumnIndexes[0]),
+                ParseOptionalDate(currentRow, optionalColumnIndexes[1]),
+                ParseOptionalString(currentRow, optionalColumnIndexes[2])));
 
             currentRow = currentRow.RowBelow();
         }
 
         return rows;
+    }
+
+    private static decimal? ParseOptionalDecimal(IXLRow row, int columnIndex)
+    {
+        if (columnIndex < 0)
+        {
+            return null;
+        }
+
+        var raw = row.Cell(columnIndex).GetString().Trim().TrimStart('$');
+        return decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var value)
+            ? value
+            : null;
+    }
+
+    private static string? ParseOptionalDate(IXLRow row, int columnIndex)
+    {
+        if (columnIndex < 0)
+        {
+            return null;
+        }
+
+        var cell = row.Cell(columnIndex);
+        if (cell.TryGetValue(out DateTime dateTime))
+        {
+            return DateOnly.FromDateTime(dateTime).ToString("yyyy-MM-dd");
+        }
+
+        return DateOnly.TryParse(cell.GetString().Trim(), out var date) ? date.ToString("yyyy-MM-dd") : null;
+    }
+
+    private static string? ParseOptionalString(IXLRow row, int columnIndex) =>
+        columnIndex < 0 ? null : NullIfEmpty(row.Cell(columnIndex).GetString());
+
+    // Accepts a few common spellings ("Full Time", "FullTime", "FT") since
+    // this is free text in the source workbook, not a constrained field.
+    private static EmploymentType? ParseEmploymentType(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return null;
+        }
+
+        var normalized = raw.Trim().Replace(" ", string.Empty).Replace("-", string.Empty);
+        if (string.Equals(normalized, "FullTime", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "FT", StringComparison.OrdinalIgnoreCase))
+        {
+            return EmploymentType.FullTime;
+        }
+
+        if (string.Equals(normalized, "PartTime", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "PT", StringComparison.OrdinalIgnoreCase))
+        {
+            return EmploymentType.PartTime;
+        }
+
+        return null;
     }
 
     // ADP's phone column packs multiple numbers/labels onto separate lines
@@ -277,7 +368,13 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
         a.State,
         a.Zipcode,
         a.Supervisor,
-        a.AdpStatus);
+        a.AdpStatus,
+        a.HourlyRate,
+        a.SsnLast4 is null ? null : $"***-**-{a.SsnLast4}",
+        a.DateOfBirth?.ToString("yyyy-MM-dd"),
+        a.HireDate?.ToString("yyyy-MM-dd"),
+        a.EmploymentType?.ToString(),
+        a.PhotoFileName is not null);
 
     private sealed record ParsedRow(
         string FirstName,
@@ -292,5 +389,8 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
         string? Phone,
         string? Supervisor,
         string? AdpStatus,
-        bool IsActive);
+        bool IsActive,
+        decimal? HourlyRate,
+        string? HireDate,
+        string? EmploymentType);
 }

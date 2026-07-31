@@ -20,6 +20,11 @@ export interface EmployeeImportRowDto {
   supervisor: string | null;
   adpStatus: string | null;
   isActive: boolean;
+  // Present only if the workbook has a matching header ("Hourly Rate"/"Hire
+  // Date"/"Employment Type") — null otherwise, never a parse failure.
+  hourlyRate: number | null;
+  hireDate: string | null;
+  employmentType: string | null;
   willCreate: boolean;
   skipReason: string | null;
 }

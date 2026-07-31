@@ -1,0 +1,8 @@
+<div class="header">
+  <a mat-icon-button [routerLink]="['/', locationCode, 'admin', 'accounts']" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>Documents @if (account()) { — {{ account()!.firstName }} {{ account()!.lastName }} }</h2>
+</div>
+
+<app-employee-documents-manager [accountId]="accountId" [canDelete]="true" />
