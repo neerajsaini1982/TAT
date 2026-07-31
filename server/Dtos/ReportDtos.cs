@@ -13,6 +13,8 @@ public record DailyHoursDto(
     int? NetWorkedMinutes,
     bool IsAbsent,
     string? AbsenceNote,
+    bool LeftEarly,
+    string? LeftEarlyNote,
     bool StillClockedIn,
     bool HasLongBreak,
     bool HasLongLunch,

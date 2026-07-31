@@ -20,8 +20,17 @@ export interface TimeEntryDto {
   segments: TimeEntrySegmentDto[];
   clockedOutByAccountId: number | null;
   note: string | null;
+  leftEarly: boolean;
+  leftEarlyNote: string | null;
+  leftEarlyMarkedByAccountId: number | null;
+  leftEarlyMarkedAt: string | null;
   editedByAccountId: number | null;
   editedAt: string | null;
+}
+
+export interface MarkLeftEarlyRequest {
+  leftEarly: boolean;
+  note: string | null;
 }
 
 export interface AdminSegmentInput {
@@ -81,5 +90,11 @@ export class TimeEntriesApi {
   // TimeEntriesController.AdminEditTimes.
   adminEditTimes(shiftAssignmentId: number, request: AdminEditTimeEntryRequest) {
     return this.http.put<TimeEntryDto>(`${this.base}/by-assignment/${shiftAssignmentId}/admin-edit`, request);
+  }
+
+  // Lead/Admin only: flags or clears that the employee left before the end
+  // of their shift — see TimeEntriesController.MarkLeftEarly.
+  markLeftEarly(id: number, request: MarkLeftEarlyRequest) {
+    return this.http.put<TimeEntryDto>(`${this.base}/${id}/left-early`, request);
   }
 }

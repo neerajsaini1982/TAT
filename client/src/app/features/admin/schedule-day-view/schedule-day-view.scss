@@ -102,14 +102,13 @@
   }
 }
 
-// A thin diagonal-striped band across the card marking a scheduled
-// break/lunch window — decorative only (pointer-events: none) and behind
-// the card's own text/badges (negative z-index, within the stacking context
-// .event-card now establishes above) so it never obscures them or blocks
-// the settings button even when a break falls right at the top of a shift.
-// Break vs Lunch read as light-on-dark vs dark-on-light stripes so the two
-// are distinguishable at a glance regardless of the card's own (per-employee)
-// background color.
+// A thin flat-tinted band across the card marking a scheduled break/lunch
+// window — decorative only (pointer-events: none) and behind the card's own
+// text/badges (negative z-index, within the stacking context .event-card
+// now establishes above) so it never obscures them or blocks the settings
+// button even when a break falls right at the top of a shift. Break vs
+// Lunch read as a light vs dark tint so the two are distinguishable at a
+// glance regardless of the card's own (per-employee) background color.
 .break-marker {
   position: absolute;
   left: 0;
@@ -118,23 +117,11 @@
   pointer-events: none;
   border-top: 1px solid rgba(255, 255, 255, 0.9);
   border-bottom: 1px solid rgba(255, 255, 255, 0.9);
-  background: repeating-linear-gradient(
-    45deg,
-    rgba(255, 255, 255, 0.4),
-    rgba(255, 255, 255, 0.4) 4px,
-    rgba(255, 255, 255, 0.12) 4px,
-    rgba(255, 255, 255, 0.12) 8px
-  );
+  background: rgba(255, 255, 255, 0.22);
 
   &.lunch {
     border-color: rgba(0, 0, 0, 0.55);
-    background: repeating-linear-gradient(
-      45deg,
-      rgba(0, 0, 0, 0.4),
-      rgba(0, 0, 0, 0.4) 4px,
-      rgba(0, 0, 0, 0.12) 4px,
-      rgba(0, 0, 0, 0.12) 8px
-    );
+    background: rgba(0, 0, 0, 0.22);
   }
 }
 
@@ -144,8 +131,7 @@
 // duration, so a break in the middle/end of a long shift reads much more
 // naturally labeled right on the line marking it than listed up top
 // disconnected from it. A text-shadow keeps it legible over the marker's
-// diagonal stripes regardless of whether a given letter lands on a light or
-// dark stripe.
+// tint regardless of the card's own background color.
 .break-label {
   position: absolute;
   left: 0;
@@ -293,9 +279,9 @@
   .break-label {
     color: #5f6368;
     font-size: 8.5px;
-    // Tuned for legibility over the on-screen diagonal stripes — print's
-    // marker is a flat, much lighter tint (see .break-marker below), where
-    // the shadow just looks like a smudge.
+    // Tuned for legibility over the on-screen white/black tint — print's
+    // marker is a flat, much lighter gray tint (see .break-marker below),
+    // where the shadow just looks like a smudge.
     text-shadow: none;
   }
 
@@ -309,9 +295,9 @@
     color: #d93025;
   }
 
-  // The on-screen diagonal stripe pattern is tuned for contrast against a
+  // The on-screen white/black tint is tuned for contrast against a
   // saturated color fill — against white paper it either disappears or
-  // just looks like noise, so print gets a plain, subdued bar instead.
+  // just looks like noise, so print gets a neutral gray tint instead.
   .break-marker {
     border-top: 1px solid #5f6368;
     border-bottom: 1px solid #5f6368;

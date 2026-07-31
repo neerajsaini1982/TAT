@@ -28,6 +28,17 @@ public class TimeEntry
     public Account? ClockedOutByAccount { get; set; }
     public string? Note { get; set; }
 
+    // Set by a Lead/Admin to flag that the employee left before the end of
+    // their shift (see TimeEntriesController.MarkLeftEarly) — independent of
+    // how the entry got closed out (self clock-out or AdminClockOut above),
+    // so it can be set or cleared after the fact. Only valid once the entry
+    // has a ClockOutAt.
+    public bool LeftEarly { get; set; }
+    public string? LeftEarlyNote { get; set; }
+    public int? LeftEarlyMarkedByAccountId { get; set; }
+    public Account? LeftEarlyMarkedByAccount { get; set; }
+    public DateTime? LeftEarlyMarkedAt { get; set; }
+
     // Who last used AdminEditTimes on this entry and when — kept for
     // reporting even though the affected punch fields themselves get
     // overwritten. Null for an entry that's only ever been self-punched.

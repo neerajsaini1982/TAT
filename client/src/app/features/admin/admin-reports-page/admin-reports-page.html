@@ -122,6 +122,9 @@
                   <td class="day-numeric-col">{{ day.netWorkedMinutes !== null ? formatDuration(day.netWorkedMinutes) : '—' }}</td>
                 }
                 <td class="notes-cell">
+                  @if (day.leftEarly) {
+                    <span class="flag">Left early{{ day.leftEarlyNote ? ' — ' + day.leftEarlyNote : '' }}</span>
+                  }
                   @if (day.hasLongBreak) {
                     <span class="flag">Long break.</span>
                   }

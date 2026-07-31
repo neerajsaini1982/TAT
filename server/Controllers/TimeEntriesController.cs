@@ -260,6 +260,44 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
         return Ok(ToDto(entry));
     }
 
+    // Lets a Lead/Admin flag (or clear) that an employee left before the end
+    // of their shift, independent of whether the entry was closed by a self
+    // clock-out or an AdminClockOut above — e.g. they clocked themselves out
+    // normally but a supervisor later confirms it was early. Only valid once
+    // the entry has been clocked out.
+    [HttpPut("{id:int}/left-early")]
+    [Authorize(Policy = "LeadOrAbove")]
+    public async Task<ActionResult<TimeEntryDto>> MarkLeftEarly(int id, MarkLeftEarlyRequest request)
+    {
+        var entry = db.TimeEntries
+            .Include(t => t.Segments)
+            .Include(t => t.ShiftAssignment).ThenInclude(a => a!.Shift).ThenInclude(s => s!.Location)
+            .SingleOrDefault(t => t.Id == id);
+        if (entry is null || !CanAccess(entry.ShiftAssignment?.Shift?.Location?.LocationCode))
+        {
+            return NotFound();
+        }
+
+        if (entry.ClockOutAt is null)
+        {
+            return BadRequest("Can't mark left early before the employee has clocked out.");
+        }
+
+        if (request.LeftEarly && string.IsNullOrWhiteSpace(request.Note))
+        {
+            return BadRequest("A note is required when marking an employee as having left early.");
+        }
+
+        entry.LeftEarly = request.LeftEarly;
+        entry.LeftEarlyNote = request.LeftEarly ? request.Note : null;
+        entry.LeftEarlyMarkedByAccountId = CallerAccountId();
+        entry.LeftEarlyMarkedAt = DateTime.UtcNow;
+        db.SaveChanges();
+
+        await notifier.NotifyLocationChanged(entry.ShiftAssignment!.Shift!.Location!.LocationCode);
+        return Ok(ToDto(entry));
+    }
+
     // Sanity-checks segment ordering and overlap only — deliberately not
     // checked against the shift's scheduled window or clock-in/out range,
     // since correcting exactly that kind of mismatch is often the reason
@@ -340,6 +378,10 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
             .ToList(),
         t.ClockedOutByAccountId,
         t.Note,
+        t.LeftEarly,
+        t.LeftEarlyNote,
+        t.LeftEarlyMarkedByAccountId,
+        t.LeftEarlyMarkedAt,
         t.EditedByAccountId,
         t.EditedAt);
 }
