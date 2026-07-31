@@ -13,6 +13,10 @@ public record TimeEntryDto(
     List<TimeEntrySegmentDto> Segments,
     int? ClockedOutByAccountId,
     string? Note,
+    bool LeftEarly,
+    string? LeftEarlyNote,
+    int? LeftEarlyMarkedByAccountId,
+    DateTime? LeftEarlyMarkedAt,
     int? EditedByAccountId,
     DateTime? EditedAt);
 
@@ -38,3 +42,7 @@ public record AdminEditTimeEntryRequest(
     DateTime? ClockOutAt,
     List<AdminSegmentInput> Segments,
     string Note);
+
+// Note is required when flagging left-early (explains why); optional/ignored
+// when clearing it. Mirrors MarkAbsentRequest.
+public record MarkLeftEarlyRequest(bool LeftEarly, string? Note);

@@ -105,6 +105,8 @@ public class ReportsController(AppDbContext db) : ControllerBase
         var hasLongLunch = false;
         var stillClockedIn = false;
         var notes = new List<string>();
+        var leftEarly = false;
+        string? leftEarlyNote = null;
 
         foreach (var assignment in dayAssignments)
         {
@@ -146,6 +148,12 @@ public class ReportsController(AppDbContext db) : ControllerBase
             {
                 notes.Add(entry.Note);
             }
+
+            if (entry.LeftEarly)
+            {
+                leftEarly = true;
+                leftEarlyNote = entry.LeftEarlyNote;
+            }
         }
 
         // Per the report spec: net worked time is worked time less lunch
@@ -154,7 +162,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
 
         return new DailyHoursDto(
             date, workedMinutes, breakMinutes, lunchMinutes, netWorkedMinutes,
-            isAbsent, absenceNote, stillClockedIn, hasLongBreak, hasLongLunch, notes);
+            isAbsent, absenceNote, leftEarly, leftEarlyNote, stillClockedIn, hasLongBreak, hasLongLunch, notes);
     }
 
     private Location? ResolveLocation(string? locationCode)

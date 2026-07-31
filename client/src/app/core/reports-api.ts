@@ -11,6 +11,8 @@ export interface DailyHoursDto {
   netWorkedMinutes: number | null;
   isAbsent: boolean;
   absenceNote: string | null;
+  leftEarly: boolean;
+  leftEarlyNote: string | null;
   stillClockedIn: boolean;
   hasLongBreak: boolean;
   hasLongLunch: boolean;

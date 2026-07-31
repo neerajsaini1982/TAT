@@ -194,6 +194,9 @@
                     @if (a.isAbsent) {
                       <span class="attendance-badge absent" [title]="a.absenceNote ?? ''">Absent</span>
                     }
+                    @if (isLeftEarly(a)) {
+                      <span class="attendance-badge warn" [title]="entryFor(a)?.leftEarlyNote ?? ''">Left Early</span>
+                    }
                     @if (isLate(a)) {
                       <span class="attendance-badge warn">Late</span>
                     }
@@ -218,6 +221,17 @@
                         <button type="button" mat-icon-button (click)="clockOutWithNote(a)" title="Clock out with note">
                           <mat-icon>logout</mat-icon>
                         </button>
+                      }
+                      @if (isClockedOut(a)) {
+                        @if (isLeftEarly(a)) {
+                          <button type="button" mat-icon-button (click)="clearLeftEarly(a)" title="Clear left early">
+                            <mat-icon>undo</mat-icon>
+                          </button>
+                        } @else {
+                          <button type="button" mat-icon-button (click)="markLeftEarly(a)" title="Mark left early">
+                            <mat-icon>directions_run</mat-icon>
+                          </button>
+                        }
                       }
                       @if (a.date === todayIso) {
                         <button type="button" mat-icon-button (click)="editTimes(a)" title="Edit punch times">

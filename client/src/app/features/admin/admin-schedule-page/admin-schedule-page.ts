@@ -523,6 +523,47 @@ export class AdminSchedulePage implements OnInit {
       });
   }
 
+  isLeftEarly(assignment: ShiftAssignmentDto): boolean {
+    return !!this.entryFor(assignment)?.leftEarly;
+  }
+
+  markLeftEarly(assignment: ShiftAssignmentDto): void {
+    const entry = this.entryFor(assignment);
+    if (!entry) {
+      return;
+    }
+    this.dialog
+      .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
+        data: {
+          title: `Mark ${assignment.accountFirstName} ${assignment.accountLastName} left early`,
+          label: 'Reason',
+          noteRequired: true,
+          confirmLabel: 'Mark Left Early',
+        },
+      })
+      .afterClosed()
+      .subscribe((note) => {
+        if (!note) {
+          return;
+        }
+        this.timeEntriesApi.markLeftEarly(entry.id, { leftEarly: true, note }).subscribe({
+          next: () => this.load(),
+          error: (err) => this.error.set(err?.error ?? 'Failed to mark left early.'),
+        });
+      });
+  }
+
+  clearLeftEarly(assignment: ShiftAssignmentDto): void {
+    const entry = this.entryFor(assignment);
+    if (!entry) {
+      return;
+    }
+    this.timeEntriesApi.markLeftEarly(entry.id, { leftEarly: false, note: null }).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(err?.error ?? 'Failed to clear left early.'),
+    });
+  }
+
   // Lets an admin set every punch on today's entry directly — available
   // whether or not the employee has clocked in yet (entryFor is null in
   // that case, and the dialog starts blank apart from a default Clock In

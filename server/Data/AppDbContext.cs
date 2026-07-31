@@ -158,6 +158,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(t => t.ClockedOutByAccountId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasOne(t => t.LeftEarlyMarkedByAccount)
+                .WithMany()
+                .HasForeignKey(t => t.LeftEarlyMarkedByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             entity.HasOne(t => t.EditedByAccount)
                 .WithMany()
                 .HasForeignKey(t => t.EditedByAccountId)
