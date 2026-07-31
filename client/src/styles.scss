@@ -7,6 +7,43 @@
 @use 'sass:map';
 @use '@angular/material' as mat;
 
+// Self-hosted fonts: this app deploys to internal-LAN-only Windows
+// machines (see server/Program.cs) that may have no internet access, so
+// pulling Roboto/Material Icons from fonts.googleapis.com at runtime is
+// not reliable — when the font fails to load, mat-icon falls back to
+// rendering its raw ligature text (e.g. "edit", "content_copy"), which is
+// what issue #48 reported. Bundling the font files with the app instead
+// makes rendering identical regardless of the deployment machine's
+// network access.
+// The unsuffixed per-weight files bundle every subset (latin, latin-ext,
+// cyrillic, etc.) each with its own `unicode-range`, so a browser only
+// fetches the subset it actually needs — same lazy behavior Google's
+// dynamic API gave us, just served locally.
+@use '@fontsource/roboto/300.css' as roboto-300;
+@use '@fontsource/roboto/400.css' as roboto-400;
+@use '@fontsource/roboto/500.css' as roboto-500;
+@use '@fontsource/material-icons/index.css' as material-icons;
+
+// @fontsource/material-icons only ships the @font-face — Google's old
+// stylesheet also supplied this `.material-icons` rule (the ligature-font
+// styling mat-icon's `class="material-icons"` markup depends on to
+// actually opt into that font). Without it, mat-icon falls back to
+// Roboto and renders raw ligature text like "edit"/"dark_mode".
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
 // Preset color themes an admin can choose from. Add a new palette pair here
 // and a matching entry in `ThemeService.THEMES` to add another option.
 // Keys are quoted strings so `@each` below yields real strings, not
