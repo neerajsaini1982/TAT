@@ -29,7 +29,8 @@ public record AccountDto(
     string? SsnMasked,
     string? DateOfBirth,
     string? HireDate,
-    string? EmploymentType);
+    string? EmploymentType,
+    bool HasPhoto);
 
 public record CreateAccountRequest(
     // Required unless Role is Employee — employees log in with a UserCode

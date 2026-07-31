@@ -373,7 +373,8 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
         a.SsnLast4 is null ? null : $"***-**-{a.SsnLast4}",
         a.DateOfBirth?.ToString("yyyy-MM-dd"),
         a.HireDate?.ToString("yyyy-MM-dd"),
-        a.EmploymentType?.ToString());
+        a.EmploymentType?.ToString(),
+        a.PhotoFileName is not null);
 
     private sealed record ParsedRow(
         string FirstName,

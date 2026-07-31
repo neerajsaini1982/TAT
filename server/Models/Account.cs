@@ -57,4 +57,9 @@ public class Account
     // is no code path that decrypts SsnEncrypted back to plaintext.
     public string? SsnEncrypted { get; set; }
     public string? SsnLast4 { get; set; }
+
+    // GUID-based name of the photo file on disk under PhotosRoot/{Id}/ —
+    // never derived from user input. Null if no photo has been uploaded.
+    public string? PhotoFileName { get; set; }
+    public string? PhotoContentType { get; set; }
 }

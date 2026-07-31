@@ -34,6 +34,7 @@ export interface AccountDto {
   dateOfBirth: string | null;
   hireDate: string | null;
   employmentType: EmploymentType | null;
+  hasPhoto: boolean;
 }
 
 export interface CreateAccountRequest {
@@ -111,5 +112,21 @@ export class AccountsApi {
   // template). loginLink is built by the caller from window.location.origin.
   sendCredentials(id: number, loginLink: string) {
     return this.http.post<void>(`${this.base}/${id}/send-credentials`, { loginLink });
+  }
+
+  // Fetched as a blob (not a plain <img src>) because the auth token is only
+  // attached to HttpClient requests via auth-interceptor.ts.
+  getPhoto(id: number) {
+    return this.http.get(`${this.base}/${id}/photo`, { responseType: 'blob' });
+  }
+
+  uploadPhoto(id: number, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<AccountDto>(`${this.base}/${id}/photo`, formData);
+  }
+
+  deletePhoto(id: number) {
+    return this.http.delete<AccountDto>(`${this.base}/${id}/photo`);
   }
 }

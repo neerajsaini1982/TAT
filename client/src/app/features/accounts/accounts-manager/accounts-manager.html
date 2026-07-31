@@ -31,6 +31,36 @@
   <mat-card class="form-card">
     <mat-card-content>
       <form (ngSubmit)="save()" class="form" autocomplete="off">
+        <div class="photo-field">
+          <div class="photo-box">
+            <video #cameraVideo class="camera-video" [class.hidden]="!cameraActive()" playsinline autoplay muted></video>
+            @if (!cameraActive()) {
+              @if (photoPreviewUrl()) {
+                <img [src]="photoPreviewUrl()" alt="Employee photo" />
+              } @else {
+                <mat-icon>person</mat-icon>
+              }
+            }
+          </div>
+          <div class="photo-actions">
+            @if (cameraActive()) {
+              <button mat-flat-button color="primary" type="button" (click)="capturePhoto()">Capture</button>
+              <button mat-button type="button" (click)="closeCamera()">Cancel</button>
+            } @else {
+              <button mat-stroked-button type="button" (click)="photoInput.click()">
+                {{ photoPreviewUrl() ? 'Change Photo' : 'Add Photo' }}
+              </button>
+              <button mat-stroked-button type="button" (click)="openCamera()">Take Photo</button>
+              @if (photoPreviewUrl()) {
+                <button mat-button type="button" (click)="removePhoto()">Remove</button>
+              }
+              <input #photoInput type="file" accept="image/jpeg,image/png" hidden (change)="onPhotoSelected($event)" />
+            }
+            @if (cameraError()) {
+              <p class="error photo-error">{{ cameraError() }}</p>
+            }
+          </div>
+        </div>
         @if (form.role !== 'Employee' && (editingId() === null || promotingFromEmployee())) {
           <mat-form-field appearance="outline">
             <mat-label>Username</mat-label>
@@ -113,6 +143,7 @@
   </mat-card>
 }
 
+<div class="table-scroll">
 <table mat-table [dataSource]="filteredAccounts()" class="mat-elevation-z1">
   <ng-container matColumnDef="serial">
     <th mat-header-cell *matHeaderCellDef>#</th>
@@ -205,3 +236,4 @@
   <tr mat-header-row *matHeaderRowDef="columns"></tr>
   <tr mat-row *matRowDef="let row; columns: columns"></tr>
 </table>
+</div>

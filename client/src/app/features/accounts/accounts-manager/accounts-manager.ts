@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, Input, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -71,8 +71,9 @@ const emptyForm = (): FormModel => ({
   templateUrl: './accounts-manager.html',
   styleUrl: './accounts-manager.scss',
 })
-export class AccountsManager implements OnInit {
+export class AccountsManager implements OnInit, OnDestroy {
   @Input() lockedLocationCode: string | null = null;
+  @ViewChild('cameraVideo') private readonly cameraVideoRef?: ElementRef<HTMLVideoElement>;
 
   private readonly accountsApi = inject(AccountsApi);
   private readonly locationsApi = inject(LocationsApi);
@@ -92,6 +93,19 @@ export class AccountsManager implements OnInit {
   protected readonly resettingId = signal<number | null>(null);
   protected readonly sendingId = signal<number | null>(null);
   protected form: FormModel = emptyForm();
+
+  // Local object URL for whatever photo is currently shown in the preview
+  // box — either the account's existing photo (fetched as a blob, since the
+  // auth token only attaches via HttpClient) or a freshly picked file.
+  protected readonly photoPreviewUrl = signal<string | null>(null);
+  private selectedPhotoFile: File | null = null;
+  private photoRemoved = false;
+
+  // Live camera capture (works on both a phone's camera and a desktop
+  // webcam via getUserMedia — no separate mobile-only code path needed).
+  protected readonly cameraActive = signal(false);
+  protected readonly cameraError = signal<string | null>(null);
+  private mediaStream: MediaStream | null = null;
 
   // Hides terminated/inactive employees by default — a location can pick up
   // 100+ inactive rows from an ADP import, and most day-to-day account work
@@ -124,6 +138,10 @@ export class AccountsManager implements OnInit {
     this.load();
   }
 
+  ngOnDestroy(): void {
+    this.closeCamera();
+  }
+
   load(): void {
     const code = this.lockedLocationCode ?? this.selectedLocation()?.locationCode;
     this.accountsApi.getAll(code).subscribe((accounts) => this.accounts.set(accounts));
@@ -141,6 +159,7 @@ export class AccountsManager implements OnInit {
     this.originalRole.set(null);
     this.form = emptyForm();
     this.error.set(null);
+    this.resetPhotoState();
     this.showForm.set(true);
   }
 
@@ -149,6 +168,12 @@ export class AccountsManager implements OnInit {
     this.originalRole.set(account.role);
     this.form = { ...emptyForm(), ...account, password: '', ssn: '' };
     this.error.set(null);
+    this.resetPhotoState();
+    if (account.hasPhoto) {
+      this.accountsApi.getPhoto(account.id).subscribe((blob) => {
+        this.photoPreviewUrl.set(URL.createObjectURL(blob));
+      });
+    }
     this.showForm.set(true);
   }
 
@@ -172,11 +197,112 @@ export class AccountsManager implements OnInit {
       role: account.role,
     };
     this.error.set(null);
+    this.resetPhotoState();
     this.showForm.set(true);
   }
 
   cancel(): void {
+    this.closeCamera();
     this.showForm.set(false);
+  }
+
+  private resetPhotoState(): void {
+    this.closeCamera();
+    const current = this.photoPreviewUrl();
+    if (current) {
+      URL.revokeObjectURL(current);
+    }
+    this.photoPreviewUrl.set(null);
+    this.selectedPhotoFile = null;
+    this.photoRemoved = false;
+  }
+
+  onPhotoSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    if (file) {
+      this.setPhotoFile(file);
+    }
+    // Reset so picking the same file again still fires a change event.
+    input.value = '';
+  }
+
+  removePhoto(): void {
+    const current = this.photoPreviewUrl();
+    if (current) {
+      URL.revokeObjectURL(current);
+    }
+    this.photoPreviewUrl.set(null);
+    this.selectedPhotoFile = null;
+    this.photoRemoved = true;
+  }
+
+  private setPhotoFile(file: File): void {
+    const current = this.photoPreviewUrl();
+    if (current) {
+      URL.revokeObjectURL(current);
+    }
+    this.selectedPhotoFile = file;
+    this.photoRemoved = false;
+    this.photoPreviewUrl.set(URL.createObjectURL(file));
+  }
+
+  // Opens a live camera preview in the photo box itself (see the template's
+  // always-present <video #cameraVideo>, hidden via CSS until active — this
+  // sidesteps ViewChild timing issues around @if-driven creation). Works the
+  // same way for a phone's camera and a desktop webcam.
+  openCamera(): void {
+    this.cameraError.set(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      this.cameraError.set('Camera access is not supported in this browser.');
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false }).then(
+      (stream) => {
+        this.mediaStream = stream;
+        this.cameraActive.set(true);
+        const video = this.cameraVideoRef?.nativeElement;
+        if (video) {
+          video.srcObject = stream;
+          void video.play();
+        }
+      },
+      () => this.cameraError.set('Could not access the camera. Check permissions and try again.'),
+    );
+  }
+
+  capturePhoto(): void {
+    const video = this.cameraVideoRef?.nativeElement;
+    if (!video || !video.videoWidth) {
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')?.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          return;
+        }
+        this.setPhotoFile(new File([blob], `photo-${Date.now()}.jpg`, { type: 'image/jpeg' }));
+        this.closeCamera();
+      },
+      'image/jpeg',
+      0.92,
+    );
+  }
+
+  closeCamera(): void {
+    this.mediaStream?.getTracks().forEach((track) => track.stop());
+    this.mediaStream = null;
+    this.cameraActive.set(false);
+    const video = this.cameraVideoRef?.nativeElement;
+    if (video) {
+      video.srcObject = null;
+    }
   }
 
   save(): void {
@@ -208,10 +334,7 @@ export class AccountsManager implements OnInit {
           employmentType: this.form.employmentType,
         })
         .subscribe({
-          next: () => {
-            this.showForm.set(false);
-            this.load();
-          },
+          next: (account) => this.syncPhotoThenClose(account.id),
           error: (err) => this.error.set(err?.error ?? 'Failed to create account.'),
         });
       return;
@@ -239,12 +362,33 @@ export class AccountsManager implements OnInit {
         employmentType: this.form.employmentType,
       })
       .subscribe({
-        next: () => {
-          this.showForm.set(false);
-          this.load();
-        },
+        next: () => this.syncPhotoThenClose(id),
         error: (err) => this.error.set(err?.error ?? 'Failed to update account.'),
       });
+  }
+
+  // After the account itself is saved, apply whatever photo change the admin
+  // made (a new file, an explicit removal, or nothing) before closing the
+  // form and reloading the table.
+  private syncPhotoThenClose(accountId: number): void {
+    const done = () => {
+      this.showForm.set(false);
+      this.load();
+    };
+
+    if (this.selectedPhotoFile) {
+      this.accountsApi.uploadPhoto(accountId, this.selectedPhotoFile).subscribe({
+        next: done,
+        error: (err) => this.error.set(err?.error ?? 'Account saved, but the photo failed to upload.'),
+      });
+    } else if (this.photoRemoved) {
+      this.accountsApi.deletePhoto(accountId).subscribe({
+        next: done,
+        error: (err) => this.error.set(err?.error ?? 'Account saved, but the photo failed to remove.'),
+      });
+    } else {
+      done();
+    }
   }
 
   remove(account: AccountDto): void {

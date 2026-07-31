@@ -45,6 +45,60 @@
   margin: 0;
 }
 
+.photo-field {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+// Standard passport photo proportions (35mm x 45mm).
+.photo-box {
+  width: 140px;
+  height: 180px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--mat-sys-surface-variant);
+  color: var(--mat-sys-on-surface-variant);
+
+  img,
+  .camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .camera-video.hidden {
+    display: none;
+  }
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+  }
+}
+
+.photo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.photo-error {
+  max-width: 220px;
+  font-size: 12px;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
 table {
   width: 100%;
 }
@@ -53,4 +107,9 @@ table {
   width: 40px;
   color: var(--mat-sys-on-surface-variant);
   text-align: right;
+}
+
+.mat-column-userCode,
+.mat-column-actions {
+  white-space: nowrap;
 }
