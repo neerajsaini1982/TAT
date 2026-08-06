@@ -277,11 +277,12 @@
   }
 
   .break-label {
-    color: #5f6368;
-    font-size: 8.5px;
-    // Tuned for legibility over the on-screen white/black tint — print's
-    // marker is a flat, much lighter gray tint (see .break-marker below),
-    // where the shadow just looks like a smudge.
+    color: #202124;
+    font-size: 11px;
+    font-weight: 700;
+    // The marker band no longer has a background fill on paper (see
+    // .break-marker below) — plain dark text needs no shadow now that
+    // it's sitting on white rather than a tint.
     text-shadow: none;
   }
 
@@ -295,16 +296,19 @@
     color: #d93025;
   }
 
-  // The on-screen white/black tint is tuned for contrast against a
-  // saturated color fill — against white paper it either disappears or
-  // just looks like noise, so print gets a neutral gray tint instead.
+  // The on-screen white/black tint band is what was making the break/lunch
+  // label unreadable on paper — dark-gray label text sitting on top of a
+  // gray-tinted fill. Print drops the fill entirely and relies on the
+  // border lines plus a dashed lunch variant to distinguish the two, so
+  // the label text always sits on plain white.
   .break-marker {
     border-top: 1px solid #5f6368;
     border-bottom: 1px solid #5f6368;
-    background: rgba(95, 99, 104, 0.12);
+    background: none;
 
     &.lunch {
-      background: rgba(95, 99, 104, 0.28);
+      border-top-style: dashed;
+      border-bottom-style: dashed;
     }
   }
 }

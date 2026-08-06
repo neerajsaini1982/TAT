@@ -9,19 +9,25 @@
 
 // Self-hosted fonts: this app deploys to internal-LAN-only Windows
 // machines (see server/Program.cs) that may have no internet access, so
-// pulling Roboto/Material Icons from fonts.googleapis.com at runtime is
-// not reliable — when the font fails to load, mat-icon falls back to
-// rendering its raw ligature text (e.g. "edit", "content_copy"), which is
-// what issue #48 reported. Bundling the font files with the app instead
-// makes rendering identical regardless of the deployment machine's
-// network access.
+// pulling fonts from fonts.googleapis.com at runtime is not reliable —
+// when a font fails to load, mat-icon falls back to rendering its raw
+// ligature text (e.g. "edit", "content_copy"), which is what issue #48
+// reported. Bundling the font files with the app instead makes rendering
+// identical regardless of the deployment machine's network access.
 // The unsuffixed per-weight files bundle every subset (latin, latin-ext,
 // cyrillic, etc.) each with its own `unicode-range`, so a browser only
 // fetches the subset it actually needs — same lazy behavior Google's
 // dynamic API gave us, just served locally.
-@use '@fontsource/roboto/300.css' as roboto-300;
-@use '@fontsource/roboto/400.css' as roboto-400;
-@use '@fontsource/roboto/500.css' as roboto-500;
+//
+// Public Sans is the U.S. Web Design System's (USWDS) typeface — the one
+// behind the clean, highly legible body text on sites like ssa.gov. It
+// replaced Roboto as the app's primary typeface for exactly that
+// legibility (see the print-visibility fix on schedule-day-view's break
+// labels, issue tracked alongside #50).
+@use '@fontsource/public-sans/400.css' as public-sans-400;
+@use '@fontsource/public-sans/500.css' as public-sans-500;
+@use '@fontsource/public-sans/600.css' as public-sans-600;
+@use '@fontsource/public-sans/700.css' as public-sans-700;
 @use '@fontsource/material-icons/index.css' as material-icons;
 
 // @fontsource/material-icons only ships the @font-face — Google's old
@@ -80,7 +86,7 @@ html {
         primary: map.get($themes, 'azure', primary),
         tertiary: map.get($themes, 'azure', tertiary),
       ),
-      typography: Roboto,
+      typography: 'Public Sans',
       density: 0,
     )
   );
