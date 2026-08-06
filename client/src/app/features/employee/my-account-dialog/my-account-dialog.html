@@ -1,0 +1,18 @@
+<h2 mat-dialog-title>My Account</h2>
+<mat-dialog-content class="content">
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>Email</mat-label>
+    <input matInput type="email" name="email" [(ngModel)]="email" />
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>Phone</mat-label>
+    <input matInput name="phone" [(ngModel)]="phone" />
+  </mat-form-field>
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">Save</button>
+</mat-dialog-actions>
