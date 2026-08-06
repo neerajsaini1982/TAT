@@ -38,6 +38,37 @@
         </button>
       }
     </mat-menu>
+  } @else if (isEmployeeMenu()) {
+    <button mat-button [matMenuTriggerFor]="employeeMenu" class="account-btn">
+      <mat-icon>settings</mat-icon>
+      <span>{{ auth.session()?.firstName }}</span>
+    </button>
+    <mat-menu #employeeMenu="matMenu">
+      <button mat-menu-item (click)="themeService.toggleScheme()">
+        <mat-icon>{{ themeService.scheme() === 'light' ? 'dark_mode' : 'light_mode' }}</mat-icon>
+        <span>{{ themeService.scheme() === 'light' ? 'Dark mode' : 'Light mode' }}</span>
+      </button>
+      <button mat-menu-item [matMenuTriggerFor]="themeMenu">
+        <mat-icon>palette</mat-icon>
+        <span>Theme color</span>
+      </button>
+      <mat-divider />
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'schedule']">My Schedule</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'availability']">My Availability</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'availability2']">Calendar View</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'documents']">My Documents</a>
+      <button mat-menu-item (click)="openAccountDialog()">Account</button>
+      <button mat-menu-item (click)="resetCode()" [disabled]="resettingCode()">Reset My Code</button>
+      <mat-divider />
+      <button mat-menu-item (click)="logout()">Log Out</button>
+    </mat-menu>
+    <mat-menu #themeMenu="matMenu">
+      @for (option of themes; track option.name) {
+        <button mat-menu-item (click)="themeService.setTheme(option.name)">
+          {{ option.label }}
+        </button>
+      }
+    </mat-menu>
   } @else {
     <button mat-icon-button (click)="themeService.toggleScheme()"
             [attr.aria-label]="themeService.scheme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">

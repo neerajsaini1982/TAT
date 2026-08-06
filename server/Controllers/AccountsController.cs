@@ -180,6 +180,41 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         return Ok(ToDto(account));
     }
 
+    // Lets the signed-in account view its own profile — used by the
+    // Employee portal's Account menu, which only that account itself can
+    // reach (AdminOrAbove would 403 an Employee).
+    [HttpGet("mine")]
+    [Authorize]
+    public ActionResult<AccountDto> GetMine()
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == CallerAccountId());
+        if (account is null)
+        {
+            return NotFound();
+        }
+
+        return Ok(ToDto(account));
+    }
+
+    // Lets the signed-in account update its own email/phone — the only
+    // fields an Employee is allowed to change about themselves.
+    [HttpPut("mine")]
+    [Authorize]
+    public ActionResult<AccountDto> UpdateMine(UpdateMineRequest request)
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == CallerAccountId());
+        if (account is null)
+        {
+            return NotFound();
+        }
+
+        account.Email = request.Email;
+        account.Phone = request.Phone;
+        db.SaveChanges();
+
+        return Ok(ToDto(account));
+    }
+
     // Emails an Employee their login link and user code, using the
     // LoginCredentials template (custom if the location has saved one, else
     // the built-in default) and this location's SMTP settings. The login

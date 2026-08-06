@@ -56,6 +56,11 @@ export interface CreateAccountRequest {
   employmentType: EmploymentType | null;
 }
 
+export interface UpdateMineRequest {
+  email: string;
+  phone: string;
+}
+
 export interface UpdateAccountRequest {
   firstName: string;
   lastName: string;
@@ -106,6 +111,14 @@ export class AccountsApi {
 
   resetMyCode() {
     return this.http.post<AccountDto>(`${this.base}/mine/reset-code`, {});
+  }
+
+  getMine() {
+    return this.http.get<AccountDto>(`${this.base}/mine`);
+  }
+
+  updateMine(request: UpdateMineRequest) {
+    return this.http.put<AccountDto>(`${this.base}/mine`, request);
   }
 
   // Emails the employee their login link and user code (LoginCredentials

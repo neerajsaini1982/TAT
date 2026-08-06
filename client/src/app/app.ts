@@ -1,7 +1,7 @@
-import { Component, computed, effect, inject } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { filter, map } from 'rxjs';
+import { filter, firstValueFrom, map } from 'rxjs';
 import { DOCUMENT } from '@angular/common';
 import { Title } from '@angular/platform-browser';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -9,9 +9,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatDialog } from '@angular/material/dialog';
 
 import { Theme, THEMES } from './core/theme';
 import { Auth } from './core/auth';
+import { AccountsApi } from './core/accounts-api';
+import { MyAccountDialog } from './features/employee/my-account-dialog/my-account-dialog';
 
 type Portal = 'admin' | 'employee' | null;
 
@@ -53,6 +56,10 @@ export class App {
   private readonly router = inject(Router);
   private readonly titleService = inject(Title);
   private readonly document = inject(DOCUMENT);
+  private readonly accountsApi = inject(AccountsApi);
+  private readonly dialog = inject(MatDialog);
+
+  protected readonly resettingCode = signal(false);
 
   // Which portal the URL is currently in — an Admin/Lead account can also
   // browse its own /employee/* pages (see employeeGuard), so this has to
@@ -119,14 +126,43 @@ export class App {
   // Admin/Lead get their per-location nav folded into one gear+name menu in
   // the toolbar (see admin-home, which used to render these as a row of
   // buttons on the page itself) instead of the standalone dark mode/palette
-  // icons — Employee and signed-out visitors keep those icons as-is, since
-  // there's no per-role nav to consolidate them with.
+  // icons — signed-out visitors keep those icons as-is, since there's no
+  // per-role nav to consolidate them with (Employee gets the same gear+name
+  // treatment below, via isEmployeeMenu).
   protected readonly isAdminMenu = computed(() => {
     const role = this.auth.role();
     return role === 'Admin' || role === 'Lead';
   });
 
+  // Plain Employee accounts get the same gear+name treatment (see
+  // isAdminMenu above) — their per-page nav row (My Schedule, My
+  // Availability, ...) used to live on employee-home itself, folded here
+  // instead so it's available from every employee page, not just the home
+  // one. Admin/Lead keep the admin menu even while browsing employee pages
+  // (employeeGuard lets them), so this only kicks in for the plain role.
+  protected readonly isEmployeeMenu = computed(() => this.auth.role() === 'Employee');
+
   logout(): void {
     this.auth.logout();
+  }
+
+  async openAccountDialog(): Promise<void> {
+    const account = await firstValueFrom(this.accountsApi.getMine());
+    this.dialog.open(MyAccountDialog, { data: account });
+  }
+
+  async resetCode(): Promise<void> {
+    if (!confirm('Reset your login code? Your current code will stop working immediately.')) {
+      return;
+    }
+    this.resettingCode.set(true);
+    try {
+      const account = await firstValueFrom(this.accountsApi.resetMyCode());
+      alert(`Your new code is ${account.userCode}. Write it down — you'll need it next time you sign in.`);
+    } catch {
+      alert('Failed to reset your code. Try again.');
+    } finally {
+      this.resettingCode.set(false);
+    }
   }
 }

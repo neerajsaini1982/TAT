@@ -74,3 +74,7 @@ public record UpdateAccountRequest(
 // LoginLink is built client-side (it already knows its own origin) and
 // passed through rather than the server guessing its hostname.
 public record SendCredentialsRequest(string LoginLink);
+
+// Self-service profile edit (see AccountsController.UpdateMine) — only the
+// two fields an Employee is allowed to change about themselves.
+public record UpdateMineRequest(string Email, string Phone);
