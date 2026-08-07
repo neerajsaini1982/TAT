@@ -14,6 +14,7 @@ import { forkJoin } from 'rxjs';
 
 import { DateFormat, LocationSettingsApi, LocationSettingsDto, TimeFormat } from '../../../core/location-settings-api';
 import { EmailTemplateDto, EmailTemplatesApi } from '../../../core/email-templates-api';
+import { AccountsApi } from '../../../core/accounts-api';
 import {
   EmailTemplateEditorDialog,
   EmailTemplateEditorResult,
@@ -142,6 +143,7 @@ const emptyForm = (): FormModel => ({
 export class AdminLocationSettingsPage implements OnInit {
   private readonly settingsApi = inject(LocationSettingsApi);
   private readonly templatesApi = inject(EmailTemplatesApi);
+  private readonly accountsApi = inject(AccountsApi);
   private readonly dialog = inject(MatDialog);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
@@ -154,6 +156,10 @@ export class AdminLocationSettingsPage implements OnInit {
   protected readonly saved = signal(false);
   protected readonly hasSmtpPassword = signal(false);
   protected readonly templates = signal<EmailTemplateDto[]>([]);
+  protected readonly testingEmail = signal(false);
+  protected readonly testEmailResult = signal<'success' | 'error' | null>(null);
+  protected readonly testEmailError = signal<string | null>(null);
+  protected testEmailAddress = '';
 
   protected form: FormModel = emptyForm();
 
@@ -167,10 +173,12 @@ export class AdminLocationSettingsPage implements OnInit {
     forkJoin({
       settings: this.settingsApi.get(this.locationCode),
       templates: this.templatesApi.getAll(this.locationCode),
+      me: this.accountsApi.getMine(),
     }).subscribe({
-      next: ({ settings, templates }) => {
+      next: ({ settings, templates, me }) => {
         this.applySettings(settings);
         this.templates.set(templates);
+        this.testEmailAddress = me.email;
         this.loading.set(false);
       },
       error: () => {
@@ -249,6 +257,40 @@ export class AdminLocationSettingsPage implements OnInit {
         error: (err) => {
           this.saving.set(false);
           this.error.set(err?.error ?? 'Failed to save settings.');
+        },
+      });
+  }
+
+  // Tests whatever SMTP fields are currently in the form, not necessarily
+  // what's saved — so an admin can check a freshly-pasted App Password
+  // works before committing to Save.
+  sendTestEmail(): void {
+    this.testingEmail.set(true);
+    this.testEmailResult.set(null);
+    this.testEmailError.set(null);
+    this.settingsApi
+      .sendTestEmail(
+        {
+          toAddress: this.testEmailAddress,
+          smtpHost: this.form.smtpHost || null,
+          smtpPort: this.form.smtpPort,
+          smtpUsername: this.form.smtpUsername || null,
+          smtpPassword: this.form.smtpPassword || null,
+          smtpUseSsl: this.form.smtpUseSsl,
+          smtpFromAddress: this.form.smtpFromAddress || null,
+          smtpFromName: this.form.smtpFromName || null,
+        },
+        this.locationCode,
+      )
+      .subscribe({
+        next: () => {
+          this.testingEmail.set(false);
+          this.testEmailResult.set('success');
+        },
+        error: (err) => {
+          this.testingEmail.set(false);
+          this.testEmailResult.set('error');
+          this.testEmailError.set(err?.error ?? 'Failed to send test email.');
         },
       });
   }

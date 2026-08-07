@@ -104,6 +104,40 @@
   font-weight: 600;
 }
 
+.test-email-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-basis: 100%;
+
+  mat-form-field {
+    flex: 1 1 220px;
+  }
+}
+
+.test-email-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  flex-basis: 100%;
+  font-size: 13px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.success {
+    color: var(--mat-sys-primary);
+  }
+
+  &.error {
+    color: var(--mat-sys-error);
+  }
+}
+
 .template-subject {
   font-size: 13px;
   color: var(--mat-sys-on-surface-variant);
