@@ -135,9 +135,12 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         {
             return BadRequest(ex.Message);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            return StatusCode(StatusCodes.Status502BadGateway, "Failed to send test email. Check the SMTP settings and try again.");
+            // This endpoint exists purely to surface SMTP problems to an
+            // Admin/Sa, so the real provider error (e.g. Gmail auth
+            // rejection) is more useful here than a generic message.
+            return StatusCode(StatusCodes.Status502BadGateway, $"Failed to send test email: {ex.Message}");
         }
 
         return NoContent();

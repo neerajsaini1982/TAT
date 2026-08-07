@@ -7,6 +7,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 
 export interface EmailTemplateEditorData {
+  templateKey: string;
   displayName: string;
   subject: string;
   bodyHtml: string;
@@ -22,11 +23,18 @@ interface PlaceholderField {
   token: string;
 }
 
-const PLACEHOLDER_FIELDS: PlaceholderField[] = [
+const COMMON_PLACEHOLDER_FIELDS: PlaceholderField[] = [
   { label: 'Employee Name', token: '{{employeeName}}' },
   { label: 'Location Name', token: '{{locationName}}' },
   { label: 'Week Range', token: '{{weekRange}}' },
 ];
+
+// Only SchedulePublished has shift data to expand into — see
+// ShiftAssignmentsController.BuildScheduleHtml, which is the only sender
+// that ever fills in {{schedule}}.
+const TEMPLATE_ONLY_PLACEHOLDER_FIELDS: Record<string, PlaceholderField[]> = {
+  SchedulePublished: [{ label: 'Shift Schedule', token: '{{schedule}}' }],
+};
 
 // Lightweight, dependency-free WYSIWYG using contenteditable + execCommand
 // rather than pulling in a rich-text editor library for one small screen.
@@ -39,7 +47,7 @@ const PLACEHOLDER_FIELDS: PlaceholderField[] = [
 export class EmailTemplateEditorDialog implements AfterViewInit {
   @ViewChild('bodyEditor') private readonly bodyEditorRef!: ElementRef<HTMLDivElement>;
 
-  protected readonly placeholderFields = PLACEHOLDER_FIELDS;
+  protected readonly placeholderFields: PlaceholderField[];
   protected subject: string;
 
   constructor(
@@ -47,6 +55,7 @@ export class EmailTemplateEditorDialog implements AfterViewInit {
     @Inject(MAT_DIALOG_DATA) protected readonly data: EmailTemplateEditorData,
   ) {
     this.subject = data.subject;
+    this.placeholderFields = [...COMMON_PLACEHOLDER_FIELDS, ...(TEMPLATE_ONLY_PLACEHOLDER_FIELDS[data.templateKey] ?? [])];
   }
 
   ngAfterViewInit(): void {

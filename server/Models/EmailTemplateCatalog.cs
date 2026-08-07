@@ -20,7 +20,7 @@ public static class EmailTemplateCatalog
         {
             Key = key,
             Subject = "Your schedule for {{weekRange}} is posted",
-            BodyHtml = "<p>Hi {{employeeName}},</p><p>Your schedule at {{locationName}} for {{weekRange}} has been posted. Please check your shifts on the app.</p>",
+            BodyHtml = "<p>Hi {{employeeName}},</p><p>Your schedule at {{locationName}} for {{weekRange}} has been posted. Please check your shifts on the app.</p>{{schedule}}",
         },
         EmailTemplateKeys.AvailabilityReminder => new EmailTemplate
         {

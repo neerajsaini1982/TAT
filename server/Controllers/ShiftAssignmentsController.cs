@@ -132,6 +132,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
                 ["{{employeeName}}"] = $"{employee.FirstName} {employee.LastName}",
                 ["{{locationName}}"] = location.Name,
                 ["{{weekRange}}"] = weekRange,
+                ["{{schedule}}"] = BuildScheduleHtml(assignments.Where(a => a.AccountId == employee.Id), settings.TimeFormat),
             };
 
             try
@@ -149,6 +150,30 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             }
         }
     }
+
+    // Renders one employee's shifts for the week as an inline HTML table
+    // (email clients don't run CSS files, so styling is inline) — this is
+    // what the {{schedule}} placeholder expands to in SendScheduleEmails.
+    private static string BuildScheduleHtml(IEnumerable<ShiftAssignment> employeeAssignments, TimeFormat timeFormat)
+    {
+        const string cell = "padding:4px 12px;border:1px solid #ddd;text-align:left;";
+
+        var rows = employeeAssignments
+            .OrderBy(a => a.Date)
+            .ThenBy(a => a.Shift!.StartTime)
+            .Select(a =>
+                $"<tr><td style=\"{cell}\">{a.Date:ddd, MMM d}</td>"
+                + $"<td style=\"{cell}\">{FormatTime(a.Shift!.StartTime, timeFormat)}–{FormatTime(a.Shift!.EndTime, timeFormat)}</td>"
+                + $"<td style=\"{cell}\">{a.Shift!.Name}</td></tr>");
+
+        return "<table style=\"border-collapse:collapse;margin-top:8px;\">"
+            + $"<tr><th style=\"{cell}\">Date</th><th style=\"{cell}\">Time</th><th style=\"{cell}\">Shift</th></tr>"
+            + string.Concat(rows)
+            + "</table>";
+    }
+
+    private static string FormatTime(TimeOnly time, TimeFormat timeFormat) =>
+        time.ToString(timeFormat == TimeFormat.TwelveHour ? "h:mm tt" : "HH:mm");
 
     [HttpGet]
     [Authorize(Policy = "AdminOrAbove")]

@@ -298,7 +298,7 @@ export class AdminLocationSettingsPage implements OnInit {
   editTemplate(template: EmailTemplateDto): void {
     this.dialog
       .open<EmailTemplateEditorDialog, unknown, EmailTemplateEditorResult>(EmailTemplateEditorDialog, {
-        data: { displayName: template.displayName, subject: template.subject, bodyHtml: template.bodyHtml },
+        data: { templateKey: template.key, displayName: template.displayName, subject: template.subject, bodyHtml: template.bodyHtml },
       })
       .afterClosed()
       .subscribe((result) => {
