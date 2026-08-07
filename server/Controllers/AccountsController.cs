@@ -263,8 +263,8 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
             await emailSender.SendAsync(
                 settings,
                 account.Email,
-                Render(template.Subject, placeholders),
-                Render(template.BodyHtml, placeholders));
+                EmailTemplateCatalog.Render(template.Subject, placeholders),
+                EmailTemplateCatalog.Render(template.BodyHtml, placeholders));
         }
         catch (InvalidOperationException ex)
         {
@@ -497,16 +497,6 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         }
 
         return (true, digits, null);
-    }
-
-    private static string Render(string template, Dictionary<string, string> placeholders)
-    {
-        foreach (var (token, value) in placeholders)
-        {
-            template = template.Replace(token, value);
-        }
-
-        return template;
     }
 
     private static AccountDto ToDto(Account a) => new(

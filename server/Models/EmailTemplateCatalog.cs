@@ -20,7 +20,7 @@ public static class EmailTemplateCatalog
         {
             Key = key,
             Subject = "Your schedule for {{weekRange}} is posted",
-            BodyHtml = "<p>Hi {{employeeName}},</p><p>Your schedule at {{locationName}} for {{weekRange}} has been posted. Please check your shifts on the app.</p>",
+            BodyHtml = "<p>Hi {{employeeName}},</p><p>Your schedule at {{locationName}} for {{weekRange}} has been posted. Please check your shifts on the app.</p>{{schedule}}",
         },
         EmailTemplateKeys.AvailabilityReminder => new EmailTemplate
         {
@@ -38,4 +38,16 @@ public static class EmailTemplateCatalog
         },
         _ => new EmailTemplate { Key = key, Subject = string.Empty, BodyHtml = string.Empty },
     };
+
+    // Shared token-replace so every sender (AccountsController,
+    // ShiftAssignmentsController, ...) renders {{placeholders}} the same way.
+    public static string Render(string template, IReadOnlyDictionary<string, string> placeholders)
+    {
+        foreach (var (token, value) in placeholders)
+        {
+            template = template.Replace(token, value);
+        }
+
+        return template;
+    }
 }

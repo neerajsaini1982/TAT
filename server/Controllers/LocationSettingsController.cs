@@ -4,12 +4,13 @@ using Server.Data;
 using Server.Dtos;
 using Server.Models;
 using Server.Security;
+using Server.Services;
 
 namespace Server.Controllers;
 
 [ApiController]
 [Route("api/location-settings")]
-public class LocationSettingsController(AppDbContext db) : ControllerBase
+public class LocationSettingsController(AppDbContext db, IEmailSender emailSender) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = "AdminOrAbove")]
@@ -89,6 +90,60 @@ public class LocationSettingsController(AppDbContext db) : ControllerBase
 
         db.SaveChanges();
         return Ok(ToDto(settings));
+    }
+
+    // Sends a one-off email through whatever SMTP fields are currently in
+    // the form, so an admin can confirm credentials work before committing
+    // to Save (and can re-test after, without retyping the password).
+    [HttpPost("test-email")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public async Task<IActionResult> SendTestEmail([FromQuery] string? locationCode, SendTestEmailRequest request)
+    {
+        var location = ResolveLocation(locationCode);
+        if (location is null)
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.ToAddress))
+        {
+            return BadRequest("Enter an email address to send the test to.");
+        }
+
+        var saved = db.LocationSettings.SingleOrDefault(s => s.LocationId == location.Id);
+        var testSettings = new LocationSettings
+        {
+            LocationId = location.Id,
+            SmtpHost = request.SmtpHost,
+            SmtpPort = request.SmtpPort,
+            SmtpUsername = request.SmtpUsername,
+            SmtpPassword = string.IsNullOrEmpty(request.SmtpPassword) ? saved?.SmtpPassword : request.SmtpPassword,
+            SmtpUseSsl = request.SmtpUseSsl,
+            SmtpFromAddress = request.SmtpFromAddress,
+            SmtpFromName = request.SmtpFromName,
+        };
+
+        try
+        {
+            await emailSender.SendAsync(
+                testSettings,
+                request.ToAddress,
+                "TAT test email",
+                $"<p>This is a test email from {location.Name} to confirm the SMTP settings are working.</p>");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            // This endpoint exists purely to surface SMTP problems to an
+            // Admin/Sa, so the real provider error (e.g. Gmail auth
+            // rejection) is more useful here than a generic message.
+            return StatusCode(StatusCodes.Status502BadGateway, $"Failed to send test email: {ex.Message}");
+        }
+
+        return NoContent();
     }
 
     private LocationSettings GetOrCreateSettings(int locationId)

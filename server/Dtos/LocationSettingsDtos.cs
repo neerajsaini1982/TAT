@@ -56,6 +56,21 @@ public record UpdateLocationSettingsRequest(
     DateOnly? PayDayStartDate,
     int? PayPeriodDays);
 
+// Lets an admin verify SMTP settings actually work before (or after) saving
+// them. SmtpHost/Username/etc mirror whatever is currently in the form —
+// not necessarily what's saved yet — so testing doesn't require a save
+// round-trip first. A blank SmtpPassword falls back to the saved one, same
+// "blank means unchanged" rule UpdateLocationSettingsRequest uses.
+public record SendTestEmailRequest(
+    string ToAddress,
+    string? SmtpHost,
+    int? SmtpPort,
+    string? SmtpUsername,
+    string? SmtpPassword,
+    bool SmtpUseSsl,
+    string? SmtpFromAddress,
+    string? SmtpFromName);
+
 // Minimal subset any signed-in account (not just Admin/Sa) can read, so an
 // Employee's client can compute when its own Clock In buttons unlock,
 // whether its own punches should render as late/over-limit, and how to

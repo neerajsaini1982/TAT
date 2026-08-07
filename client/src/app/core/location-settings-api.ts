@@ -57,6 +57,17 @@ export interface UpdateLocationSettingsRequest {
   payPeriodDays: number | null;
 }
 
+export interface SendTestEmailRequest {
+  toAddress: string;
+  smtpHost: string | null;
+  smtpPort: number | null;
+  smtpUsername: string | null;
+  smtpPassword: string | null;
+  smtpUseSsl: boolean;
+  smtpFromAddress: string | null;
+  smtpFromName: string | null;
+}
+
 // Minimal subset any signed-in account can read (see LocationSettingsController.GetMine).
 export interface EmployeeLocationSettingsDto {
   timeFormat: TimeFormat;
@@ -85,5 +96,10 @@ export class LocationSettingsApi {
   update(request: UpdateLocationSettingsRequest, locationCode?: string) {
     const params = locationCode ? `?locationCode=${encodeURIComponent(locationCode)}` : '';
     return this.http.put<LocationSettingsDto>(`${this.base}${params}`, request);
+  }
+
+  sendTestEmail(request: SendTestEmailRequest, locationCode?: string) {
+    const params = locationCode ? `?locationCode=${encodeURIComponent(locationCode)}` : '';
+    return this.http.post<void>(`${this.base}/test-email${params}`, request);
   }
 }

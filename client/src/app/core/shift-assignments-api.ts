@@ -72,7 +72,7 @@ export class ShiftAssignmentsApi {
     return this.http.put<ShiftAssignmentDto>(`${this.base}/${id}/absent`, request);
   }
 
-  publish(weekStartDate: string, locationCode?: string) {
-    return this.http.post<void>(`${this.base}/publish`, { weekStartDate, locationCode });
+  publish(weekStartDate: string, locationCode?: string, sendEmail = false) {
+    return this.http.post<void>(`${this.base}/publish`, { weekStartDate, locationCode, sendEmail });
   }
 }

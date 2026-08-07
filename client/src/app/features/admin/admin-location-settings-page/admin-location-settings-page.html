@@ -199,6 +199,32 @@
             <input matInput [(ngModel)]="form.smtpFromName" name="smtpFromName" />
           </mat-form-field>
           <mat-slide-toggle [(ngModel)]="form.smtpUseSsl" name="smtpUseSsl">Use SSL/TLS</mat-slide-toggle>
+
+          <div class="test-email-row">
+            <mat-form-field appearance="outline">
+              <mat-label>Send test email to</mat-label>
+              <input matInput type="email" [(ngModel)]="testEmailAddress" name="testEmailAddress" placeholder="you@example.com" />
+            </mat-form-field>
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="sendTestEmail()"
+              [disabled]="testingEmail() || !testEmailAddress"
+            >
+              {{ testingEmail() ? 'Sending…' : 'Send Test Email' }}
+            </button>
+          </div>
+          @if (testEmailResult() === 'success') {
+            <p class="test-email-status success">
+              <mat-icon>check_circle</mat-icon>
+              Test email sent to {{ testEmailAddress }}.
+            </p>
+          } @else if (testEmailResult() === 'error') {
+            <p class="test-email-status error">
+              <mat-icon>error</mat-icon>
+              {{ testEmailError() }}
+            </p>
+          }
         </mat-card-content>
       </mat-card>
 
