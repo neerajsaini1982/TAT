@@ -4,7 +4,7 @@
 // a production build), see usages in the sa/admin/employee login forms.
 export const DEV_DEFAULTS = {
   sa: { username: 'sa', password: 'ChangeMe123!' },
-  admin: { username: 'admin1', password: 'AdminPass1!' },
+  admin: { username: 'sonia', password: 'sonia' },
   employeeCode: '458789',
   locationCode: 'l2psj',
 };
