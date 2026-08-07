@@ -22,6 +22,7 @@ import { employeeColor } from '../../../core/employee-colors';
 import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-flags';
 import { addDays, combineDateAndTime, formatDate, formatWeekRange, hoursMinutesLabel, mondayOf } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
+import { PublishScheduleDialog, PublishScheduleDialogData } from '../publish-schedule-dialog/publish-schedule-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
 import { ScheduleDayView } from '../schedule-day-view/schedule-day-view';
 import { ScheduleWeekTimeline, WeekTimelineDay } from '../schedule-week-timeline/schedule-week-timeline';
@@ -400,21 +401,28 @@ export class AdminSchedulePage implements OnInit {
   }
 
   publish(): void {
-    if (!confirm("Publish this week's schedule? It will become visible to employees on their My Schedule page.")) {
-      return;
-    }
-    this.publishing.set(true);
-    this.error.set(null);
-    this.assignmentsApi.publish(formatDate(this.weekStart()), this.locationCode).subscribe({
-      next: () => {
-        this.publishing.set(false);
-        this.load();
-      },
-      error: (err) => {
-        this.publishing.set(false);
-        this.error.set(err?.error ?? 'Failed to publish schedule.');
-      },
-    });
+    this.dialog
+      .open<PublishScheduleDialog, PublishScheduleDialogData, boolean>(PublishScheduleDialog, {
+        data: { weekRangeLabel: this.weekRangeLabel() },
+      })
+      .afterClosed()
+      .subscribe((sendEmail) => {
+        if (sendEmail === undefined) {
+          return;
+        }
+        this.publishing.set(true);
+        this.error.set(null);
+        this.assignmentsApi.publish(formatDate(this.weekStart()), this.locationCode, sendEmail).subscribe({
+          next: () => {
+            this.publishing.set(false);
+            this.load();
+          },
+          error: (err) => {
+            this.publishing.set(false);
+            this.error.set(err?.error ?? 'Failed to publish schedule.');
+          },
+        });
+      });
   }
 
   removeAssignment(assignment: ShiftAssignmentDto): void {

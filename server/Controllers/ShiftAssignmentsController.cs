@@ -7,6 +7,7 @@ using Server.Dtos;
 using Server.Hubs;
 using Server.Models;
 using Server.Security;
+using Server.Services;
 
 namespace Server.Controllers;
 
@@ -18,7 +19,7 @@ namespace Server.Controllers;
 [ApiController]
 [Route("api/shift-assignments")]
 [Authorize]
-public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notifier) : ControllerBase
+public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notifier, IEmailSender emailSender) : ControllerBase
 {
     // Self-service: whoever is logged in sees their own upcoming schedule,
     // and everyone else's too if their role has been granted Schedule
@@ -55,7 +56,11 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
 
     // Bulk-marks every assignment in a location/week as published so it
     // starts showing up in GetMine for the employees on it. Until this is
-    // called, the admin schedule grid is a draft/preview only.
+    // called, the admin schedule grid is a draft/preview only. When the
+    // admin opts in via the SendEmail checkbox, also emails every scheduled
+    // employee using the SchedulePublished template — checked up front so a
+    // missing SMTP setup is reported before anything is published, rather
+    // than after.
     [HttpPost("publish")]
     [Authorize(Policy = "AdminOrAbove")]
     public async Task<IActionResult> Publish(PublishScheduleRequest request)
@@ -66,9 +71,20 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             return BadRequest("A valid locationCode is required.");
         }
 
+        LocationSettings? settings = null;
+        if (request.SendEmail)
+        {
+            settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == location.Id);
+            if (settings is null || string.IsNullOrWhiteSpace(settings.SmtpHost))
+            {
+                return BadRequest("SMTP is not configured for this location. Set it up under Settings first.");
+            }
+        }
+
         var weekEndDate = request.WeekStartDate.AddDays(6);
         var assignments = db.ShiftAssignments
             .Include(a => a.Shift)
+            .Include(a => a.Account)
             .Where(a => a.Shift!.LocationId == location.Id && a.Date >= request.WeekStartDate && a.Date <= weekEndDate)
             .ToList();
 
@@ -81,7 +97,57 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
 
         db.SaveChanges();
         await notifier.NotifyLocationChanged(location.LocationCode);
+
+        if (settings is not null)
+        {
+            await SendScheduleEmails(location, settings, assignments, request.WeekStartDate, weekEndDate);
+        }
+
         return NoContent();
+    }
+
+    // Emails everyone with a shift this week once, even if they have
+    // several assignments across the week. Sending is best-effort per
+    // employee: one bad address or a transient SMTP hiccup shouldn't stop
+    // the rest of the location from being notified (the schedule is already
+    // published at this point regardless).
+    private async Task SendScheduleEmails(
+        Location location, LocationSettings settings, List<ShiftAssignment> assignments, DateOnly weekStartDate, DateOnly weekEndDate)
+    {
+        var template = db.EmailTemplates.SingleOrDefault(
+            t => t.LocationId == location.Id && t.Key == EmailTemplateKeys.SchedulePublished)
+            ?? EmailTemplateCatalog.Default(EmailTemplateKeys.SchedulePublished);
+
+        var weekRange = $"{weekStartDate.ToString("MMM d")} – {weekEndDate.ToString("MMM d")}";
+
+        var employees = assignments
+            .Select(a => a.Account!)
+            .Where(a => !string.IsNullOrWhiteSpace(a.Email))
+            .DistinctBy(a => a.Id);
+
+        foreach (var employee in employees)
+        {
+            var placeholders = new Dictionary<string, string>
+            {
+                ["{{employeeName}}"] = $"{employee.FirstName} {employee.LastName}",
+                ["{{locationName}}"] = location.Name,
+                ["{{weekRange}}"] = weekRange,
+            };
+
+            try
+            {
+                await emailSender.SendAsync(
+                    settings,
+                    employee.Email,
+                    EmailTemplateCatalog.Render(template.Subject, placeholders),
+                    EmailTemplateCatalog.Render(template.BodyHtml, placeholders));
+            }
+            catch
+            {
+                // Best-effort — one employee's bad address/SMTP hiccup
+                // shouldn't stop the rest of the location from being notified.
+            }
+        }
     }
 
     [HttpGet]

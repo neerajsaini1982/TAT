@@ -28,4 +28,4 @@ public record MoveShiftAssignmentRequest(int AccountId, DateOnly Date);
 // when clearing it.
 public record MarkAbsentRequest(bool IsAbsent, string? Note);
 
-public record PublishScheduleRequest(string? LocationCode, DateOnly WeekStartDate);
+public record PublishScheduleRequest(string? LocationCode, DateOnly WeekStartDate, bool SendEmail = false);

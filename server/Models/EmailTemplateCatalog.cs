@@ -38,4 +38,16 @@ public static class EmailTemplateCatalog
         },
         _ => new EmailTemplate { Key = key, Subject = string.Empty, BodyHtml = string.Empty },
     };
+
+    // Shared token-replace so every sender (AccountsController,
+    // ShiftAssignmentsController, ...) renders {{placeholders}} the same way.
+    public static string Render(string template, IReadOnlyDictionary<string, string> placeholders)
+    {
+        foreach (var (token, value) in placeholders)
+        {
+            template = template.Replace(token, value);
+        }
+
+        return template;
+    }
 }
