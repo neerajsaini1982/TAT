@@ -36,8 +36,22 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod());
 });
 
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Default")));
+var sqliteConnectionString = builder.Configuration.GetConnectionString("Default")!;
+
+// Azure App Service (and any host using Run-From-Package) mounts the
+// deployed app folder read-only, so the sqlite file must live outside it
+// (e.g. /home/data/tat.db, set via ConnectionStrings__Default). Unlike the
+// photos/documents roots, EF Core won't create a missing parent directory
+// for us, so it needs to be created up front or the very first migration
+// fails to open the file.
+var sqliteDirectory = Path.GetDirectoryName(Path.GetFullPath(
+    new Microsoft.Data.Sqlite.SqliteConnectionStringBuilder(sqliteConnectionString).DataSource));
+if (sqliteDirectory is not null)
+{
+    Directory.CreateDirectory(sqliteDirectory);
+}
+
+builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(sqliteConnectionString));
 
 builder.Services.AddScoped<TokenService>();
 
