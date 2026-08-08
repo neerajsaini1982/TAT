@@ -12,6 +12,18 @@ using Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// appsettings.json pins a fixed port (5235) for the LAN/Windows deployment,
+// and that value wins over the ASPNETCORE_URLS environment variable under
+// the default configuration precedence (the env-derived "urls" bootstrap
+// value sits below appsettings.json in the provider stack). Azure App
+// Service's built-in .NET runtime image relies on ASPNETCORE_URLS to know
+// which port to probe, so it needs to be honored explicitly here when set.
+var azureUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS");
+if (!string.IsNullOrEmpty(azureUrls))
+{
+    builder.WebHost.UseUrls(azureUrls);
+}
+
 const string AngularDevClient = "AngularDevClient";
 
 // Add services to the container.
