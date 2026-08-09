@@ -51,6 +51,12 @@ public class LocationSettings
     // When on, exposes extra diagnostics/test affordances for this location.
     public bool DevelopmentMode { get; set; } = false;
 
+    // When off, self-service punches (clock-in/out, break, lunch — see
+    // TimeEntriesController) are only accepted from an IP address the admin
+    // has approved for this location (AllowedPunchDevice). Defaults to on so
+    // existing locations aren't suddenly locked out.
+    public bool ClockInAnywhere { get; set; } = true;
+
     // Governs whether roles other than Admin can see everyone's shifts (not
     // just their own) on the "My Schedule" page — the admin roster/management
     // page always shows everyone regardless of this. When disabled, every

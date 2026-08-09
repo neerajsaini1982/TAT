@@ -72,6 +72,7 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         settings.AdminSeesAllSchedules = request.AdminSeesAllSchedules;
         settings.LeadSeesAllSchedules = request.LeadSeesAllSchedules;
         settings.EmployeeSeesAllSchedules = request.EmployeeSeesAllSchedules;
+        settings.ClockInAnywhere = request.ClockInAnywhere;
         settings.SmtpHost = request.SmtpHost;
         settings.SmtpPort = request.SmtpPort;
         settings.SmtpUsername = request.SmtpUsername;
@@ -189,6 +190,7 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         s.AdminSeesAllSchedules,
         s.LeadSeesAllSchedules,
         s.EmployeeSeesAllSchedules,
+        s.ClockInAnywhere,
         s.SmtpHost,
         s.SmtpPort,
         s.SmtpUsername,

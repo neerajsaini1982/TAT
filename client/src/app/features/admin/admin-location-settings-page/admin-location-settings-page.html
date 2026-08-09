@@ -159,6 +159,62 @@
       </mat-card-content>
     </mat-card>
 
+    <mat-card class="section">
+      <mat-card-header>
+        <mat-card-title>Clock-In Restriction</mat-card-title>
+        <mat-card-subtitle>
+          Controls whether employees can clock-in/out, break in/out, and lunch in/out from anywhere, or only from
+          approved devices.
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content class="section-content">
+        <mat-slide-toggle [(ngModel)]="form.clockInAnywhere" name="clockInAnywhere">Clock-In Anywhere</mat-slide-toggle>
+
+        @if (!form.clockInAnywhere) {
+          <div class="device-list">
+            @for (device of allowedDevices(); track device.id) {
+              <div class="template-row">
+                <div class="template-info">
+                  <span class="template-name">{{ device.label }}</span>
+                  <span class="template-subject">{{ device.ipAddress }}</span>
+                </div>
+                <button mat-icon-button type="button" aria-label="Remove device" (click)="removeDevice(device)">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            } @empty {
+              <p class="no-devices">No approved devices yet — employees won't be able to clock in until one is added.</p>
+            }
+
+            <div class="add-device-row">
+              <mat-form-field appearance="outline">
+                <mat-label>IP Address</mat-label>
+                <input matInput [(ngModel)]="newDeviceIp" name="newDeviceIp" placeholder="192.168.1.10" />
+              </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Label</mat-label>
+                <input matInput [(ngModel)]="newDeviceLabel" name="newDeviceLabel" placeholder="Front desk kiosk" />
+              </mat-form-field>
+              <button
+                mat-stroked-button
+                type="button"
+                (click)="addDevice()"
+                [disabled]="addingDevice() || !newDeviceIp.trim() || !newDeviceLabel.trim()"
+              >
+                {{ addingDevice() ? 'Adding…' : 'Add' }}
+              </button>
+            </div>
+            @if (deviceError()) {
+              <p class="test-email-status error">
+                <mat-icon>error</mat-icon>
+                {{ deviceError() }}
+              </p>
+            }
+          </div>
+        }
+      </mat-card-content>
+    </mat-card>
+
     <div class="section-group">
       <h3 class="group-label">Email</h3>
 

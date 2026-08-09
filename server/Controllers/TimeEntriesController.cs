@@ -87,6 +87,12 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
             return Conflict("Already clocked in for this shift.");
         }
 
+        var deviceError = CheckDeviceAllowed(assignment.Shift!.LocationId);
+        if (deviceError is not null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, deviceError);
+        }
+
         var windowMinutes = db.LocationSettings
             .Where(s => s.LocationId == assignment.Shift!.LocationId)
             .Select(s => (int?)s.ClockInWindowMinutes)
@@ -341,10 +347,19 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
     // 400 when the transition isn't valid from the entry's current state.
     private ActionResult<TimeEntryDto> Transition(int id, Func<TimeEntry, string?> apply)
     {
-        var entry = db.TimeEntries.Include(t => t.Segments).SingleOrDefault(t => t.Id == id);
+        var entry = db.TimeEntries
+            .Include(t => t.Segments)
+            .Include(t => t.ShiftAssignment).ThenInclude(a => a!.Shift)
+            .SingleOrDefault(t => t.Id == id);
         if (entry is null || entry.AccountId != CallerAccountId())
         {
             return NotFound();
+        }
+
+        var deviceError = CheckDeviceAllowed(entry.ShiftAssignment!.Shift!.LocationId);
+        if (deviceError is not null)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, deviceError);
         }
 
         var error = apply(entry);
@@ -355,6 +370,37 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
 
         db.SaveChanges();
         return Ok(ToDto(entry));
+    }
+
+    // When LocationSettings.ClockInAnywhere is off, restricts self-service
+    // punches to IPs an Admin has approved for that location. Admin
+    // overrides (AdminClockOut/AdminEditTimes) aren't subject to this — an
+    // admin acting on someone else's entry isn't punching from the
+    // employee's device.
+    private string? CheckDeviceAllowed(int locationId)
+    {
+        var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == locationId);
+        if (settings is null || settings.ClockInAnywhere)
+        {
+            return null;
+        }
+
+        var ip = ClientIp();
+        var allowed = ip is not null && db.AllowedPunchDevices.Any(d => d.LocationId == locationId && d.IpAddress == ip);
+        return allowed ? null : "Clock-in/out is restricted to approved devices at this location. Contact your admin.";
+    }
+
+    // Prefers X-Forwarded-For (set by Azure App Service's front end) over
+    // the socket-level RemoteIpAddress, which on Azure reflects the
+    // internal proxy hop rather than the real client.
+    private string? ClientIp()
+    {
+        var forwarded = Request.Headers["X-Forwarded-For"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(forwarded))
+        {
+            return forwarded.Split(',')[0].Trim();
+        }
+        return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 
     private bool CanAccess(string? locationCode) =>
