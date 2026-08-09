@@ -211,12 +211,21 @@ export class CurrentWeekSchedule implements OnInit {
             ),
           ];
 
-          // Location scope (Admin/Lead) needs every employee's punches to
-          // fill the table's columns, not just the caller's own, and for
-          // whichever dates are actually visible now that those can be any
-          // day in any week — mine scope only ever needs the caller's own
-          // for today, which is also all getMine ever returns.
-          const entries$ = isLocationScope
+          // Location scope (Admin) always needs every employee's punches.
+          // 'mine' scope usually only needs the caller's own — but Schedule
+          // Visibility can grant a roster there too (e.g. Lead with
+          // LeadSeesAllSchedules), and TimeEntriesController.GetForLocation
+          // is LeadOrAbove, so a Lead seeing a roster this way still has
+          // permission to see everyone's punches, not just their own. An
+          // Employee granted a roster view does NOT have that server
+          // permission, so this stays role-gated rather than just
+          // roster-visible.
+          const role = this.auth.role();
+          const rosterVisible = assignments.some((a) => a.accountId !== this.myAccountId);
+          const canSeeOthersPunches =
+            isLocationScope || (rosterVisible && (role === 'Sa' || role === 'Admin' || role === 'Lead'));
+
+          const entries$ = canSeeOthersPunches
             ? visibleDates.length > 0
               ? forkJoin(
                   visibleDates.map((date) =>
