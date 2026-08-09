@@ -273,9 +273,13 @@
             real data. Your current local database is backed up first, but restart the local server afterward so it
             picks up the new file cleanly.
           </p>
-          <button mat-stroked-button type="button" [disabled]="syncingDb()" (click)="syncDbFromLive()">
-            {{ syncingDb() ? 'Syncing…' : 'Sync DB from Live' }}
-          </button>
+          @if (canSyncDb) {
+            <button mat-stroked-button type="button" [disabled]="syncingDb()" (click)="syncDbFromLive()">
+              {{ syncingDb() ? 'Syncing…' : 'Sync DB from Live' }}
+            </button>
+          } @else {
+            <p class="error">Lead accounts can't do this — sign in as Admin instead.</p>
+          }
           @if (syncDbResult()) {
             <p class="saved-note">{{ syncDbResult() }}</p>
           }

@@ -15,6 +15,7 @@ import { forkJoin } from 'rxjs';
 import { DateFormat, LocationSettingsApi, LocationSettingsDto, TimeFormat } from '../../../core/location-settings-api';
 import { EmailTemplateDto, EmailTemplatesApi } from '../../../core/email-templates-api';
 import { AccountsApi } from '../../../core/accounts-api';
+import { Auth } from '../../../core/auth';
 import { DevToolsApi } from '../../../core/dev-tools-api';
 import {
   EmailTemplateEditorDialog,
@@ -148,6 +149,7 @@ export class AdminLocationSettingsPage implements OnInit {
   private readonly templatesApi = inject(EmailTemplatesApi);
   private readonly accountsApi = inject(AccountsApi);
   private readonly devToolsApi = inject(DevToolsApi);
+  private readonly auth = inject(Auth);
   private readonly dialog = inject(MatDialog);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
@@ -155,6 +157,11 @@ export class AdminLocationSettingsPage implements OnInit {
   // Only ever true for a local `ng serve` dev build — never in a production
   // build, regardless of environment — see DevToolsApi/DevToolsController.
   protected readonly isDevMode = isDevMode();
+  // Matches DevToolsController's AdminOrAbove policy. This page (adminGuard)
+  // is only ever reached as Admin or Lead — Sa can't get here — so in
+  // practice this excludes just Lead, but checking the real policy keeps it
+  // honest if that ever changes.
+  protected readonly canSyncDb = this.auth.role() === 'Admin' || this.auth.role() === 'Sa';
   protected readonly syncingDb = signal(false);
   protected readonly syncDbResult = signal<string | null>(null);
   protected readonly syncDbError = signal<string | null>(null);
@@ -326,7 +333,11 @@ export class AdminLocationSettingsPage implements OnInit {
       },
       error: (err) => {
         this.syncingDb.set(false);
-        this.syncDbError.set(err?.error ?? 'Failed to sync the database from live.');
+        this.syncDbError.set(
+          err?.status === 403
+            ? "Forbidden — Lead accounts can't do this; sign in as Admin instead."
+            : (err?.error ?? 'Failed to sync the database from live.'),
+        );
       },
     });
   }

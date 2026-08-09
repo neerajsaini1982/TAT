@@ -19,9 +19,16 @@ namespace Server.Controllers;
 // which must already be installed and logged in (`az login`) on this
 // machine — see appsettings.Development.json for the target app/resource
 // group (AzureSync section).
+//
+// AdminOrAbove rather than SaOnly: the button lives on the per-location
+// admin settings page, which adminGuard restricts to Admin/Lead — Sa can
+// never reach it (see client/src/app/core/guards.ts) — so SaOnly would
+// make this permanently unreachable through the UI. The real access
+// control here is IsDevelopment() plus the operator's own `az login`
+// session, not the app role.
 [ApiController]
 [Route("api/dev-tools")]
-[Authorize(Policy = "SaOnly")]
+[Authorize(Policy = "AdminOrAbove")]
 public class DevToolsController(AppDbContext db, IConfiguration config, IWebHostEnvironment env, IHttpClientFactory httpClientFactory) : ControllerBase
 {
     [HttpPost("sync-db-from-live")]
