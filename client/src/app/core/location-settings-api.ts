@@ -21,6 +21,7 @@ export interface LocationSettingsDto {
   adminSeesAllSchedules: boolean;
   leadSeesAllSchedules: boolean;
   employeeSeesAllSchedules: boolean;
+  clockInAnywhere: boolean;
   smtpHost: string | null;
   smtpPort: number | null;
   smtpUsername: string | null;
@@ -48,6 +49,7 @@ export interface UpdateLocationSettingsRequest {
   adminSeesAllSchedules: boolean;
   leadSeesAllSchedules: boolean;
   employeeSeesAllSchedules: boolean;
+  clockInAnywhere: boolean;
   smtpHost: string | null;
   smtpPort: number | null;
   smtpUsername: string | null;

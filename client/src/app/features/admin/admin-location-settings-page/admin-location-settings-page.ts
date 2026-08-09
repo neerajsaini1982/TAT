@@ -14,6 +14,7 @@ import { forkJoin } from 'rxjs';
 
 import { DateFormat, LocationSettingsApi, LocationSettingsDto, TimeFormat } from '../../../core/location-settings-api';
 import { EmailTemplateDto, EmailTemplatesApi } from '../../../core/email-templates-api';
+import { AllowedPunchDeviceDto, AllowedPunchDevicesApi } from '../../../core/allowed-punch-devices-api';
 import { AccountsApi } from '../../../core/accounts-api';
 import { Auth } from '../../../core/auth';
 import { DevToolsApi } from '../../../core/dev-tools-api';
@@ -90,6 +91,7 @@ interface FormModel {
   adminSeesAllSchedules: boolean;
   leadSeesAllSchedules: boolean;
   employeeSeesAllSchedules: boolean;
+  clockInAnywhere: boolean;
   smtpHost: string;
   smtpPort: number | null;
   smtpUsername: string;
@@ -116,6 +118,7 @@ const emptyForm = (): FormModel => ({
   adminSeesAllSchedules: true,
   leadSeesAllSchedules: false,
   employeeSeesAllSchedules: false,
+  clockInAnywhere: true,
   smtpHost: '',
   smtpPort: null,
   smtpUsername: '',
@@ -147,6 +150,7 @@ const emptyForm = (): FormModel => ({
 export class AdminLocationSettingsPage implements OnInit {
   private readonly settingsApi = inject(LocationSettingsApi);
   private readonly templatesApi = inject(EmailTemplatesApi);
+  private readonly devicesApi = inject(AllowedPunchDevicesApi);
   private readonly accountsApi = inject(AccountsApi);
   private readonly devToolsApi = inject(DevToolsApi);
   private readonly auth = inject(Auth);
@@ -184,6 +188,11 @@ export class AdminLocationSettingsPage implements OnInit {
   protected readonly testEmailResult = signal<'success' | 'error' | null>(null);
   protected readonly testEmailError = signal<string | null>(null);
   protected testEmailAddress = '';
+  protected readonly allowedDevices = signal<AllowedPunchDeviceDto[]>([]);
+  protected readonly addingDevice = signal(false);
+  protected readonly deviceError = signal<string | null>(null);
+  protected newDeviceIp = '';
+  protected newDeviceLabel = '';
 
   protected form: FormModel = emptyForm();
 
@@ -197,11 +206,13 @@ export class AdminLocationSettingsPage implements OnInit {
     forkJoin({
       settings: this.settingsApi.get(this.locationCode),
       templates: this.templatesApi.getAll(this.locationCode),
+      devices: this.devicesApi.getAll(this.locationCode),
       me: this.accountsApi.getMine(),
     }).subscribe({
-      next: ({ settings, templates, me }) => {
+      next: ({ settings, templates, devices, me }) => {
         this.applySettings(settings);
         this.templates.set(templates);
+        this.allowedDevices.set(devices);
         this.testEmailAddress = me.email;
         this.loading.set(false);
       },
@@ -229,6 +240,7 @@ export class AdminLocationSettingsPage implements OnInit {
       adminSeesAllSchedules: settings.adminSeesAllSchedules,
       leadSeesAllSchedules: settings.leadSeesAllSchedules,
       employeeSeesAllSchedules: settings.employeeSeesAllSchedules,
+      clockInAnywhere: settings.clockInAnywhere,
       smtpHost: settings.smtpHost ?? '',
       smtpPort: settings.smtpPort,
       smtpUsername: settings.smtpUsername ?? '',
@@ -262,6 +274,7 @@ export class AdminLocationSettingsPage implements OnInit {
           adminSeesAllSchedules: this.form.adminSeesAllSchedules,
           leadSeesAllSchedules: this.form.leadSeesAllSchedules,
           employeeSeesAllSchedules: this.form.employeeSeesAllSchedules,
+          clockInAnywhere: this.form.clockInAnywhere,
           smtpHost: this.form.smtpHost || null,
           smtpPort: this.form.smtpPort,
           smtpUsername: this.form.smtpUsername || null,
@@ -368,6 +381,36 @@ export class AdminLocationSettingsPage implements OnInit {
         this.templates.update((list) => list.map((t) => (t.key === key ? updated : t)));
       },
       error: (err) => this.error.set(err?.error ?? 'Failed to save template.'),
+    });
+  }
+
+  addDevice(): void {
+    if (!this.newDeviceIp.trim() || !this.newDeviceLabel.trim()) {
+      return;
+    }
+    this.addingDevice.set(true);
+    this.deviceError.set(null);
+    this.devicesApi
+      .create({ ipAddress: this.newDeviceIp.trim(), label: this.newDeviceLabel.trim() }, this.locationCode)
+      .subscribe({
+        next: (device) => {
+          this.allowedDevices.update((list) => [...list, device]);
+          this.newDeviceIp = '';
+          this.newDeviceLabel = '';
+          this.addingDevice.set(false);
+        },
+        error: (err) => {
+          this.addingDevice.set(false);
+          this.deviceError.set(err?.error ?? 'Failed to add device.');
+        },
+      });
+  }
+
+  removeDevice(device: AllowedPunchDeviceDto): void {
+    this.deviceError.set(null);
+    this.devicesApi.delete(device.id, this.locationCode).subscribe({
+      next: () => this.allowedDevices.update((list) => list.filter((d) => d.id !== device.id)),
+      error: (err) => this.deviceError.set(err?.error ?? 'Failed to remove device.'),
     });
   }
 }

@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ShiftAssignment> ShiftAssignments => Set<ShiftAssignment>();
     public DbSet<LocationSettings> LocationSettings => Set<LocationSettings>();
     public DbSet<EmailTemplate> EmailTemplates => Set<EmailTemplate>();
+    public DbSet<AllowedPunchDevice> AllowedPunchDevices => Set<AllowedPunchDevice>();
     public DbSet<TimeEntry> TimeEntries => Set<TimeEntry>();
     public DbSet<ScheduledBreak> ScheduledBreaks => Set<ScheduledBreak>();
     public DbSet<TimeEntrySegment> TimeEntrySegments => Set<TimeEntrySegment>();
@@ -139,6 +140,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(t => new { t.LocationId, t.Key }).IsUnique();
+        });
+
+        modelBuilder.Entity<AllowedPunchDevice>(entity =>
+        {
+            entity.HasOne(d => d.Location)
+                .WithMany()
+                .HasForeignKey(d => d.LocationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(d => new { d.LocationId, d.IpAddress }).IsUnique();
         });
 
         modelBuilder.Entity<TimeEntry>(entity =>

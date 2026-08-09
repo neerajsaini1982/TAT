@@ -17,6 +17,9 @@ public record LocationSettingsDto(
     bool AdminSeesAllSchedules,
     bool LeadSeesAllSchedules,
     bool EmployeeSeesAllSchedules,
+    // When off, self-service punches are restricted to an approved IP — see
+    // AllowedPunchDeviceDto/AllowedPunchDevicesController.
+    bool ClockInAnywhere,
     string? SmtpHost,
     int? SmtpPort,
     string? SmtpUsername,
@@ -46,6 +49,7 @@ public record UpdateLocationSettingsRequest(
     bool AdminSeesAllSchedules,
     bool LeadSeesAllSchedules,
     bool EmployeeSeesAllSchedules,
+    bool ClockInAnywhere,
     string? SmtpHost,
     int? SmtpPort,
     string? SmtpUsername,
