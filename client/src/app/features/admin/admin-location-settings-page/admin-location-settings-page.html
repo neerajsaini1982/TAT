@@ -107,6 +107,18 @@
             name="lunchLimitMinutes"
           />
         </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Overtime Threshold (minutes/day)</mat-label>
+          <input
+            matInput
+            type="number"
+            min="0"
+            max="1440"
+            [(ngModel)]="form.overtimeDailyThresholdMinutes"
+            name="overtimeDailyThresholdMinutes"
+          />
+        </mat-form-field>
       </mat-card-content>
     </mat-card>
 
@@ -248,6 +260,31 @@
         </mat-card-content>
       </mat-card>
     </div>
+
+    @if (isDevMode) {
+      <mat-card class="section">
+        <mat-card-header>
+          <mat-card-title>Developer Tools</mat-card-title>
+          <mat-card-subtitle>Only shown in a local dev build — never appears in production.</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content class="section-content">
+          <p class="dev-tools-description">
+            Downloads the live production database and replaces this machine's local one, so you can test against
+            real data. Your current local database is backed up first, but restart the local server afterward so it
+            picks up the new file cleanly.
+          </p>
+          <button mat-stroked-button type="button" [disabled]="syncingDb()" (click)="syncDbFromLive()">
+            {{ syncingDb() ? 'Syncing…' : 'Sync DB from Live' }}
+          </button>
+          @if (syncDbResult()) {
+            <p class="saved-note">{{ syncDbResult() }}</p>
+          }
+          @if (syncDbError()) {
+            <p class="error">{{ syncDbError() }}</p>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
 
     <div class="save-row">
       <button mat-flat-button color="primary" type="submit" [disabled]="saving()">Save Settings</button>

@@ -6,6 +6,12 @@
       "runtimeExecutable": "sh",
       "runtimeArgs": ["-c", "cd client && npx ng serve --port 4200"],
       "port": 4200
+    },
+    {
+      "name": "server",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "cd server && dotnet run --launch-profile http"],
+      "port": 5235
     }
   ]
 }

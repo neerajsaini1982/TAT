@@ -11,6 +11,10 @@ public record DailyHoursDto(
     int BreakMinutes,
     int LunchMinutes,
     int? NetWorkedMinutes,
+    // Net worked time beyond the location's daily overtime threshold (see
+    // LocationSettings.OvertimeDailyThresholdMinutes). 0 on days that aren't
+    // over, and on days NetWorkedMinutes is null (not yet clocked out).
+    int OvertimeMinutes,
     bool IsAbsent,
     string? AbsenceNote,
     bool LeftEarly,
@@ -37,6 +41,7 @@ public record EmployeeHoursReportDto(
     int TotalBreakMinutes,
     int TotalLunchMinutes,
     int TotalNetWorkedMinutes,
+    int TotalOvertimeMinutes,
     int AbsentDays,
     int OpenEntryDays,
     List<DailyHoursDto> Days);

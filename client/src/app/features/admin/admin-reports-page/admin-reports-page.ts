@@ -44,6 +44,7 @@ export class AdminReportsPage implements OnInit {
     'breakTime',
     'lunchTime',
     'netWorkedTime',
+    'overtimeTime',
     'notes',
   ];
 
@@ -70,6 +71,7 @@ export class AdminReportsPage implements OnInit {
       breakMinutes: rows.reduce((sum, r) => sum + r.totalBreakMinutes, 0),
       lunchMinutes: rows.reduce((sum, r) => sum + r.totalLunchMinutes, 0),
       netWorkedMinutes: rows.reduce((sum, r) => sum + r.totalNetWorkedMinutes, 0),
+      overtimeMinutes: rows.reduce((sum, r) => sum + r.totalOvertimeMinutes, 0),
       absentDays: rows.reduce((sum, r) => sum + r.absentDays, 0),
       openEntryDays: rows.reduce((sum, r) => sum + r.openEntryDays, 0),
     };

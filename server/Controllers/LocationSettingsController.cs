@@ -67,6 +67,7 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         settings.LateClockInGraceMinutes = request.LateClockInGraceMinutes;
         settings.BreakLimitMinutes = request.BreakLimitMinutes;
         settings.LunchLimitMinutes = request.LunchLimitMinutes;
+        settings.OvertimeDailyThresholdMinutes = request.OvertimeDailyThresholdMinutes;
         settings.DevelopmentMode = request.DevelopmentMode;
         settings.ScheduleVisibilityEnabled = request.ScheduleVisibilityEnabled;
         settings.AdminSeesAllSchedules = request.AdminSeesAllSchedules;
@@ -184,6 +185,7 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         s.LateClockInGraceMinutes,
         s.BreakLimitMinutes,
         s.LunchLimitMinutes,
+        s.OvertimeDailyThresholdMinutes,
         s.DevelopmentMode,
         s.ScheduleVisibilityEnabled,
         s.AdminSeesAllSchedules,

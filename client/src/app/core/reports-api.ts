@@ -9,6 +9,7 @@ export interface DailyHoursDto {
   breakMinutes: number;
   lunchMinutes: number;
   netWorkedMinutes: number | null;
+  overtimeMinutes: number;
   isAbsent: boolean;
   absenceNote: string | null;
   leftEarly: boolean;
@@ -26,6 +27,7 @@ export interface EmployeeHoursReportDto {
   totalBreakMinutes: number;
   totalLunchMinutes: number;
   totalNetWorkedMinutes: number;
+  totalOvertimeMinutes: number;
   absentDays: number;
   openEntryDays: number;
   days: DailyHoursDto[];

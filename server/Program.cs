@@ -81,6 +81,8 @@ builder.Services.AddSingleton<SsnProtector>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IScheduleNotifier, ScheduleNotifier>();
 builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+// Used by DevToolsController to pull the live DB down over Kudu's VFS API.
+builder.Services.AddHttpClient();
 
 var jwtSection = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

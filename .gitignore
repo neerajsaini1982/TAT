@@ -39,6 +39,7 @@ yarn-error.log*
 *.db
 *.db-shm
 *.db-wal
+*.db.bak-*
 
 # Root-level dev tooling (concurrently, etc.)
 /node_modules/

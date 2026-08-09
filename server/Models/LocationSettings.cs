@@ -47,6 +47,10 @@ public class LocationSettings
     public int BreakLimitMinutes { get; set; } = 15;
     // A Lunch longer than this many minutes is flagged.
     public int LunchLimitMinutes { get; set; } = 30;
+    // Net worked time beyond this many minutes in a single day counts as
+    // overtime on the hours report (see ReportsController). Defaults to 480
+    // (8 hours).
+    public int OvertimeDailyThresholdMinutes { get; set; } = 480;
 
     // When on, exposes extra diagnostics/test affordances for this location.
     public bool DevelopmentMode { get; set; } = false;

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, isDevMode, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
@@ -15,6 +15,7 @@ import { forkJoin } from 'rxjs';
 import { DateFormat, LocationSettingsApi, LocationSettingsDto, TimeFormat } from '../../../core/location-settings-api';
 import { EmailTemplateDto, EmailTemplatesApi } from '../../../core/email-templates-api';
 import { AccountsApi } from '../../../core/accounts-api';
+import { DevToolsApi } from '../../../core/dev-tools-api';
 import {
   EmailTemplateEditorDialog,
   EmailTemplateEditorResult,
@@ -82,6 +83,7 @@ interface FormModel {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
+  overtimeDailyThresholdMinutes: number;
   developmentMode: boolean;
   scheduleVisibilityEnabled: boolean;
   adminSeesAllSchedules: boolean;
@@ -107,6 +109,7 @@ const emptyForm = (): FormModel => ({
   lateClockInGraceMinutes: 5,
   breakLimitMinutes: 15,
   lunchLimitMinutes: 30,
+  overtimeDailyThresholdMinutes: 480,
   developmentMode: false,
   scheduleVisibilityEnabled: true,
   adminSeesAllSchedules: true,
@@ -144,9 +147,17 @@ export class AdminLocationSettingsPage implements OnInit {
   private readonly settingsApi = inject(LocationSettingsApi);
   private readonly templatesApi = inject(EmailTemplatesApi);
   private readonly accountsApi = inject(AccountsApi);
+  private readonly devToolsApi = inject(DevToolsApi);
   private readonly dialog = inject(MatDialog);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
+
+  // Only ever true for a local `ng serve` dev build — never in a production
+  // build, regardless of environment — see DevToolsApi/DevToolsController.
+  protected readonly isDevMode = isDevMode();
+  protected readonly syncingDb = signal(false);
+  protected readonly syncDbResult = signal<string | null>(null);
+  protected readonly syncDbError = signal<string | null>(null);
 
   protected readonly timeZones = TIME_ZONES;
   protected readonly dateFormats = DATE_FORMATS;
@@ -199,6 +210,7 @@ export class AdminLocationSettingsPage implements OnInit {
       lateClockInGraceMinutes: settings.lateClockInGraceMinutes,
       breakLimitMinutes: settings.breakLimitMinutes,
       lunchLimitMinutes: settings.lunchLimitMinutes,
+      overtimeDailyThresholdMinutes: settings.overtimeDailyThresholdMinutes,
       developmentMode: settings.developmentMode,
       scheduleVisibilityEnabled: settings.scheduleVisibilityEnabled,
       adminSeesAllSchedules: settings.adminSeesAllSchedules,
@@ -231,6 +243,7 @@ export class AdminLocationSettingsPage implements OnInit {
           lateClockInGraceMinutes: this.form.lateClockInGraceMinutes,
           breakLimitMinutes: this.form.breakLimitMinutes,
           lunchLimitMinutes: this.form.lunchLimitMinutes,
+          overtimeDailyThresholdMinutes: this.form.overtimeDailyThresholdMinutes,
           developmentMode: this.form.developmentMode,
           scheduleVisibilityEnabled: this.form.scheduleVisibilityEnabled,
           adminSeesAllSchedules: this.form.adminSeesAllSchedules,
@@ -293,6 +306,29 @@ export class AdminLocationSettingsPage implements OnInit {
           this.testEmailError.set(err?.error ?? 'Failed to send test email.');
         },
       });
+  }
+
+  // Local dev only (see DevToolsController) — pulls the live Azure database
+  // down and replaces this machine's local one so it can be tested against
+  // real data.
+  syncDbFromLive(): void {
+    if (!confirm('Replace your local database with a copy of the live one? Your current local data will be backed up, but you should restart the local server afterward.')) {
+      return;
+    }
+
+    this.syncingDb.set(true);
+    this.syncDbResult.set(null);
+    this.syncDbError.set(null);
+    this.devToolsApi.syncDbFromLive().subscribe({
+      next: (result) => {
+        this.syncingDb.set(false);
+        this.syncDbResult.set(result.message);
+      },
+      error: (err) => {
+        this.syncingDb.set(false);
+        this.syncDbError.set(err?.error ?? 'Failed to sync the database from live.');
+      },
+    });
   }
 
   editTemplate(template: EmailTemplateDto): void {

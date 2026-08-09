@@ -15,6 +15,7 @@ export interface LocationSettingsDto {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
+  overtimeDailyThresholdMinutes: number;
   developmentMode: boolean;
   scheduleVisibilityEnabled: boolean;
   adminSeesAllSchedules: boolean;
@@ -41,6 +42,7 @@ export interface UpdateLocationSettingsRequest {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
+  overtimeDailyThresholdMinutes: number;
   developmentMode: boolean;
   scheduleVisibilityEnabled: boolean;
   adminSeesAllSchedules: boolean;

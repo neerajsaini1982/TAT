@@ -40,6 +40,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
         var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == location.Id);
         var breakLimitMinutes = settings?.BreakLimitMinutes ?? 15;
         var lunchLimitMinutes = settings?.LunchLimitMinutes ?? 30;
+        var overtimeThresholdMinutes = settings?.OvertimeDailyThresholdMinutes ?? 480;
 
         var assignments = db.ShiftAssignments
             .Include(a => a.Account)
@@ -54,7 +55,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
 
         var report = assignments
             .GroupBy(a => a.AccountId)
-            .Select(g => BuildEmployeeReport(g.First().Account!, g.ToList(), entriesByAssignmentId, breakLimitMinutes, lunchLimitMinutes))
+            .Select(g => BuildEmployeeReport(g.First().Account!, g.ToList(), entriesByAssignmentId, breakLimitMinutes, lunchLimitMinutes, overtimeThresholdMinutes))
             .OrderBy(e => e.FullName)
             .ToList();
 
@@ -66,12 +67,13 @@ public class ReportsController(AppDbContext db) : ControllerBase
         List<ShiftAssignment> assignments,
         Dictionary<int, TimeEntry> entriesByAssignmentId,
         int breakLimitMinutes,
-        int lunchLimitMinutes)
+        int lunchLimitMinutes,
+        int overtimeThresholdMinutes)
     {
         var days = assignments
             .GroupBy(a => a.Date)
             .OrderBy(g => g.Key)
-            .Select(g => BuildDay(g.Key, g.ToList(), entriesByAssignmentId, breakLimitMinutes, lunchLimitMinutes))
+            .Select(g => BuildDay(g.Key, g.ToList(), entriesByAssignmentId, breakLimitMinutes, lunchLimitMinutes, overtimeThresholdMinutes))
             .ToList();
 
         return new EmployeeHoursReportDto(
@@ -81,6 +83,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
             days.Sum(d => d.BreakMinutes),
             days.Sum(d => d.LunchMinutes),
             days.Sum(d => d.NetWorkedMinutes ?? 0),
+            days.Sum(d => d.OvertimeMinutes),
             days.Count(d => d.IsAbsent),
             days.Count(d => d.StillClockedIn),
             days);
@@ -93,7 +96,8 @@ public class ReportsController(AppDbContext db) : ControllerBase
         List<ShiftAssignment> dayAssignments,
         Dictionary<int, TimeEntry> entriesByAssignmentId,
         int breakLimitMinutes,
-        int lunchLimitMinutes)
+        int lunchLimitMinutes,
+        int overtimeThresholdMinutes)
     {
         var isAbsent = dayAssignments.Any(a => a.IsAbsent);
         var absenceNote = dayAssignments.FirstOrDefault(a => a.IsAbsent)?.AbsenceNote;
@@ -159,9 +163,10 @@ public class ReportsController(AppDbContext db) : ControllerBase
         // Per the report spec: net worked time is worked time less lunch
         // only — break time is not subtracted out.
         var netWorkedMinutes = workedMinutes is not null ? workedMinutes - lunchMinutes : null;
+        var overtimeMinutes = netWorkedMinutes is not null ? Math.Max(0, netWorkedMinutes.Value - overtimeThresholdMinutes) : 0;
 
         return new DailyHoursDto(
-            date, workedMinutes, breakMinutes, lunchMinutes, netWorkedMinutes,
+            date, workedMinutes, breakMinutes, lunchMinutes, netWorkedMinutes, overtimeMinutes,
             isAbsent, absenceNote, leftEarly, leftEarlyNote, stillClockedIn, hasLongBreak, hasLongLunch, notes);
     }
 
