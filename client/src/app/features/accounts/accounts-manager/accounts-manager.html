@@ -75,6 +75,11 @@
             <mat-label>Username</mat-label>
             <input matInput name="username" [(ngModel)]="form.username" disabled />
           </mat-form-field>
+        } @else if (editingId() !== null) {
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput name="username" [(ngModel)]="form.username" required />
+          </mat-form-field>
         }
         <mat-form-field appearance="outline">
           <mat-label>First Name</mat-label>

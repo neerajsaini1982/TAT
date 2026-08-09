@@ -317,6 +317,19 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
             account.Username = request.Username;
             account.PasswordHash = PasswordHasher.Hash(request.Password);
         }
+        // Renaming a username without a role change — e.g. correcting an
+        // Employee's auto-generated username from the ADP import. Doesn't
+        // touch PasswordHash: an Employee's is still that unknown random
+        // value, irrelevant since they log in with UserCode, not this.
+        else if (!string.IsNullOrWhiteSpace(request.Username) && request.Username != account.Username)
+        {
+            if (db.Accounts.Any(a => a.Id != id && a.Username == request.Username))
+            {
+                return Conflict($"Username '{request.Username}' is already in use.");
+            }
+
+            account.Username = request.Username;
+        }
 
         account.FirstName = request.FirstName;
         account.LastName = request.LastName;

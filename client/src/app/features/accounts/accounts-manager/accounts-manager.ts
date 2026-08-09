@@ -353,7 +353,11 @@ export class AccountsManager implements OnInit, OnDestroy {
         phone: this.form.phone,
         isActive: this.form.isActive,
         role: this.form.role,
-        username: this.promotingFromEmployee() ? this.form.username : undefined,
+        // Sent whenever the field is editable (promoting off Employee, or
+        // renaming an Employee's username in place) — when it's disabled
+        // (already-Admin/Lead/Sa, not promoting) this is just their
+        // unchanged existing value, a no-op on the server.
+        username: this.form.username,
         password: this.promotingFromEmployee() ? this.form.password : undefined,
         hourlyRate: this.form.hourlyRate,
         ssn: this.form.ssn || undefined,
