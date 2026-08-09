@@ -154,9 +154,15 @@ export class AdminLocationSettingsPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
-  // Only ever true for a local `ng serve` dev build — never in a production
-  // build, regardless of environment — see DevToolsApi/DevToolsController.
-  protected readonly isDevMode = isDevMode();
+  // isDevMode() alone isn't enough here: this app's dev server is routinely
+  // run LAN-accessible (see AngularDevClient CORS policy in Program.cs), so
+  // a `ng serve` build stays "dev mode" for every device on the LAN, not
+  // just this machine. The sync tool is tied to *this* machine's own `az
+  // login` session, so it also needs the browser itself to be on
+  // localhost — otherwise a coworker testing the dev build over the LAN
+  // would see (and could click) a button that isn't theirs to use.
+  protected readonly showDevTools =
+    isDevMode() && (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || location.hostname === '[::1]');
   // Matches DevToolsController's AdminOrAbove policy. This page (adminGuard)
   // is only ever reached as Admin or Lead — Sa can't get here — so in
   // practice this excludes just Lead, but checking the real policy keeps it
