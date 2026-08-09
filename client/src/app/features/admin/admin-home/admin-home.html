@@ -26,6 +26,6 @@
 
   <div class="schedule-section">
     <h2 class="section-title">This Week's Schedule</h2>
-    <app-current-week-schedule scope="location" [locationCode]="locationCode" />
+    <app-current-week-schedule [scope]="auth.role() === 'Lead' ? 'mine' : 'location'" [locationCode]="locationCode" />
   </div>
 }
