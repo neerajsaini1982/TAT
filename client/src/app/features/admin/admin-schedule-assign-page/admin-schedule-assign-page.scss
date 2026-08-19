@@ -1,0 +1,605 @@
+// The app shell centers every route in a 960px .content column (see
+// app.scss) — fine for forms, but it squeezes this table into a box
+// narrower than most screens and forces horizontal scroll for no reason.
+// Break out to the full viewport width instead; .content stays centered
+// under the toolbar, so left:50%/translateX(-50%) reliably re-centers a
+// 100vw-wide host regardless of exact viewport size.
+:host {
+  display: block;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  box-sizing: border-box;
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  position: relative;
+
+  .week-label {
+    min-width: 160px;
+    text-align: center;
+    font-weight: 500;
+    font-size: 17px;
+  }
+}
+
+.view-toggle {
+  position: absolute;
+  right: 0;
+}
+
+.day-tabs {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.day-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 64px;
+  padding: 6px 10px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  cursor: pointer;
+  font: inherit;
+
+  &.active {
+    background: var(--mat-sys-primary);
+    border-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+  }
+}
+
+.day-tab-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.day-tab-date {
+  font-size: 13px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  text-align: center;
+}
+
+// Stands in for .header/.publish-bar (both hidden in print, see the
+// @media print block below) so the printed page still identifies which
+// location and week it's for.
+.print-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+// Unlike .print-header (only ever in the DOM while viewMode is 'print'),
+// this sits in the Day view's DOM at all times — hidden on screen since the
+// day-tabs above already show the selected date, and only meant to identify
+// the single day a Day-view printout covers once those tabs are hidden by
+// .no-print. Kept to just the date, and small — the Day view's own timeline
+// already eats most of a landscape page, so this shouldn't be what pushes a
+// tightly-fitted printout onto a second page.
+.day-print-header {
+  display: none;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.print-button {
+  display: flex;
+  margin: 0 auto 12px;
+}
+
+// Everything marked .no-print is admin-only chrome (nav controls, filters,
+// per-cell assign dropdowns, status banners) that adds nothing to a physical
+// printout and would just burn page space better spent on the schedule
+// itself.
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  .day-print-header {
+    display: block;
+  }
+
+  :host {
+    // The 100vw breakout above is sized against the *screen* viewport to
+    // escape the app shell's centered column — irrelevant on a printed
+    // page (there's no shell/sidebar to break out of), and left/transform
+    // here would otherwise be computed against the page's full box
+    // (including the @page margin), not its printable area, throwing the
+    // content off-center or clipped at the edge.
+    position: static;
+    left: auto;
+    transform: none;
+    width: auto;
+    padding: 0;
+  }
+}
+
+.dev-mode-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  color: var(--mat-sys-tertiary);
+  font-size: 13px;
+  font-weight: 500;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.publish-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.week-total {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 999px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &.published {
+    background: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+  }
+
+  &.draft {
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.no-shifts-note {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+  margin: 0 0 12px;
+}
+
+.filters-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.employee-search {
+  min-width: 220px;
+}
+
+.chip {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.assignment-chip {
+  position: relative;
+  background: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  padding-right: 20px;
+  padding-left: 10px;
+  margin-bottom: 4px;
+  // Colored per employee (see employeeColor()) so a chip is identifiable
+  // even when the table is scrolled and the employee's row label is out
+  // of view.
+  border-left: 4px solid var(--employee-color, var(--mat-sys-primary));
+
+  // Not posted yet: dashed outline distinguishes it from the solid look
+  // of an already-published (live, employee-visible) shift.
+  &.draft {
+    background: transparent;
+    border: 1px dashed var(--mat-sys-outline);
+    border-left: 4px solid var(--employee-color, var(--mat-sys-outline));
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &.absent {
+    opacity: 0.6;
+
+    .chip-name,
+    .chip-time {
+      text-decoration: line-through;
+    }
+  }
+
+  // Punch status is the loudest signal on the grid — a tinted tile reads
+  // faster at a glance than the text/icon actions alone. Absent/draft
+  // chips never carry a TimeEntry (see isClockedIn/isClockedOut), so these
+  // never combine with the states above.
+  &.clocked-in {
+    background: color-mix(in srgb, #2e7d32 22%, var(--mat-sys-surface));
+  }
+
+  &.clocked-out {
+    background: color-mix(in srgb, var(--mat-sys-on-surface-variant) 16%, var(--mat-sys-surface));
+  }
+}
+
+.punch-status {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 2px;
+  margin-right: 4px;
+  padding: 1px 6px 1px 4px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.6;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+
+  mat-icon {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+    line-height: 12px;
+  }
+
+  &.in {
+    background: #2e7d32;
+    color: #fff;
+  }
+
+  &.out {
+    background: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.attendance-badge {
+  display: inline-block;
+  margin-top: 2px;
+  margin-right: 4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.6;
+
+  &.absent {
+    background: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
+
+  &.warn {
+    background: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+  }
+}
+
+.chip-actions {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+
+  button {
+    // Compact override of Material's default 40px touch target — these sit
+    // inside a small chip, not a toolbar.
+    width: 22px;
+    height: 22px;
+    padding: 0;
+
+    mat-icon {
+      font-size: 15px;
+      width: 15px;
+      height: 15px;
+      line-height: 15px;
+    }
+  }
+}
+
+.chip-name {
+  font-weight: 600;
+}
+
+.chip-time {
+  opacity: 0.85;
+}
+
+.chip-remove {
+  all: unset;
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+// A bounded height is what makes position:sticky work correctly here — an
+// unbounded auto-height div never actually scrolls internally, so it can't
+// be a real sticky "scrollport": the header/column would just render at a
+// fixed CSS offset instead of tracking the visible area. Capping the height
+// makes .table-scroll the true scrolling region (both axes), so the sticky
+// header row and sticky first column below track it properly, and
+// everything above (title, week nav, Post Schedule bar) stays on-screen
+// without needing to be pinned itself.
+.table-scroll {
+  overflow: auto;
+  max-height: 65vh;
+}
+
+table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  min-width: 900px;
+}
+
+// Fixed layout + a matching colgroup on both the body table and the footer
+// table (see .table-footer-scroll below) is what keeps their columns the
+// same width — with two separate <table> elements, browsers can't infer
+// that from shared content the way they would within a single table.
+.col-employee {
+  width: 140px;
+}
+
+.col-day {
+  width: 130px;
+}
+
+.col-total {
+  width: 70px;
+}
+
+th,
+td {
+  border: 1px solid var(--mat-sys-outline-variant);
+  padding: 6px 8px;
+  vertical-align: top;
+  text-align: left;
+  font-size: 13px;
+}
+
+th {
+  background: var(--mat-sys-surface-container);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+// Pinned to the left so the employee's name is never scrolled out of view,
+// same reasoning as the sticky header row above — a solid background is
+// required or cells scrolling underneath show through. The corner cell
+// (th.employee-col) sits above both the sticky row and sticky column, so it
+// needs the highest z-index of the three.
+.employee-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  white-space: nowrap;
+  font-weight: 500;
+  background: var(--mat-sys-surface);
+}
+
+th.employee-col {
+  z-index: 3;
+}
+
+// Sits directly below .table-scroll, outside it, so the Daily Total row is
+// always on-screen without needing to track vertical scroll — see the
+// template comment by table-footer-scroll for why sticky doesn't work here.
+// Horizontal scroll still has to be mirrored in from the body (onBodyScroll),
+// so this container's own scrolling is JS-driven, not user-facing.
+.table-footer-scroll {
+  overflow: hidden;
+  border-top: 2px solid var(--mat-sys-outline-variant);
+}
+
+tfoot .employee-col {
+  background: var(--mat-sys-surface-container);
+}
+
+// The dot only renders where --employee-color is actually bound (the
+// per-row name cell); header/footer .employee-col cells don't set it, so
+// var(...)'s fallback keeps them from showing a stray colored dot.
+.employee-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  background: var(--employee-color, transparent);
+  vertical-align: middle;
+}
+
+.total-col {
+  text-align: center;
+  font-weight: 600;
+}
+
+.day-date {
+  font-weight: 400;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.day-cell {
+  min-height: 64px;
+  // Anchors .cell-suggestions (position: absolute) to this cell rather
+  // than the table/viewport.
+  position: relative;
+  // position: relative alone does NOT create a stacking context (that only
+  // happens once z-index is also set to something other than auto) — so
+  // without this, a plain td has no stacking context of its own, and the
+  // row rendered right below it (also plain, unpositioned, later in DOM
+  // order) paints on top of anything that visually spills out of this
+  // cell's bottom edge, e.g. .cell-suggestions here. z-index: 0 is enough
+  // to opt in to a stacking context; cell-active bumps it further so the
+  // one cell with its dropdown open always wins over its neighbors too.
+  z-index: 0;
+
+  &.cell-active {
+    z-index: 10;
+  }
+
+  &.unavailable {
+    background: var(--mat-sys-error-container);
+    opacity: 0.6;
+
+    // Development Mode: still flagged as "not available" for context, but
+    // the dropdown stays enabled so it doesn't look blocked.
+    &.override-allowed {
+      opacity: 0.85;
+    }
+  }
+}
+
+.availability-label {
+  font-size: 11px;
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+// The type-to-filter text box that replaces drag-and-drop in this page (see
+// admin-schedule-assign-page.ts) — sized to fit inside a narrow day column
+// without forcing it wider than the drag-and-drop page's.
+.cell-autocomplete {
+  position: relative;
+  margin-top: 4px;
+}
+
+.cell-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 3px 4px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font-size: 11px;
+  font-family: inherit;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -1px;
+  }
+}
+
+// Anchored under .cell-input by .day-cell's position: relative — sits above
+// the table's sticky header/column (z-index up to 3, see th/th.employee-col
+// above) so it's never clipped behind them.
+.cell-suggestions {
+  all: unset;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  max-height: 180px;
+  overflow-y: auto;
+  margin-top: 2px;
+  background: var(--mat-sys-surface-container-high);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  display: block;
+
+  li {
+    display: flex;
+    gap: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--mat-sys-surface-container-highest);
+    }
+
+    // The match Tab/Enter will commit — bolded so it's clear which one
+    // typing more characters (or Backspace) would narrow away from.
+    &.top-match {
+      font-weight: 700;
+      background: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
+    }
+  }
+
+  .suggestion-time {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+tfoot td {
+  background: var(--mat-sys-surface-container);
+  font-weight: 600;
+}

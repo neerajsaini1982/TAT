@@ -1,0 +1,304 @@
+<div class="header no-print">
+  <a mat-icon-button [routerLink]="['/', locationCode, 'admin']" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>Schedule (Quick Assign) — {{ locationCode }}</h2>
+</div>
+
+<div class="week-nav">
+  <button mat-icon-button class="no-print" (click)="previousWeek()" aria-label="Previous week">
+    <mat-icon>chevron_left</mat-icon>
+  </button>
+  <span class="week-label no-print">{{ weekRangeLabel() }}</span>
+  <button mat-icon-button class="no-print" (click)="nextWeek()" aria-label="Next week">
+    <mat-icon>chevron_right</mat-icon>
+  </button>
+
+  <mat-button-toggle-group
+    class="view-toggle no-print"
+    [value]="viewMode()"
+    (change)="viewMode.set($event.value)"
+    aria-label="View mode"
+  >
+    <mat-button-toggle value="week">Week</mat-button-toggle>
+    <mat-button-toggle value="day">Day</mat-button-toggle>
+    <mat-button-toggle value="print">Week (Print)</mat-button-toggle>
+  </mat-button-toggle-group>
+</div>
+
+<div class="publish-bar no-print">
+  @if (isFullyPublished()) {
+    <span class="status-badge published">
+      <mat-icon>check_circle</mat-icon>
+      Published — visible to employees
+    </span>
+  } @else if (hasAssignments()) {
+    <span class="status-badge draft">
+      <mat-icon>visibility_off</mat-icon>
+      Draft — not visible to employees yet
+    </span>
+  }
+  <button
+    mat-flat-button
+    color="primary"
+    (click)="publish()"
+    [disabled]="!hasAssignments() || isFullyPublished() || publishing()"
+  >
+    Post Schedule
+  </button>
+  <span class="week-total">{{ hoursLabel(weekTotalHours()) }} hrs scheduled this week</span>
+</div>
+
+@if (error()) {
+  <p class="error no-print">{{ error() }}</p>
+}
+
+@if (developmentMode()) {
+  <p class="dev-mode-note no-print">
+    <mat-icon>science</mat-icon>
+    Development Mode is on — shifts can be assigned regardless of submitted availability.
+  </p>
+}
+
+@if (viewMode() === 'day') {
+  <div class="day-tabs no-print">
+    @for (col of dayColumns(); track col.label; let i = $index) {
+      <button
+        type="button"
+        class="day-tab"
+        [class.active]="selectedDayIndex() === i"
+        (click)="selectedDayIndex.set(i)"
+      >
+        <span class="day-tab-label">{{ col.label }}</span>
+        <span class="day-tab-date">{{ col.dateLabel }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="day-print-header">{{ selectedDayDateLabel() }}</div>
+
+  <button type="button" mat-stroked-button class="print-button no-print" (click)="printSchedule()">
+    <mat-icon>print</mat-icon>
+    Print
+  </button>
+
+  <app-schedule-day-view
+    [assignments]="selectedDayAssignments()"
+    (markAbsent)="markAbsent($event)"
+    (clearAbsent)="clearAbsent($event)"
+    (editTimes)="editTimesForDay($event)"
+  />
+} @else if (viewMode() === 'print') {
+  <div class="print-header">
+    <h3>Schedule — {{ locationCode }}</h3>
+    <span>{{ weekRangeLabel() }}</span>
+  </div>
+
+  <button type="button" mat-stroked-button class="print-button no-print" (click)="printSchedule()">
+    <mat-icon>print</mat-icon>
+    Print
+  </button>
+
+  <app-schedule-week-timeline [days]="weekTimelineDays()" />
+} @else {
+
+<div class="schedule">
+  @if (shifts().length === 0) {
+    <p class="no-shifts-note no-print">No active shifts. Create some in Manage Shifts first.</p>
+  }
+
+  <div class="filters-bar">
+    <mat-form-field appearance="outline" class="employee-search">
+      <mat-label>Search employees</mat-label>
+      <input matInput [ngModel]="employeeSearch()" (ngModelChange)="employeeSearch.set($event)" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
+    <mat-checkbox [ngModel]="showOnlyScheduled()" (ngModelChange)="showOnlyScheduled.set($event)">
+      Show only scheduled employees
+    </mat-checkbox>
+  </div>
+
+  <div class="table-wrap">
+    <div class="table-scroll" #bodyScroll (scroll)="onBodyScroll(bodyScroll)">
+      <table>
+        <colgroup>
+          <col class="col-employee" />
+          @for (col of dayColumns(); track col.label) {
+            <col class="col-day" />
+          }
+          <col class="col-total" />
+        </colgroup>
+        <thead>
+        <tr>
+          <th class="employee-col">Employee</th>
+          @for (col of dayColumns(); track col.label) {
+            <th>{{ col.label }} <span class="day-date">{{ col.dateLabel }}</span></th>
+          }
+          <th class="total-col">Total Hrs</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of visibleRows(); track row.accountId; let rowIndex = $index) {
+          <tr>
+            <td class="employee-col" [style.--employee-color]="employeeColor(row.accountId)">
+              <span class="employee-dot"></span>{{ row.name }}
+            </td>
+            @for (day of row.days; track day.date; let dayIndex = $index) {
+              <td
+                class="day-cell"
+                [class.unavailable]="!day.isAvailable"
+                [class.override-allowed]="!day.isAvailable && developmentMode()"
+                [class.cell-active]="activeCellKey() === cellKey(row, day)"
+              >
+                <div class="availability-label">{{ day.availabilityLabel }}</div>
+                @for (a of day.assignments; track a.id) {
+                  <div
+                    class="chip assignment-chip"
+                    [class.draft]="!a.isPublished"
+                    [class.absent]="a.isAbsent"
+                    [class.clocked-in]="isClockedIn(a)"
+                    [class.clocked-out]="isClockedOut(a)"
+                    [style.--employee-color]="employeeColor(a.accountId)"
+                  >
+                    <span class="chip-name">{{ a.shiftName }}</span>
+                    <span class="chip-time">{{ a.shiftStartTime.slice(0, 5) }}–{{ a.shiftEndTime.slice(0, 5) }}</span>
+
+                    @if (isClockedIn(a)) {
+                      <span class="punch-status in"><mat-icon>login</mat-icon>In</span>
+                    } @else if (isClockedOut(a)) {
+                      <span class="punch-status out"><mat-icon>check_circle</mat-icon>Out</span>
+                    }
+
+                    @if (a.isAbsent) {
+                      <span class="attendance-badge absent" [title]="a.absenceNote ?? ''">Absent</span>
+                    }
+                    @if (isLeftEarly(a)) {
+                      <span class="attendance-badge warn" [title]="entryFor(a)?.leftEarlyNote ?? ''">Left Early</span>
+                    }
+                    @if (isLate(a)) {
+                      <span class="attendance-badge warn">Late</span>
+                    }
+                    @if (isBreakOver(a)) {
+                      <span class="attendance-badge warn">Long Break</span>
+                    }
+                    @if (isLunchOver(a)) {
+                      <span class="attendance-badge warn">Long Lunch</span>
+                    }
+
+                    <div class="chip-actions">
+                      @if (a.isAbsent) {
+                        <button type="button" mat-icon-button (click)="clearAbsent(a)" title="Clear absent">
+                          <mat-icon>how_to_reg</mat-icon>
+                        </button>
+                      } @else {
+                        <button type="button" mat-icon-button (click)="markAbsent(a)" title="Mark absent">
+                          <mat-icon>person_off</mat-icon>
+                        </button>
+                      }
+                      @if (canClockOut(a)) {
+                        <button type="button" mat-icon-button (click)="clockOutWithNote(a)" title="Clock out with note">
+                          <mat-icon>logout</mat-icon>
+                        </button>
+                      }
+                      @if (isClockedOut(a)) {
+                        @if (isLeftEarly(a)) {
+                          <button type="button" mat-icon-button (click)="clearLeftEarly(a)" title="Clear left early">
+                            <mat-icon>undo</mat-icon>
+                          </button>
+                        } @else {
+                          <button type="button" mat-icon-button (click)="markLeftEarly(a)" title="Mark left early">
+                            <mat-icon>directions_run</mat-icon>
+                          </button>
+                        }
+                      }
+                      @if (a.date === todayIso) {
+                        <button type="button" mat-icon-button (click)="editTimes(a)" title="Edit punch times">
+                          <mat-icon>schedule</mat-icon>
+                        </button>
+                      }
+                    </div>
+
+                    <button type="button" class="chip-remove" (click)="removeAssignment(a)" aria-label="Remove shift">×</button>
+                  </div>
+                }
+
+                @if (shifts().length > 0) {
+                  <div class="cell-autocomplete no-print">
+                    <input
+                      type="text"
+                      class="cell-input"
+                      autocomplete="off"
+                      placeholder="+ Add shift"
+                      [id]="cellInputId(row.accountId, day.date)"
+                      [disabled]="!day.isAvailable && !developmentMode()"
+                      [value]="cellQuery(row, day)"
+                      (input)="onCellQueryInput($event, row, day)"
+                      (keydown)="onCellKeydown($event, row, day, rowIndex, dayIndex)"
+                      (focus)="onCellFocus(row, day)"
+                      (blur)="onCellBlur(row, day)"
+                      [attr.aria-label]="'Add shift for ' + row.name + ' on ' + day.dayLabel"
+                    />
+                    @if (activeCellKey() === cellKey(row, day)) {
+                      @let matches = filteredShifts(cellQuery(row, day));
+                      @if (matches.length > 0) {
+                        <ul class="cell-suggestions">
+                          @for (shift of matches; track shift.id; let i = $index) {
+                            <li [class.top-match]="i === 0" (mousedown)="onSuggestionPick($event, row, day, shift)">
+                              <span class="suggestion-time">{{ shiftTime(shift) }}</span>
+                              <span class="suggestion-name">{{ shift.name }}</span>
+                            </li>
+                          }
+                        </ul>
+                      }
+                    }
+                  </div>
+                }
+              </td>
+            }
+            <td class="total-col">{{ hoursLabel(row.totalHours) }}</td>
+          </tr>
+        }
+        @if (visibleRows().length === 0) {
+          <tr>
+            <td [attr.colspan]="dayHeaders.length + 2">
+              {{ rows().length === 0 ? 'No employees at this location yet.' : 'No employees match your filters.' }}
+            </td>
+          </tr>
+        }
+      </tbody>
+      </table>
+    </div>
+
+    @if (rows().length > 0) {
+      <!-- A separate table below the scrolling body, rather than a <tfoot> inside
+           it: a <tfoot> is always the table's last row, so it never has room to
+           detach and "stick" — position:sticky has nothing to push it away from.
+           Keeping the Daily Total row outside .table-scroll entirely means it's
+           never subject to that box's vertical scrolling in the first place, and
+           stays visible without a sticky offset. Its own scrollLeft is mirrored
+           from the body via onBodyScroll so columns still line up when scrolled
+           horizontally; the colgroup on both tables keeps column widths identical. -->
+      <div class="table-footer-scroll" #footerScroll>
+        <table>
+          <colgroup>
+            <col class="col-employee" />
+            @for (col of dayColumns(); track col.label) {
+              <col class="col-day" />
+            }
+            <col class="col-total" />
+          </colgroup>
+          <tfoot>
+            <tr>
+              <td class="employee-col">Daily Total</td>
+              @for (total of dailyTotals(); track $index) {
+                <td>{{ hoursLabel(total) }}</td>
+              }
+              <td class="total-col">{{ hoursLabel(weekTotalHours()) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    }
+  </div>
+</div>
+}
