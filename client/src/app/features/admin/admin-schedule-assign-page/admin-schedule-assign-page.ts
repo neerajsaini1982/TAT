@@ -1,0 +1,624 @@
+import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, viewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatInputModule } from '@angular/material/input';
+import { MatDialog } from '@angular/material/dialog';
+import { catchError, forkJoin, of } from 'rxjs';
+
+import { AvailabilityApi } from '../../../core/availability-api';
+import { ShiftDto, ShiftsApi } from '../../../core/shifts-api';
+import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
+import { LocationSettingsApi } from '../../../core/location-settings-api';
+import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
+import { ScheduleRealtime } from '../../../core/schedule-realtime';
+import { employeeColor } from '../../../core/employee-colors';
+import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-flags';
+import { addDays, combineDateAndTime, formatDate, formatWeekRange, hoursMinutesLabel, mondayOf } from '../../../core/week-utils';
+import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
+import { PublishScheduleDialog, PublishScheduleDialogData } from '../publish-schedule-dialog/publish-schedule-dialog';
+import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
+import { ScheduleDayView } from '../schedule-day-view/schedule-day-view';
+import { ScheduleWeekTimeline, WeekTimelineDay } from '../schedule-week-timeline/schedule-week-timeline';
+
+interface DayCell {
+  date: string;
+  dayLabel: string;
+  isAvailable: boolean;
+  availabilityLabel: string;
+  // Null while isAvailable is false, or when the employee marked the
+  // whole day open ("All day") rather than a specific window.
+  availableStartTime: string | null;
+  availableEndTime: string | null;
+  assignments: ShiftAssignmentDto[];
+}
+
+interface EmployeeRow {
+  accountId: number;
+  name: string;
+  days: DayCell[];
+  totalHours: number;
+}
+
+const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// This is a variant of AdminSchedulePage (see admin-schedule-page.ts) for
+// admins who find dragging shift chips onto cells fiddly when there are a
+// lot of shift templates to choose from (issue #60). Every cell gets a
+// "+ Add shift" dropdown instead of being a CDK drop target, and assignment
+// chips are no longer draggable — moving a shift means removing it and
+// re-adding it on the new cell. Everything else (view modes, publish,
+// filters, attendance actions) is identical to the drag-and-drop page, so
+// keep the two in sync when one of them changes.
+@Component({
+  selector: 'app-admin-schedule-assign-page',
+  imports: [
+    RouterLink,
+    FormsModule,
+    MatButtonModule,
+    MatButtonToggleModule,
+    MatCheckboxModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    ScheduleDayView,
+    ScheduleWeekTimeline,
+  ],
+  templateUrl: './admin-schedule-assign-page.html',
+  styleUrl: './admin-schedule-assign-page.scss',
+})
+export class AdminScheduleAssignPage implements OnInit {
+  private readonly availabilityApi = inject(AvailabilityApi);
+  private readonly shiftsApi = inject(ShiftsApi);
+  private readonly assignmentsApi = inject(ShiftAssignmentsApi);
+  private readonly settingsApi = inject(LocationSettingsApi);
+  private readonly timeEntriesApi = inject(TimeEntriesApi);
+  private readonly realtime = inject(ScheduleRealtime);
+  private readonly dialog = inject(MatDialog);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly route = inject(ActivatedRoute);
+  protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
+
+  // Edit Times is only offered for today's chips: a TimeEntry can only ever
+  // exist for today's date (see entryFor below), so entries for other days
+  // in the visible week aren't even fetched.
+  protected readonly todayIso = formatDate(new Date());
+
+  protected readonly dayHeaders = DAY_HEADERS;
+  protected readonly weekStart = signal(mondayOf(new Date()));
+  protected readonly weekRangeLabel = () => formatWeekRange(this.weekStart());
+  protected readonly loading = signal(false);
+  protected readonly error = signal<string | null>(null);
+  protected readonly shifts = signal<ShiftDto[]>([]);
+  protected readonly rows = signal<EmployeeRow[]>([]);
+  // When on, admins can assign shifts regardless of submitted availability —
+  // see LocationSettings.DevelopmentMode and the server-side enforcement in
+  // ShiftAssignmentsController.
+  protected readonly developmentMode = signal(false);
+  // Attendance thresholds used to badge today's chips as Late/Long
+  // Break/Long Lunch — see LocationSettings and core/attendance-flags.ts.
+  protected readonly lateClockInGraceMinutes = signal(5);
+  protected readonly breakLimitMinutes = signal(15);
+  protected readonly lunchLimitMinutes = signal(30);
+  // Today's punches only — a TimeEntry can only ever exist for today's date
+  // (see TimeEntriesController.ClockIn), so there's nothing to fetch for
+  // other days in the visible week.
+  private readonly entriesByAssignmentId = signal<Map<number, TimeEntryDto>>(new Map());
+  protected readonly employeeColor = employeeColor;
+
+  // Shift templates grouped into optgroups by start time — shifts that all
+  // start at the same time land in one group, the next-earliest start time
+  // below it, and so on. Mirrors the drag palette's grouping in
+  // AdminSchedulePage so "the 11am shift" is just as easy to scan for in the
+  // dropdown.
+  protected readonly groupedShifts = computed(() => {
+    const byStartTime = new Map<string, ShiftDto[]>();
+    for (const shift of this.shifts()) {
+      const group = byStartTime.get(shift.startTime);
+      if (group) {
+        group.push(shift);
+      } else {
+        byStartTime.set(shift.startTime, [shift]);
+      }
+    }
+    return [...byStartTime.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([startTime, shiftsAtTime]) => ({
+        startTime,
+        shifts: [...shiftsAtTime].sort((a, b) => a.endTime.localeCompare(b.endTime)),
+      }));
+  });
+
+  // Header labels paired with each column's actual calendar date, e.g. "Mon" + "Jul 20".
+  protected readonly dayColumns = computed(() => {
+    const start = this.weekStart();
+    return DAY_HEADERS.map((label, i) => ({
+      label,
+      dateLabel: addDays(start, i).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+    }));
+  });
+
+  // Week grid vs. a single day's Google-Calendar-style timeline (see
+  // ScheduleDayView) vs. that same timeline style spread across all 7 days
+  // (see ScheduleWeekTimeline) — the day timeline is for spotting coverage
+  // gaps (is someone opening/closing, are there enough shifts) at a
+  // glance, rather than reading times out of the grid's chips one by one;
+  // the week timeline is a read-only, one-page-printable version of that.
+  protected readonly viewMode = signal<'week' | 'day' | 'print'>('week');
+
+  // Every employee's assignments for each day, flattened into one list per
+  // day (ScheduleWeekTimeline lays employees out by time, not by row, so
+  // it doesn't need them grouped by employee the way the week table does).
+  protected readonly weekTimelineDays = computed<WeekTimelineDay[]>(() =>
+    this.dayColumns().map((col, i) => ({
+      label: col.label,
+      dateLabel: col.dateLabel,
+      assignments: this.rows().flatMap((row) => row.days[i]?.assignments ?? []),
+    })),
+  );
+  // Index into DAY_HEADERS/dayColumns (0 = Monday). Defaults to today if
+  // today falls in the visible week, otherwise Monday; deliberately not
+  // recomputed on previous/next-week navigation so flipping weeks keeps
+  // you on the same day-of-week you were looking at.
+  protected readonly selectedDayIndex = signal(this.defaultDayIndex());
+
+  protected readonly selectedDayAssignments = computed(() => {
+    const dayIndex = this.selectedDayIndex();
+    return this.rows().flatMap((row) => row.days[dayIndex]?.assignments ?? []);
+  });
+
+  // Full weekday + date for the Day view's print-only header (e.g.
+  // "Saturday, July 25, 2026") — the on-screen day-tabs already show which
+  // day is selected, but those are .no-print, so the printed page needs
+  // its own unambiguous label for which single day this printout covers.
+  protected readonly selectedDayDateLabel = computed(() =>
+    addDays(this.weekStart(), this.selectedDayIndex()).toLocaleDateString(undefined, {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    }),
+  );
+
+  private defaultDayIndex(): number {
+    const start = mondayOf(new Date());
+    for (let i = 0; i < 7; i++) {
+      if (formatDate(addDays(start, i)) === this.todayIso) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  // Filters affect which rows are displayed, not the Daily Total / Total
+  // Hrs figures below — those stay the full location's schedule regardless
+  // of what's currently filtered into view.
+  protected readonly employeeSearch = signal('');
+  protected readonly showOnlyScheduled = signal(false);
+
+  protected readonly visibleRows = computed(() => {
+    const query = this.employeeSearch().trim().toLowerCase();
+    const onlyScheduled = this.showOnlyScheduled();
+    return this.rows().filter(
+      (row) =>
+        (!query || row.name.toLowerCase().includes(query)) && (!onlyScheduled || row.totalHours > 0),
+    );
+  });
+
+  protected readonly dailyTotals = computed(() =>
+    DAY_HEADERS.map((_, i) =>
+      this.rows().reduce((sum, row) => sum + row.days[i].assignments.reduce((s, a) => s + a.hours, 0), 0),
+    ),
+  );
+  protected readonly weekTotalHours = computed(() =>
+    Math.round(this.dailyTotals().reduce((sum, hours) => sum + hours, 0) * 100) / 100,
+  );
+  protected readonly hoursLabel = hoursMinutesLabel;
+
+  // The whole week is a draft/preview, invisible to employees, until the
+  // admin posts it. Any create against a published week reverts to draft
+  // until it's re-posted.
+  private readonly allAssignments = computed(() => this.rows().flatMap((r) => r.days.flatMap((d) => d.assignments)));
+  protected readonly hasAssignments = computed(() => this.allAssignments().length > 0);
+  protected readonly isFullyPublished = computed(
+    () => this.hasAssignments() && this.allAssignments().every((a) => a.isPublished),
+  );
+  protected readonly publishing = signal(false);
+
+  // The Daily Total row lives in its own table below .table-scroll (see the
+  // template comment there) so it stays visible while the body scrolls
+  // vertically. It still needs to track the body's horizontal scroll so its
+  // columns stay lined up underneath the body's.
+  private readonly footerScroll = viewChild<ElementRef<HTMLDivElement>>('footerScroll');
+
+  onBodyScroll(body: HTMLDivElement): void {
+    const footer = this.footerScroll()?.nativeElement;
+    if (footer) {
+      footer.scrollLeft = body.scrollLeft;
+    }
+  }
+
+  ngOnInit(): void {
+    this.settingsApi.get(this.locationCode).subscribe({
+      next: (settings) => {
+        this.developmentMode.set(settings.developmentMode);
+        this.lateClockInGraceMinutes.set(settings.lateClockInGraceMinutes);
+        this.breakLimitMinutes.set(settings.breakLimitMinutes);
+        this.lunchLimitMinutes.set(settings.lunchLimitMinutes);
+      },
+      error: () => this.developmentMode.set(false),
+    });
+    this.realtime
+      .connect(this.locationCode)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.load());
+    this.load();
+  }
+
+  load(): void {
+    this.loading.set(true);
+    this.error.set(null);
+    const weekIso = formatDate(this.weekStart());
+
+    forkJoin({
+      roster: this.availabilityApi.getForLocation(weekIso, this.locationCode),
+      assignments: this.assignmentsApi.getForWeek(weekIso, this.locationCode),
+      shifts: this.shiftsApi.getAll(this.locationCode),
+      entries: this.timeEntriesApi.getForLocation(this.locationCode, this.todayIso).pipe(catchError(() => of([]))),
+    }).subscribe({
+      next: ({ roster, assignments, shifts, entries }) => {
+        this.shifts.set(shifts.filter((s) => s.isActive));
+        this.entriesByAssignmentId.set(new Map(entries.map((e) => [e.shiftAssignmentId, e])));
+
+        const assignmentsByKey = new Map<string, ShiftAssignmentDto[]>();
+        for (const a of assignments) {
+          const key = `${a.accountId}|${a.date}`;
+          assignmentsByKey.set(key, [...(assignmentsByKey.get(key) ?? []), a]);
+        }
+
+        this.rows.set(
+          roster.map((person) => {
+            const days = person.days.map((d, i): DayCell => ({
+              date: d.date,
+              dayLabel: DAY_HEADERS[i],
+              isAvailable: d.isAvailable,
+              availabilityLabel: this.availabilityLabel(d.isAvailable, d.startTime, d.endTime),
+              availableStartTime: d.isAvailable ? d.startTime : null,
+              availableEndTime: d.isAvailable ? d.endTime : null,
+              assignments: assignmentsByKey.get(`${person.accountId}|${d.date}`) ?? [],
+            }));
+            const totalHours = days.reduce(
+              (sum, d) => sum + d.assignments.reduce((s, a) => s + a.hours, 0),
+              0,
+            );
+            return {
+              accountId: person.accountId,
+              name: `${person.firstName} ${person.lastName}`,
+              days,
+              totalHours: Math.round(totalHours * 100) / 100,
+            };
+          }),
+        );
+        this.loading.set(false);
+      },
+      error: () => {
+        this.error.set('Failed to load schedule.');
+        this.loading.set(false);
+      },
+    });
+  }
+
+  printSchedule(): void {
+    window.print();
+  }
+
+  previousWeek(): void {
+    this.weekStart.set(addDays(this.weekStart(), -7));
+    this.load();
+  }
+
+  nextWeek(): void {
+    this.weekStart.set(addDays(this.weekStart(), 7));
+    this.load();
+  }
+
+  private availabilityLabel(isAvailable: boolean, startTime: string | null, endTime: string | null): string {
+    if (!isAvailable) {
+      return 'Not available';
+    }
+    if (!startTime || !endTime) {
+      return 'All day';
+    }
+    return `${startTime.slice(0, 5)}–${endTime.slice(0, 5)}`;
+  }
+
+  // Handles the cell's "+ Add shift" dropdown: resolves the picked shift,
+  // resets the select back to its placeholder, and assigns it. A native
+  // <select> (rather than a per-cell reactive form control) keeps state
+  // trivial across a whole week's worth of cells.
+  onAssignSelect(event: Event, row: EmployeeRow, day: DayCell): void {
+    const select = event.target as HTMLSelectElement;
+    const shiftId = Number(select.value);
+    select.value = '';
+    if (!shiftId) {
+      return;
+    }
+    this.assignShift(row, day, shiftId);
+  }
+
+  private assignShift(row: EmployeeRow, day: DayCell, shiftId: number): void {
+    if (!day.isAvailable && !this.developmentMode()) {
+      this.error.set(`${row.name} is not available on ${day.dayLabel}.`);
+      return;
+    }
+
+    const shift = this.shifts().find((s) => s.id === shiftId);
+    if (!shift) {
+      return;
+    }
+
+    const mismatch = this.partialAvailabilityWarning(day, shift.startTime, shift.endTime);
+    if (mismatch && !confirm(`${mismatch} Assign anyway?`)) {
+      return;
+    }
+
+    this.error.set(null);
+    this.assignmentsApi.create({ shiftId, accountId: row.accountId, date: day.date }).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(err?.error ?? 'Failed to assign shift.'),
+    });
+  }
+
+  // Employee said they're available, but not necessarily for the shift's
+  // full span (e.g. available 11-4, shift runs 11-7) — warn instead of
+  // silently under-covering the shift. "All day" availability (no
+  // specific window) always covers it.
+  private partialAvailabilityWarning(day: DayCell, shiftStart: string, shiftEnd: string): string | null {
+    if (!day.availableStartTime || !day.availableEndTime) {
+      return null;
+    }
+    if (shiftStart < day.availableStartTime || shiftEnd > day.availableEndTime) {
+      return `${day.dayLabel}: available ${day.availableStartTime.slice(0, 5)}–${day.availableEndTime.slice(0, 5)}, but this shift runs ${shiftStart.slice(0, 5)}–${shiftEnd.slice(0, 5)}.`;
+    }
+    return null;
+  }
+
+  publish(): void {
+    this.dialog
+      .open<PublishScheduleDialog, PublishScheduleDialogData, boolean>(PublishScheduleDialog, {
+        data: { weekRangeLabel: this.weekRangeLabel() },
+      })
+      .afterClosed()
+      .subscribe((sendEmail) => {
+        if (sendEmail === undefined) {
+          return;
+        }
+        this.publishing.set(true);
+        this.error.set(null);
+        this.assignmentsApi.publish(formatDate(this.weekStart()), this.locationCode, sendEmail).subscribe({
+          next: () => {
+            this.publishing.set(false);
+            this.load();
+          },
+          error: (err) => {
+            this.publishing.set(false);
+            this.error.set(err?.error ?? 'Failed to publish schedule.');
+          },
+        });
+      });
+  }
+
+  removeAssignment(assignment: ShiftAssignmentDto): void {
+    this.assignmentsApi.delete(assignment.id).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(err?.error ?? 'Failed to remove shift.'),
+    });
+  }
+
+  shiftTime(shift: ShiftDto): string {
+    return `${shift.startTime.slice(0, 5)}–${shift.endTime.slice(0, 5)}`;
+  }
+
+  // A TimeEntry can only ever exist for today's date (see
+  // TimeEntriesController.ClockIn), so this is null for every other day.
+  entryFor(assignment: ShiftAssignmentDto): TimeEntryDto | null {
+    return this.entriesByAssignmentId().get(assignment.id) ?? null;
+  }
+
+  isLate(assignment: ShiftAssignmentDto): boolean {
+    const entry = this.entryFor(assignment);
+    return !!entry && isLateClockIn(entry, assignment, this.lateClockInGraceMinutes());
+  }
+
+  // Checks every Break/Lunch segment on the entry, however many the
+  // employee has taken — not just a fixed first/second slot.
+  isBreakOver(assignment: ShiftAssignmentDto): boolean {
+    const entry = this.entryFor(assignment);
+    return !!entry && isAnySegmentOverLimit(entry, 'Break', this.breakLimitMinutes(), new Date());
+  }
+
+  isLunchOver(assignment: ShiftAssignmentDto): boolean {
+    const entry = this.entryFor(assignment);
+    return !!entry && isAnySegmentOverLimit(entry, 'Lunch', this.lunchLimitMinutes(), new Date());
+  }
+
+  // A currently-clocked-in employee — clocked-out ones don't need the
+  // override, and someone who never clocked in gets Mark Absent instead.
+  canClockOut(assignment: ShiftAssignmentDto): boolean {
+    const entry = this.entryFor(assignment);
+    return !!entry && entry.clockOutAt === null;
+  }
+
+  // Chip status at a glance: currently on the clock, already clocked out,
+  // or not punched in yet (the chip's default look covers that last case).
+  isClockedIn(assignment: ShiftAssignmentDto): boolean {
+    return this.canClockOut(assignment);
+  }
+
+  isClockedOut(assignment: ShiftAssignmentDto): boolean {
+    return this.entryFor(assignment)?.clockOutAt != null;
+  }
+
+  markAbsent(assignment: ShiftAssignmentDto): void {
+    this.dialog
+      .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
+        data: {
+          title: `Mark ${assignment.accountFirstName} ${assignment.accountLastName} absent`,
+          label: 'Reason',
+          noteRequired: true,
+          confirmLabel: 'Mark Absent',
+        },
+      })
+      .afterClosed()
+      .subscribe((note) => {
+        if (!note) {
+          return;
+        }
+        this.assignmentsApi.markAbsent(assignment.id, { isAbsent: true, note }).subscribe({
+          next: () => this.load(),
+          error: (err) => this.error.set(err?.error ?? 'Failed to mark absent.'),
+        });
+      });
+  }
+
+  clearAbsent(assignment: ShiftAssignmentDto): void {
+    this.assignmentsApi.markAbsent(assignment.id, { isAbsent: false, note: null }).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(err?.error ?? 'Failed to clear absence.'),
+    });
+  }
+
+  clockOutWithNote(assignment: ShiftAssignmentDto): void {
+    const entry = this.entryFor(assignment);
+    if (!entry) {
+      return;
+    }
+    this.dialog
+      .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
+        data: {
+          title: `Clock out ${assignment.accountFirstName} ${assignment.accountLastName}`,
+          label: 'Reason (e.g. left early)',
+          noteRequired: true,
+          confirmLabel: 'Clock Out',
+        },
+      })
+      .afterClosed()
+      .subscribe((note) => {
+        if (!note) {
+          return;
+        }
+        this.timeEntriesApi.adminClockOut(entry.id, note).subscribe({
+          next: () => this.load(),
+          error: (err) => this.error.set(err?.error ?? 'Failed to clock out.'),
+        });
+      });
+  }
+
+  isLeftEarly(assignment: ShiftAssignmentDto): boolean {
+    return !!this.entryFor(assignment)?.leftEarly;
+  }
+
+  markLeftEarly(assignment: ShiftAssignmentDto): void {
+    const entry = this.entryFor(assignment);
+    if (!entry) {
+      return;
+    }
+    this.dialog
+      .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
+        data: {
+          title: `Mark ${assignment.accountFirstName} ${assignment.accountLastName} left early`,
+          label: 'Reason',
+          noteRequired: true,
+          confirmLabel: 'Mark Left Early',
+        },
+      })
+      .afterClosed()
+      .subscribe((note) => {
+        if (!note) {
+          return;
+        }
+        this.timeEntriesApi.markLeftEarly(entry.id, { leftEarly: true, note }).subscribe({
+          next: () => this.load(),
+          error: (err) => this.error.set(err?.error ?? 'Failed to mark left early.'),
+        });
+      });
+  }
+
+  clearLeftEarly(assignment: ShiftAssignmentDto): void {
+    const entry = this.entryFor(assignment);
+    if (!entry) {
+      return;
+    }
+    this.timeEntriesApi.markLeftEarly(entry.id, { leftEarly: false, note: null }).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(err?.error ?? 'Failed to clear left early.'),
+    });
+  }
+
+  // Lets an admin set every punch on today's entry directly — available
+  // whether or not the employee has clocked in yet (entryFor is null in
+  // that case, and the dialog starts blank apart from a default Clock In
+  // of "now").
+  editTimes(assignment: ShiftAssignmentDto): void {
+    this.openEditTimesDialog(assignment, this.entryFor(assignment));
+  }
+
+  // Same dialog as editTimes, but for the Day view's "Time Punches" menu
+  // item, which can point at any day in the week — not just today, so it
+  // can't reuse entriesByAssignmentId (that Map is only ever populated for
+  // todayIso, see load()). There's no server-side restriction to today
+  // for AdminEditTimes, so this just fetches that specific day's entries
+  // fresh instead of maintaining a second cache for the rest of the week.
+  editTimesForDay(assignment: ShiftAssignmentDto): void {
+    this.timeEntriesApi.getForLocation(this.locationCode, assignment.date).subscribe({
+      next: (entries) => {
+        const entry = entries.find((e) => e.shiftAssignmentId === assignment.id) ?? null;
+        this.openEditTimesDialog(assignment, entry);
+      },
+      error: () => this.openEditTimesDialog(assignment, null),
+    });
+  }
+
+  private openEditTimesDialog(assignment: ShiftAssignmentDto, entry: TimeEntryDto | null): void {
+    this.dialog
+      .open<EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult>(EditTimeEntryDialog, {
+        data: {
+          employeeName: `${assignment.accountFirstName} ${assignment.accountLastName}`,
+          entry,
+          scheduledBreaks: assignment.scheduledBreaks,
+          shiftStartTime: assignment.shiftStartTime,
+          shiftEndTime: assignment.shiftEndTime,
+          date: assignment.date,
+          breakLimitMinutes: this.breakLimitMinutes(),
+          lunchLimitMinutes: this.lunchLimitMinutes(),
+        },
+      })
+      .afterClosed()
+      .subscribe((result) => {
+        if (!result) {
+          return;
+        }
+        const toIso = (time: string | null) => (time ? combineDateAndTime(assignment.date, time).toISOString() : null);
+        this.timeEntriesApi
+          .adminEditTimes(assignment.id, {
+            clockInAt: toIso(result.clockInAt)!,
+            clockOutAt: toIso(result.clockOutAt),
+            segments: result.segments.map((s) => ({
+              kind: s.kind,
+              startAt: toIso(s.start)!,
+              endAt: toIso(s.end),
+            })),
+            note: result.note,
+          })
+          .subscribe({
+            next: () => this.load(),
+            error: (err) => this.error.set(err?.error ?? 'Failed to update punch times.'),
+          });
+      });
+  }
+}
