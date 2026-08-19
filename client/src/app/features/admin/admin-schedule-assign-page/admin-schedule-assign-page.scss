@@ -488,6 +488,9 @@ tfoot .employee-col {
 
 .day-cell {
   min-height: 64px;
+  // Anchors .cell-suggestions (position: absolute) to this cell rather
+  // than the table/viewport.
+  position: relative;
 
   &.unavailable {
     background: var(--mat-sys-error-container);
@@ -508,23 +511,78 @@ tfoot .employee-col {
   white-space: nowrap;
 }
 
-// The "+ Add shift" dropdown that replaces drag-and-drop in this page (see
+// The type-to-filter text box that replaces drag-and-drop in this page (see
 // admin-schedule-assign-page.ts) — sized to fit inside a narrow day column
 // without forcing it wider than the drag-and-drop page's.
-.cell-select {
-  width: 100%;
+.cell-autocomplete {
+  position: relative;
   margin-top: 4px;
+}
+
+.cell-input {
+  width: 100%;
+  box-sizing: border-box;
   padding: 3px 4px;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 4px;
   background: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface-variant);
+  color: var(--mat-sys-on-surface);
   font-size: 11px;
   font-family: inherit;
 
   &:disabled {
     cursor: not-allowed;
     opacity: 0.6;
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: -1px;
+  }
+}
+
+// Anchored under .cell-input by .day-cell's position: relative — sits above
+// the table's sticky header/column (z-index up to 3, see th/th.employee-col
+// above) so it's never clipped behind them.
+.cell-suggestions {
+  all: unset;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  max-height: 180px;
+  overflow-y: auto;
+  margin-top: 2px;
+  background: var(--mat-sys-surface-container-high);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  display: block;
+
+  li {
+    display: flex;
+    gap: 6px;
+    padding: 4px 6px;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+      background: var(--mat-sys-surface-container-highest);
+    }
+
+    // The match Tab/Enter will commit — bolded so it's clear which one
+    // typing more characters (or Backspace) would narrow away from.
+    &.top-match {
+      font-weight: 700;
+      background: var(--mat-sys-secondary-container);
+      color: var(--mat-sys-on-secondary-container);
+    }
+  }
+
+  .suggestion-time {
+    color: var(--mat-sys-on-surface-variant);
   }
 }
 

@@ -50,11 +50,14 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 // This is a variant of AdminSchedulePage (see admin-schedule-page.ts) for
 // admins who find dragging shift chips onto cells fiddly when there are a
 // lot of shift templates to choose from (issue #60). Every cell gets a
-// "+ Add shift" dropdown instead of being a CDK drop target, and assignment
-// chips are no longer draggable — moving a shift means removing it and
-// re-adding it on the new cell. Everything else (view modes, publish,
-// filters, attendance actions) is identical to the drag-and-drop page, so
-// keep the two in sync when one of them changes.
+// type-to-filter text box instead of being a CDK drop target — typing e.g.
+// "10:45" narrows to shifts starting/ending at 10:45, and Tab commits the
+// top match and jumps to the next cell (wrapping to the next employee's
+// Monday after Sunday), so a whole week can be filled in without leaving
+// the keyboard. Assignment chips are no longer draggable — moving a shift
+// means removing it and re-adding it on the new cell. Everything else
+// (view modes, publish, filters, attendance actions) is identical to the
+// drag-and-drop page, so keep the two in sync when one of them changes.
 @Component({
   selector: 'app-admin-schedule-assign-page',
   imports: [
@@ -111,28 +114,127 @@ export class AdminScheduleAssignPage implements OnInit {
   private readonly entriesByAssignmentId = signal<Map<number, TimeEntryDto>>(new Map());
   protected readonly employeeColor = employeeColor;
 
-  // Shift templates grouped into optgroups by start time — shifts that all
-  // start at the same time land in one group, the next-earliest start time
-  // below it, and so on. Mirrors the drag palette's grouping in
-  // AdminSchedulePage so "the 11am shift" is just as easy to scan for in the
-  // dropdown.
-  protected readonly groupedShifts = computed(() => {
-    const byStartTime = new Map<string, ShiftDto[]>();
-    for (const shift of this.shifts()) {
-      const group = byStartTime.get(shift.startTime);
-      if (group) {
-        group.push(shift);
-      } else {
-        byStartTime.set(shift.startTime, [shift]);
+  // Shifts sorted by start then end time, the order both the suggestion
+  // list and "top match wins on Tab" logic rely on below.
+  protected readonly sortedShifts = computed(() =>
+    [...this.shifts()].sort((a, b) => a.startTime.localeCompare(b.startTime) || a.endTime.localeCompare(b.endTime)),
+  );
+
+  // Per-cell autocomplete text, keyed by cellKey (accountId|date) rather
+  // than kept on DayCell itself — DayCell objects are rebuilt from scratch
+  // on every load() (e.g. after a realtime update from another admin), and
+  // an in-progress keystroke shouldn't be wiped out by that.
+  private readonly cellQueries = signal<Map<string, string>>(new Map());
+  // Which cell's suggestion list is open (the one currently focused).
+  protected readonly activeCellKey = signal<string | null>(null);
+
+  cellKey(row: EmployeeRow, day: DayCell): string {
+    return `${row.accountId}|${day.date}`;
+  }
+
+  cellInputId(accountId: number, date: string): string {
+    return `cell-input-${accountId}-${date}`;
+  }
+
+  cellQuery(row: EmployeeRow, day: DayCell): string {
+    return this.cellQueries().get(this.cellKey(row, day)) ?? '';
+  }
+
+  private setCellQuery(row: EmployeeRow, day: DayCell, value: string): void {
+    const next = new Map(this.cellQueries());
+    next.set(this.cellKey(row, day), value);
+    this.cellQueries.set(next);
+  }
+
+  private clearCellQuery(row: EmployeeRow, day: DayCell): void {
+    const next = new Map(this.cellQueries());
+    next.delete(this.cellKey(row, day));
+    this.cellQueries.set(next);
+  }
+
+  onCellQueryInput(event: Event, row: EmployeeRow, day: DayCell): void {
+    this.setCellQuery(row, day, (event.target as HTMLInputElement).value);
+  }
+
+  onCellFocus(row: EmployeeRow, day: DayCell): void {
+    this.activeCellKey.set(this.cellKey(row, day));
+  }
+
+  onCellBlur(row: EmployeeRow, day: DayCell): void {
+    if (this.activeCellKey() === this.cellKey(row, day)) {
+      this.activeCellKey.set(null);
+    }
+  }
+
+  // Shifts matching the typed text against name, start time, and end time
+  // (e.g. "10:45" matches any shift starting or ending at 10:45) — an
+  // empty query matches everything, same as an unfiltered dropdown would.
+  filteredShifts(query: string): ShiftDto[] {
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      return this.sortedShifts();
+    }
+    return this.sortedShifts().filter((s) =>
+      `${s.name} ${s.startTime.slice(0, 5)} ${s.endTime.slice(0, 5)}`.toLowerCase().includes(q),
+    );
+  }
+
+  // Mouse pick from the suggestion list. mousedown (not click) + preventDefault
+  // stops the input from blurring before this handler runs, so the cell stays
+  // focused and its suggestion list doesn't flicker closed first.
+  onSuggestionPick(event: MouseEvent, row: EmployeeRow, day: DayCell, shift: ShiftDto): void {
+    event.preventDefault();
+    this.assignShift(row, day, shift.id);
+    this.clearCellQuery(row, day);
+  }
+
+  // Enter commits the top filtered match without moving focus (same cell,
+  // ready for another shift on the same day). Tab commits the top match too,
+  // then jumps to the next cell — day to the right, wrapping to the next
+  // employee's Monday after Sunday — skipping preventDefault (and thus
+  // falling through to the browser's own Tab handling) once there's no next
+  // cell to jump to, e.g. the very last cell in the grid.
+  onCellKeydown(event: KeyboardEvent, row: EmployeeRow, day: DayCell, rowIndex: number, dayIndex: number): void {
+    if (event.key !== 'Tab' && event.key !== 'Enter') {
+      return;
+    }
+    if (event.key === 'Tab' && event.shiftKey) {
+      return;
+    }
+
+    const query = this.cellQuery(row, day).trim();
+    if (query) {
+      const [topMatch] = this.filteredShifts(query);
+      if (topMatch) {
+        this.assignShift(row, day, topMatch.id);
+      }
+      this.clearCellQuery(row, day);
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      return;
+    }
+
+    // Tab: figure out the next cell in reading order.
+    let nextAccountId: number | undefined;
+    let nextDate: string | undefined;
+    if (dayIndex < 6) {
+      nextAccountId = row.accountId;
+      nextDate = row.days[dayIndex + 1].date;
+    } else {
+      const nextRow = this.visibleRows()[rowIndex + 1];
+      if (nextRow) {
+        nextAccountId = nextRow.accountId;
+        nextDate = nextRow.days[0].date;
       }
     }
-    return [...byStartTime.entries()]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([startTime, shiftsAtTime]) => ({
-        startTime,
-        shifts: [...shiftsAtTime].sort((a, b) => a.endTime.localeCompare(b.endTime)),
-      }));
-  });
+
+    if (nextAccountId !== undefined && nextDate !== undefined) {
+      event.preventDefault();
+      document.getElementById(this.cellInputId(nextAccountId, nextDate))?.focus();
+    }
+  }
 
   // Header labels paired with each column's actual calendar date, e.g. "Mon" + "Jul 20".
   protected readonly dayColumns = computed(() => {
@@ -335,20 +437,6 @@ export class AdminScheduleAssignPage implements OnInit {
       return 'All day';
     }
     return `${startTime.slice(0, 5)}–${endTime.slice(0, 5)}`;
-  }
-
-  // Handles the cell's "+ Add shift" dropdown: resolves the picked shift,
-  // resets the select back to its placeholder, and assigns it. A native
-  // <select> (rather than a per-cell reactive form control) keeps state
-  // trivial across a whole week's worth of cells.
-  onAssignSelect(event: Event, row: EmployeeRow, day: DayCell): void {
-    const select = event.target as HTMLSelectElement;
-    const shiftId = Number(select.value);
-    select.value = '';
-    if (!shiftId) {
-      return;
-    }
-    this.assignShift(row, day, shiftId);
   }
 
   private assignShift(row: EmployeeRow, day: DayCell, shiftId: number): void {

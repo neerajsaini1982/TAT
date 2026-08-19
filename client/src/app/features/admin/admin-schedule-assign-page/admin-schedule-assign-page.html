@@ -138,12 +138,12 @@
         </tr>
       </thead>
       <tbody>
-        @for (row of visibleRows(); track row.accountId) {
+        @for (row of visibleRows(); track row.accountId; let rowIndex = $index) {
           <tr>
             <td class="employee-col" [style.--employee-color]="employeeColor(row.accountId)">
               <span class="employee-dot"></span>{{ row.name }}
             </td>
-            @for (day of row.days; track day.date) {
+            @for (day of row.days; track day.date; let dayIndex = $index) {
               <td
                 class="day-cell"
                 [class.unavailable]="!day.isAvailable"
@@ -222,21 +222,35 @@
                 }
 
                 @if (shifts().length > 0) {
-                  <select
-                    class="cell-select no-print"
-                    [disabled]="!day.isAvailable && !developmentMode()"
-                    (change)="onAssignSelect($event, row, day)"
-                    [attr.aria-label]="'Add shift for ' + row.name + ' on ' + day.dayLabel"
-                  >
-                    <option value="" selected>+ Add shift</option>
-                    @for (group of groupedShifts(); track group.startTime) {
-                      <optgroup [label]="group.startTime.slice(0, 5)">
-                        @for (shift of group.shifts; track shift.id) {
-                          <option [value]="shift.id">{{ shift.name }} ({{ shiftTime(shift) }})</option>
-                        }
-                      </optgroup>
+                  <div class="cell-autocomplete no-print">
+                    <input
+                      type="text"
+                      class="cell-input"
+                      autocomplete="off"
+                      placeholder="+ Add shift"
+                      [id]="cellInputId(row.accountId, day.date)"
+                      [disabled]="!day.isAvailable && !developmentMode()"
+                      [value]="cellQuery(row, day)"
+                      (input)="onCellQueryInput($event, row, day)"
+                      (keydown)="onCellKeydown($event, row, day, rowIndex, dayIndex)"
+                      (focus)="onCellFocus(row, day)"
+                      (blur)="onCellBlur(row, day)"
+                      [attr.aria-label]="'Add shift for ' + row.name + ' on ' + day.dayLabel"
+                    />
+                    @if (activeCellKey() === cellKey(row, day)) {
+                      @let matches = filteredShifts(cellQuery(row, day));
+                      @if (matches.length > 0) {
+                        <ul class="cell-suggestions">
+                          @for (shift of matches; track shift.id; let i = $index) {
+                            <li [class.top-match]="i === 0" (mousedown)="onSuggestionPick($event, row, day, shift)">
+                              <span class="suggestion-time">{{ shiftTime(shift) }}</span>
+                              <span class="suggestion-name">{{ shift.name }}</span>
+                            </li>
+                          }
+                        </ul>
+                      }
                     }
-                  </select>
+                  </div>
                 }
               </td>
             }
