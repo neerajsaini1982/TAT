@@ -148,6 +148,7 @@
                 class="day-cell"
                 [class.unavailable]="!day.isAvailable"
                 [class.override-allowed]="!day.isAvailable && developmentMode()"
+                [class.cell-active]="activeCellKey() === cellKey(row, day)"
               >
                 <div class="availability-label">{{ day.availabilityLabel }}</div>
                 @for (a of day.assignments; track a.id) {

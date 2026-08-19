@@ -491,6 +491,19 @@ tfoot .employee-col {
   // Anchors .cell-suggestions (position: absolute) to this cell rather
   // than the table/viewport.
   position: relative;
+  // position: relative alone does NOT create a stacking context (that only
+  // happens once z-index is also set to something other than auto) — so
+  // without this, a plain td has no stacking context of its own, and the
+  // row rendered right below it (also plain, unpositioned, later in DOM
+  // order) paints on top of anything that visually spills out of this
+  // cell's bottom edge, e.g. .cell-suggestions here. z-index: 0 is enough
+  // to opt in to a stacking context; cell-active bumps it further so the
+  // one cell with its dropdown open always wins over its neighbors too.
+  z-index: 0;
+
+  &.cell-active {
+    z-index: 10;
+  }
 
   &.unavailable {
     background: var(--mat-sys-error-container);
