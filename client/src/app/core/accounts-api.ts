@@ -15,6 +15,9 @@ export interface AccountDto {
   phone: string;
   role: Role;
   isActive: boolean;
+  // Whether this employee shows up as a row on the schedule screens — see
+  // AvailabilityApi.getForLocation's onShiftScheduleOnly param.
+  isOnShiftSchedule: boolean;
   userCode: string | null;
   locationCode: string | null;
   // Populated by the ADP employee-directory import (see employee-import-api.ts);
@@ -67,6 +70,7 @@ export interface UpdateAccountRequest {
   email: string;
   phone: string;
   isActive: boolean;
+  isOnShiftSchedule: boolean;
   role: Role;
   // Only required when role moves away from Employee.
   username?: string;

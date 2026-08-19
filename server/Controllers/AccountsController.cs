@@ -122,6 +122,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
             Phone = request.Phone,
             Role = request.Role,
             IsActive = true,
+            IsOnShiftSchedule = true,
             LocationId = location?.Id,
             UserCode = location is null ? null : AccountProvisioning.GenerateUniqueUserCode(db, location.Id),
             HourlyRate = request.HourlyRate,
@@ -336,6 +337,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         account.Email = request.Email;
         account.Phone = request.Phone;
         account.IsActive = request.IsActive;
+        account.IsOnShiftSchedule = request.IsOnShiftSchedule;
         account.Role = request.Role;
         account.HourlyRate = request.HourlyRate;
         account.DateOfBirth = request.DateOfBirth;
@@ -521,6 +523,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         a.Phone,
         a.Role.ToString(),
         a.IsActive,
+        a.IsOnShiftSchedule,
         a.UserCode,
         a.Location?.LocationCode,
         a.BirthDate,

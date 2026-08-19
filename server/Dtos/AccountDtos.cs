@@ -11,6 +11,7 @@ public record AccountDto(
     string Phone,
     string Role,
     bool IsActive,
+    bool IsOnShiftSchedule,
     string? UserCode,
     string? LocationCode,
     // Populated by the ADP employee-directory import (see
@@ -58,6 +59,7 @@ public record UpdateAccountRequest(
     string Email,
     string Phone,
     bool IsActive,
+    bool IsOnShiftSchedule,
     AccountRole Role,
     // Only required when Role moves away from Employee (the account has no
     // real password on file yet — Employee accounts log in with a UserCode

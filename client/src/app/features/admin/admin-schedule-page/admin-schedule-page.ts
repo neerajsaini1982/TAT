@@ -266,7 +266,9 @@ export class AdminSchedulePage implements OnInit {
     const weekIso = formatDate(this.weekStart());
 
     forkJoin({
-      roster: this.availabilityApi.getForLocation(weekIso, this.locationCode),
+      // onShiftScheduleOnly: true excludes anyone the admin has unchecked
+      // "On Shift Schedule" for (see issue #61) from the schedule's rows.
+      roster: this.availabilityApi.getForLocation(weekIso, this.locationCode, true),
       assignments: this.assignmentsApi.getForWeek(weekIso, this.locationCode),
       shifts: this.shiftsApi.getAll(this.locationCode),
       entries: this.timeEntriesApi.getForLocation(this.locationCode, this.todayIso).pipe(catchError(() => of([]))),
