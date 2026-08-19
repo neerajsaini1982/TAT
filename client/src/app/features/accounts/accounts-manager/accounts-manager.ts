@@ -23,6 +23,7 @@ interface FormModel {
   phone: string;
   role: Role;
   isActive: boolean;
+  isOnShiftSchedule: boolean;
   hourlyRate: number | null;
   // Write-only — always reset to '' when editing (see startEdit); never
   // pre-filled with the real value. Blank means "leave unchanged" on update.
@@ -43,6 +44,7 @@ const emptyForm = (): FormModel => ({
   phone: '',
   role: 'Employee',
   isActive: true,
+  isOnShiftSchedule: true,
   hourlyRate: null,
   ssn: '',
   ssnMasked: null,
@@ -127,7 +129,7 @@ export class AccountsManager implements OnInit, OnDestroy {
   });
 
   get columns(): string[] {
-    const base = ['serial', 'username', 'firstName', 'lastName', 'role', 'userCode', 'isActive', 'actions'];
+    const base = ['serial', 'username', 'firstName', 'lastName', 'role', 'userCode', 'isActive', 'isOnShiftSchedule', 'actions'];
     return this.lockedLocationCode ? base : ['serial', 'locationCode', ...base.slice(1)];
   }
 
@@ -352,6 +354,7 @@ export class AccountsManager implements OnInit, OnDestroy {
         email: this.form.email,
         phone: this.form.phone,
         isActive: this.form.isActive,
+        isOnShiftSchedule: this.form.isOnShiftSchedule,
         role: this.form.role,
         // Sent whenever the field is editable (promoting off Employee, or
         // renaming an Employee's username in place) — when it's disabled

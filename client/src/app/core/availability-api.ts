@@ -51,10 +51,18 @@ export class AvailabilityApi {
     return this.http.put<AvailabilityDto>(`${this.base}/${accountId}`, request);
   }
 
-  getForLocation(weekStartDate: string, locationCode?: string) {
+  // onShiftScheduleOnly excludes accounts with IsOnShiftSchedule = false —
+  // pass true from the schedule pages (see admin-schedule-page.ts and
+  // admin-schedule-assign-page.ts); the availability-tracking page leaves it
+  // off so opting out of the schedule doesn't also hide someone's submitted
+  // availability.
+  getForLocation(weekStartDate: string, locationCode?: string, onShiftScheduleOnly?: boolean) {
     const params = new URLSearchParams({ weekStartDate });
     if (locationCode) {
       params.set('locationCode', locationCode);
+    }
+    if (onShiftScheduleOnly) {
+      params.set('onShiftScheduleOnly', 'true');
     }
     return this.http.get<AvailabilityDto[]>(`${this.base}?${params.toString()}`);
   }

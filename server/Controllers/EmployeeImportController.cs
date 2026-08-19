@@ -358,6 +358,7 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
         a.Phone,
         a.Role.ToString(),
         a.IsActive,
+        a.IsOnShiftSchedule,
         a.UserCode,
         a.Location?.LocationCode,
         a.BirthDate,

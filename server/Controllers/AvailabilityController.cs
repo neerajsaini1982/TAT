@@ -102,7 +102,12 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
     }
 
     // Read-only roster for a location/week so admins can see who has
-    // submitted and who hasn't, replacing the old WhatsApp thread.
+    // submitted and who hasn't, replacing the old WhatsApp thread. The same
+    // endpoint doubles as the schedule pages' employee roster (see
+    // admin-schedule-page.ts/admin-schedule-assign-page.ts), which is what
+    // onShiftScheduleOnly is for — an account can opt out of the schedule
+    // screens (IsOnShiftSchedule = false) without going invisible from
+    // availability tracking, so it's only applied when the caller asks.
     // Admin and Lead accounts can work shifts too, so they're schedulable
     // alongside Employee accounts; only Sa (no location, not a worker) is
     // excluded. Inactive/terminated accounts are excluded too — an ADP
@@ -111,12 +116,17 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
     [HttpGet]
     [Authorize(Policy = "AdminOrAbove")]
     public ActionResult<IEnumerable<AvailabilityDto>> GetForLocation(
-        [FromQuery] string? locationCode, [FromQuery] DateOnly weekStartDate)
+        [FromQuery] string? locationCode, [FromQuery] DateOnly weekStartDate, [FromQuery] bool onShiftScheduleOnly = false)
     {
         var accountsQuery = db.Accounts
             .Include(a => a.Location)
             .Where(a => a.Role == AccountRole.Employee || a.Role == AccountRole.Lead || a.Role == AccountRole.Admin)
             .Where(a => a.IsActive);
+
+        if (onShiftScheduleOnly)
+        {
+            accountsQuery = accountsQuery.Where(a => a.IsOnShiftSchedule);
+        }
 
         if (User.IsInRole(nameof(AccountRole.Sa)))
         {

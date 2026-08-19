@@ -11,6 +11,12 @@ public class Account
     public string Phone { get; set; } = string.Empty;
     public AccountRole Role { get; set; }
     public bool IsActive { get; set; } = true;
+
+    // Whether this account shows up as a row on the schedule screens (see
+    // AvailabilityController.GetForLocation's onShiftScheduleOnly param).
+    // Defaults true for everyone; an admin unchecks it for someone who
+    // shouldn't be scheduled without deactivating their account entirely.
+    public bool IsOnShiftSchedule { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // 6-digit code an Employee types in at /{locationCode}/employee to log in.
