@@ -21,6 +21,7 @@ import { AvailabilityPage } from './features/employee/availability-page/availabi
 import { AvailabilityCalendarPage } from './features/employee/availability-calendar-page/availability-calendar-page';
 import { EmployeeSchedulePage } from './features/employee/employee-schedule-page/employee-schedule-page';
 import { MyDocumentsPage } from './features/employee/my-documents-page/my-documents-page';
+import { HelpPage } from './features/employee/help-page/help-page';
 import { saGuard, adminGuard, employeeGuard } from './core/guards';
 
 export const routes: Routes = [
@@ -50,6 +51,7 @@ export const routes: Routes = [
   { path: ':locationCode/employee/availability2', component: AvailabilityCalendarPage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/schedule', component: EmployeeSchedulePage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/documents', component: MyDocumentsPage, canActivate: [employeeGuard] },
+  { path: ':locationCode/employee/help', component: HelpPage, canActivate: [employeeGuard] },
 
   { path: ':locationCode', component: LocationHome, pathMatch: 'full' },
 ];

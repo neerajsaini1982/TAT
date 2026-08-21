@@ -143,7 +143,13 @@ export class App {
   protected readonly isEmployeeMenu = computed(() => this.auth.role() === 'Employee');
 
   logout(): void {
+    // Navigate first: the current route may be a guarded sub-page (e.g.
+    // My Documents, Help) that only checks auth on activation, not
+    // reactively — clearing the session in place would leave its content
+    // on screen with nothing to re-trigger the guard.
+    const locationCode = this.auth.locationCode();
     this.auth.logout();
+    this.router.navigateByUrl(locationCode ? `/${locationCode}` : '/');
   }
 
   async openAccountDialog(): Promise<void> {

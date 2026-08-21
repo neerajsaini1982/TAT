@@ -1,0 +1,35 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.intro {
+  margin: 0 0 16px;
+  opacity: 0.8;
+}
+
+mat-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+ol,
+ul {
+  margin: 8px 0;
+  padding-left: 20px;
+
+  li {
+    margin-bottom: 4px;
+  }
+}
+
+p {
+  line-height: 1.5;
+}

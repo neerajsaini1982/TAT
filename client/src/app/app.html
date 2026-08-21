@@ -58,6 +58,7 @@
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'availability']">My Availability</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'availability2']">Calendar View</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'documents']">My Documents</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'help']">Help</a>
       <button mat-menu-item (click)="openAccountDialog()">Account</button>
       <button mat-menu-item (click)="resetCode()" [disabled]="resettingCode()">Reset My Code</button>
       <mat-divider />

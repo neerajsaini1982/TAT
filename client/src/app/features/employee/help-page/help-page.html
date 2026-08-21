@@ -1,0 +1,109 @@
+<div class="header">
+  <a mat-icon-button [routerLink]="['/', locationCode, 'employee']" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>Help &amp; How-To</h2>
+</div>
+
+<p class="intro">
+  Everything below happens right on your home screen — there's nothing extra to install or set up.
+</p>
+
+<mat-accordion multi="true">
+  <mat-expansion-panel expanded>
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>login</mat-icon>
+        Logging In
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <ol>
+      <li>Go to your location's page (bookmark it, or ask your manager for the link).</li>
+      <li>Enter your <strong>6-digit code</strong> in the "Employee Clock In" box.</li>
+      <li>Press <strong>Login</strong>.</li>
+    </ol>
+    <p>
+      Don't know your code, or think it's wrong? Ask your manager to reset it, or use
+      <strong>Reset My Code</strong> from your account menu (top right, once you're logged in) if you're already
+      signed in on another device.
+    </p>
+  </mat-expansion-panel>
+
+  <mat-expansion-panel expanded>
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>alarm_on</mat-icon>
+        Clocking In
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <ol>
+      <li>After logging in, find today's shift under <strong>This Week's Schedule</strong>.</li>
+      <li>
+        Press the <strong>Clock In</strong> button in the "Clock In / Clock Out" column.
+      </li>
+    </ol>
+    <p>
+      The button only appears once your shift is close enough to start
+      @if (clockInWindowMinutes() !== null) {
+        (up to <strong>{{ clockInWindowMinutes() }} minutes</strong> early).
+      } @else {
+        — check with your manager for the exact window at this location.
+      }
+      If you're too early, you'll see "Opens at &hellip;" showing the earliest time you can punch in.
+    </p>
+  </mat-expansion-panel>
+
+  <mat-expansion-panel expanded>
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>free_breakfast</mat-icon>
+        Breaks &amp; Lunch
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <ol>
+      <li>Once you're clocked in, the <strong>Breaks</strong> column shows <strong>+ Break</strong> and <strong>+ Lunch</strong> buttons.</li>
+      <li>Press the one that matches what you're starting.</li>
+      <li>When you're back, press <strong>End</strong> next to that break/lunch to close it out.</li>
+    </ol>
+    <p>
+      You can only have one break or lunch open at a time, and you can't clock out until any open one is
+      ended first.
+      @if (breakLimitMinutes() !== null && lunchLimitMinutes() !== null) {
+        Breaks are expected to wrap up within <strong>{{ breakLimitMinutes() }} minutes</strong> and lunch within
+        <strong>{{ lunchLimitMinutes() }} minutes</strong> — running long shows a "Long Break"/"Long Lunch" flag on
+        your row, visible to your manager.
+      }
+    </p>
+  </mat-expansion-panel>
+
+  <mat-expansion-panel expanded>
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>logout</mat-icon>
+        Clocking Out
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <ol>
+      <li>End any open break or lunch first (see above).</li>
+      <li>Press <strong>Clock Out</strong> in the "Clock In / Clock Out" column.</li>
+    </ol>
+    <p>
+      Once you clock out, your hours worked for that shift appear right below the punch times.
+    </p>
+  </mat-expansion-panel>
+
+  <mat-expansion-panel>
+    <mat-expansion-panel-header>
+      <mat-panel-title>
+        <mat-icon>tips_and_updates</mat-icon>
+        Good to Know
+      </mat-panel-title>
+    </mat-expansion-panel-header>
+    <ul>
+      <li>Punching in/out is self-service — only you can punch your own shift.</li>
+      <li>If you miss a punch or something looks wrong, tell your manager — they can correct it for you.</li>
+      <li>Your schedule, breaks, and hours all update live, so it's safe to refresh the page any time.</li>
+      <li>Use the account menu (top right) to switch to dark mode, change the theme color, view your documents, or check your availability and schedule.</li>
+    </ul>
+  </mat-expansion-panel>
+</mat-accordion>
