@@ -32,6 +32,7 @@
   gap: 8px;
   margin-bottom: 16px;
   position: relative;
+  flex-wrap: wrap;
 
   .week-label {
     min-width: 160px;
@@ -41,9 +42,15 @@
   }
 }
 
+// Pinned to the row's right edge (independent of the centered prev/label/
+// next group) only once there's room for both without colliding — below
+// that it drops out of absolute positioning and wraps onto its own
+// centered line instead of overlapping the week label.
 .view-toggle {
-  position: absolute;
-  right: 0;
+  @media (min-width: 700px) {
+    position: absolute;
+    right: 0;
+  }
 }
 
 .day-tabs {

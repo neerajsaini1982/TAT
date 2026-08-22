@@ -145,4 +145,18 @@ body {
   margin: 10mm;
 }
 
+// Every page's own "back button + title (+ action buttons)" row reuses the
+// same `.header { display: flex; align-items: center; gap: ... }` pattern
+// (see e.g. admin-accounts-page, accounts-manager) without setting
+// flex-wrap — fine on desktop where everything fits on one line, but on a
+// phone-width screen those action buttons (Search, Show All Employees,
+// Upload Employees, ...) would otherwise be forced to shrink below their
+// content size or run off-screen. This one rule reaches every page's
+// `.header` (global styles aren't scoped by Angular's emulated
+// encapsulation) without each page needing its own copy.
+.header {
+  flex-wrap: wrap;
+  row-gap: 8px;
+}
+
 /* You can add global styles to this file, and also import other style files */

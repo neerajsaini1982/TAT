@@ -3,16 +3,23 @@ mat-toolbar {
 }
 
 .title {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: min(60vw, 480px);
+  min-width: 0;
+  // True centering (ignoring how wide the button group on the right is)
+  // only kicks in once there's enough room for it not to collide with
+  // those buttons — below that, the title just flows normally and
+  // truncates, sharing the toolbar with .spacer's flex:1 1 auto.
+  @media (min-width: 600px) {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: min(60vw, 480px);
+  }
 
   .title-icon {
     flex: 0 0 auto;
@@ -21,6 +28,10 @@ mat-toolbar {
 
 .spacer {
   flex: 1 1 auto;
+
+  @media (max-width: 599.98px) {
+    flex: 0 1 0;
+  }
 }
 
 .account-btn {
