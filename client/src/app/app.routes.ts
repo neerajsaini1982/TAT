@@ -17,6 +17,7 @@ import { AdminScheduleAssignPage } from './features/admin/admin-schedule-assign-
 import { AdminLocationSettingsPage } from './features/admin/admin-location-settings-page/admin-location-settings-page';
 import { AdminReportsPage } from './features/admin/admin-reports-page/admin-reports-page';
 import { EmployeeHome } from './features/employee/employee-home/employee-home';
+import { KioskHome } from './features/kiosk/kiosk-home/kiosk-home';
 import { AvailabilityPage } from './features/employee/availability-page/availability-page';
 import { AvailabilityCalendarPage } from './features/employee/availability-calendar-page/availability-calendar-page';
 import { EmployeeSchedulePage } from './features/employee/employee-schedule-page/employee-schedule-page';
@@ -52,6 +53,8 @@ export const routes: Routes = [
   { path: ':locationCode/employee/schedule', component: EmployeeSchedulePage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/documents', component: MyDocumentsPage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/help', component: HelpPage, canActivate: [employeeGuard] },
+
+  { path: ':locationCode/kiosk', component: KioskHome },
 
   { path: ':locationCode', component: LocationHome, pathMatch: 'full' },
 ];

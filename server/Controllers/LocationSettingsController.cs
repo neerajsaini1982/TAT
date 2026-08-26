@@ -90,6 +90,15 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
             settings.SmtpPassword = request.SmtpPassword;
         }
 
+        if (request.ClearKioskPasscode)
+        {
+            settings.KioskPasscodeHash = null;
+        }
+        else if (!string.IsNullOrEmpty(request.KioskPasscode))
+        {
+            settings.KioskPasscodeHash = PasswordHasher.Hash(request.KioskPasscode);
+        }
+
         db.SaveChanges();
         return Ok(ToDto(settings));
     }
@@ -202,5 +211,6 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         !string.IsNullOrEmpty(s.SmtpPassword),
         s.PayDayStartDate,
         s.PayPeriodDays,
-        s.GetNextPayDate(DateOnly.FromDateTime(DateTime.Now)));
+        s.GetNextPayDate(DateOnly.FromDateTime(DateTime.Now)),
+        !string.IsNullOrEmpty(s.KioskPasscodeHash));
 }

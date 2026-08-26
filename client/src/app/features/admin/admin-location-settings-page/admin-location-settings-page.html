@@ -227,6 +227,41 @@
       </mat-card-content>
     </mat-card>
 
+    <mat-card class="section">
+      <mat-card-header>
+        <mat-card-title>Kiosk</mat-card-title>
+        <mat-card-subtitle>
+          Lets a shared device (e.g. a store tablet) stay logged in all day so employees can clock in/out by tapping
+          their name and entering their own PIN, instead of using their own phone. Set employee PINs from the
+          Accounts page.
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content class="section-content">
+        <mat-form-field appearance="outline">
+          <mat-label>Kiosk Passcode</mat-label>
+          <input
+            matInput
+            type="password"
+            [(ngModel)]="form.kioskPasscode"
+            name="kioskPasscode"
+            [placeholder]="hasKioskPasscode() ? 'Unchanged' : ''"
+          />
+        </mat-form-field>
+
+        @if (hasKioskPasscode()) {
+          <button
+            mat-stroked-button
+            type="button"
+            color="warn"
+            (click)="disableKiosk()"
+            [disabled]="clearingKioskPasscode()"
+          >
+            {{ clearingKioskPasscode() ? 'Disabling…' : 'Disable Kiosk' }}
+          </button>
+        }
+      </mat-card-content>
+    </mat-card>
+
     <div class="section-group">
       <h3 class="group-label">Email</h3>
 

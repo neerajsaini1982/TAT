@@ -1,0 +1,33 @@
+<h2 mat-dialog-title>{{ data.employeeName }}</h2>
+<mat-dialog-content class="content">
+  <p class="action">{{ data.action }}</p>
+
+  <div class="pin-dots">
+    @for (dot of pinDots; track $index) {
+      <span class="pin-dot" [class.filled]="$index < pin.length"></span>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  } @else if (submitting()) {
+    <p class="status">Checking…</p>
+  }
+
+  <div class="keypad">
+    @for (key of digits; track $index) {
+      @if (key === 'backspace') {
+        <button type="button" mat-stroked-button class="key" [disabled]="submitting()" (click)="press(key)" aria-label="Backspace">
+          <mat-icon>backspace</mat-icon>
+        </button>
+      } @else if (key) {
+        <button type="button" mat-stroked-button class="key" [disabled]="submitting()" (click)="press(key)">{{ key }}</button>
+      } @else {
+        <span></span>
+      }
+    }
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+</mat-dialog-actions>

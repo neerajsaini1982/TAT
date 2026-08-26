@@ -12,7 +12,7 @@ namespace Server.Controllers;
 
 [ApiController]
 [Route("api/accounts")]
-public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnProtector ssnProtector, IConfiguration config) : ControllerBase
+public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnProtector ssnProtector, PinProtector pinProtector, IConfiguration config) : ControllerBase
 {
     private const long MaxPhotoSizeBytes = 5 * 1024 * 1024;
     private static readonly HashSet<string> AllowedPhotoExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -157,6 +157,72 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         }
 
         account.UserCode = AccountProvisioning.GenerateUniqueUserCode(db, account.LocationId.Value);
+        db.SaveChanges();
+
+        return Ok(ToDto(account));
+    }
+
+    // Lets an Admin/Lead set (or replace) the PIN this account punches in
+    // with at a kiosk device (see KioskController). One step more
+    // permissive than ResetCode above (which is AdminOrAbove only) —
+    // deliberate, kiosk PIN management is meant to be a day-to-day Lead
+    // task, not an Admin-only one.
+    [HttpPost("{id:int}/kiosk-pin")]
+    [Authorize(Policy = "LeadOrAbove")]
+    public ActionResult<AccountDto> SetKioskPin(int id, SetKioskPinRequest request)
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == id);
+        if (account is null || !CanAccess(account))
+        {
+            return NotFound();
+        }
+
+        if (request.Pin is not { Length: 4 } || !request.Pin.All(char.IsDigit))
+        {
+            return BadRequest("PIN must be exactly 4 digits.");
+        }
+
+        account.PinEncrypted = pinProtector.Protect(request.Pin);
+        account.PinFailedAttempts = 0;
+        account.PinLockedUntil = null;
+        db.SaveChanges();
+
+        return Ok(ToDto(account));
+    }
+
+    // Lets an Admin (not Lead — deliberately narrower than SetKioskPin
+    // above) look up an employee's existing kiosk PIN without resetting it.
+    // Recoverable only because PinEncrypted is genuinely encrypted, not
+    // hashed like a password.
+    [HttpGet("{id:int}/kiosk-pin")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public ActionResult<KioskPinDto> GetKioskPin(int id)
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == id);
+        if (account is null || !CanAccess(account))
+        {
+            return NotFound();
+        }
+
+        var pin = account.PinEncrypted is null ? null : pinProtector.Unprotect(account.PinEncrypted);
+        return Ok(new KioskPinDto(pin));
+    }
+
+    // Lets an Admin/Lead unlock an employee's kiosk punching early, instead
+    // of waiting out the 15-minute lockout KioskPinService applies after 5
+    // wrong PINs.
+    [HttpPost("{id:int}/kiosk-pin/clear-lock")]
+    [Authorize(Policy = "LeadOrAbove")]
+    public ActionResult<AccountDto> ClearKioskPinLock(int id)
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == id);
+        if (account is null || !CanAccess(account))
+        {
+            return NotFound();
+        }
+
+        account.PinFailedAttempts = 0;
+        account.PinLockedUntil = null;
         db.SaveChanges();
 
         return Ok(ToDto(account));
@@ -540,5 +606,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         a.DateOfBirth?.ToString("yyyy-MM-dd"),
         a.HireDate?.ToString("yyyy-MM-dd"),
         a.EmploymentType?.ToString(),
-        a.PhotoFileName is not null);
+        a.PhotoFileName is not null,
+        a.PinEncrypted is not null,
+        a.PinLockedUntil);
 }

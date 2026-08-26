@@ -6,6 +6,8 @@ public record AdminLoginRequest(string LocationCode, string Username, string Pas
 
 public record EmployeeLoginRequest(string LocationCode, string UserCode);
 
+public record KioskLoginRequest(string LocationCode, string Passcode);
+
 public record AuthResponse(
     string Token,
     int AccountId,

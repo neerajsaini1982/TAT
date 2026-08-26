@@ -68,4 +68,14 @@ public class Account
     // never derived from user input. Null if no photo has been uploaded.
     public string? PhotoFileName { get; set; }
     public string? PhotoContentType { get; set; }
+
+    // Short PIN this account punches in/out with at a kiosk device (see
+    // KioskController) — distinct from UserCode/PasswordHash, which log
+    // into a full session. Encrypted (not hashed) via PinProtector, since
+    // unlike a password an Admin is allowed to look this back up — see
+    // AccountsController.GetKioskPin. Null means this account can't punch
+    // at a kiosk yet.
+    public string? PinEncrypted { get; set; }
+    public int PinFailedAttempts { get; set; } = 0;
+    public DateTime? PinLockedUntil { get; set; }
 }

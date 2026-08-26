@@ -1,4 +1,5 @@
 import { Component, ElementRef, Input, OnDestroy, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -9,10 +10,13 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 
 import { AccountsApi, AccountDto, EmploymentType } from '../../../core/accounts-api';
 import { LocationsApi, LocationDto } from '../../../core/locations-api';
-import { Role } from '../../../core/auth';
+import { Auth, Role } from '../../../core/auth';
+import { SetKioskPinDialog, SetKioskPinDialogData } from '../set-kiosk-pin-dialog/set-kiosk-pin-dialog';
+import { ViewKioskPinDialog, ViewKioskPinDialogData } from '../view-kiosk-pin-dialog/view-kiosk-pin-dialog';
 
 interface FormModel {
   username: string;
@@ -59,6 +63,7 @@ const emptyForm = (): FormModel => ({
 @Component({
   selector: 'app-accounts-manager',
   imports: [
+    DatePipe,
     RouterLink,
     FormsModule,
     MatTableModule,
@@ -79,6 +84,16 @@ export class AccountsManager implements OnInit, OnDestroy {
 
   private readonly accountsApi = inject(AccountsApi);
   private readonly locationsApi = inject(LocationsApi);
+  private readonly auth = inject(Auth);
+  private readonly dialog = inject(MatDialog);
+
+  // View Kiosk PIN is Admin-only (Sa counts as above-Admin) — Lead can still
+  // set/reset a PIN below, just not look an existing one back up. Mirrors
+  // the server's AdminOrAbove policy on GetKioskPin.
+  protected readonly canViewKioskPin = computed(() => {
+    const role = this.auth.role();
+    return role === 'Sa' || role === 'Admin';
+  });
 
   protected readonly roles: Role[] = ['Admin', 'Lead', 'Employee'];
   protected readonly employmentTypes: EmploymentType[] = ['FullTime', 'PartTime'];
@@ -94,6 +109,7 @@ export class AccountsManager implements OnInit, OnDestroy {
   protected readonly error = signal<string | null>(null);
   protected readonly resettingId = signal<number | null>(null);
   protected readonly sendingId = signal<number | null>(null);
+  protected readonly settingPinId = signal<number | null>(null);
   protected form: FormModel = emptyForm();
 
   // Local object URL for whatever photo is currently shown in the preview
@@ -421,6 +437,58 @@ export class AccountsManager implements OnInit, OnDestroy {
       error: (err) => {
         this.resettingId.set(null);
         alert(err?.error ?? 'Failed to reset user code.');
+      },
+    });
+  }
+
+  setKioskPin(account: AccountDto): void {
+    this.dialog
+      .open<SetKioskPinDialog, SetKioskPinDialogData, string>(SetKioskPinDialog, {
+        data: { employeeName: `${account.firstName} ${account.lastName}` },
+      })
+      .afterClosed()
+      .subscribe((pin) => {
+        if (!pin) {
+          return;
+        }
+        this.settingPinId.set(account.id);
+        this.accountsApi.setKioskPin(account.id, pin).subscribe({
+          next: () => {
+            this.settingPinId.set(null);
+            this.load();
+          },
+          error: (err) => {
+            this.settingPinId.set(null);
+            alert(err?.error ?? 'Failed to set kiosk PIN.');
+          },
+        });
+      });
+  }
+
+  // Admin-only (see canViewKioskPin) — fetches then displays the existing
+  // PIN, rather than the dialog fetching it itself, so a failed lookup
+  // never opens an empty/broken dialog.
+  viewKioskPin(account: AccountDto): void {
+    this.accountsApi.getKioskPin(account.id).subscribe({
+      next: ({ pin }) => {
+        this.dialog.open<ViewKioskPinDialog, ViewKioskPinDialogData>(ViewKioskPinDialog, {
+          data: { employeeName: `${account.firstName} ${account.lastName}`, pin },
+        });
+      },
+      error: (err) => alert(err?.error ?? 'Failed to look up kiosk PIN.'),
+    });
+  }
+
+  clearKioskPinLock(account: AccountDto): void {
+    this.settingPinId.set(account.id);
+    this.accountsApi.clearKioskPinLock(account.id).subscribe({
+      next: () => {
+        this.settingPinId.set(null);
+        this.load();
+      },
+      error: (err) => {
+        this.settingPinId.set(null);
+        alert(err?.error ?? 'Failed to clear the kiosk PIN lock.');
       },
     });
   }

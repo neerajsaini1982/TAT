@@ -79,6 +79,13 @@
                   <td class="shift-cell">
                     <span class="shift-name">{{ shift.assignment.shiftName }}</span>
                     <span class="shift-time">{{ scheduledTime(shift.assignment) }}</span>
+                    @for (b of scheduledBreaksOfKind(shift.assignment, 'Break'); track $index) {
+                      <span class="shift-scheduled-break">Break: {{ scheduledBreakTime(b) }}</span>
+                    }
+                    @for (b of scheduledBreaksOfKind(shift.assignment, 'Lunch'); track $index) {
+                      <span class="shift-scheduled-break">Lunch: {{ scheduledBreakTime(b) }}</span>
+                    }
+                    <span class="shift-total">Total: {{ hoursLabel(shift.assignment.hours) }}</span>
                   </td>
 
                   <td class="punch-cell clock-cell">
@@ -161,15 +168,15 @@
                   @if (showEmployeeNames() && canManageOthers()) {
                     <td class="actions-cell">
                       @if (shift.assignment.isAbsent) {
-                        <button type="button" mat-icon-button (click)="clearAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Clear absent">
+                        <button type="button" class="clear-absent-btn" mat-icon-button (click)="clearAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Clear absent">
                           <mat-icon>how_to_reg</mat-icon>
                         </button>
                       } @else {
-                        <button type="button" mat-icon-button (click)="markAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Mark absent">
+                        <button type="button" class="mark-absent-btn" mat-icon-button (click)="markAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Mark absent">
                           <mat-icon>person_off</mat-icon>
                         </button>
                       }
-                      <button type="button" mat-icon-button (click)="editTimes(shift)" title="Edit punch times">
+                      <button type="button" mat-icon-button (click)="editTimes(shift)" [disabled]="shift.assignment.isAbsent" title="Edit punch times">
                         <mat-icon>schedule</mat-icon>
                       </button>
                     </td>

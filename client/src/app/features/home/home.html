@@ -40,4 +40,20 @@
       </form>
     </mat-card-content>
   </mat-card>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Kiosk</mat-card-title>
+      <mat-card-subtitle>Clock in and out from a shared device</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form (ngSubmit)="goToKiosk()" class="form" autocomplete="off">
+        <mat-form-field appearance="outline">
+          <mat-label>Location Code</mat-label>
+          <input matInput name="kioskLocationCode" [(ngModel)]="kioskLocationCode" required />
+        </mat-form-field>
+        <button mat-flat-button color="primary" type="submit">Continue</button>
+      </form>
+    </mat-card-content>
+  </mat-card>
 </div>

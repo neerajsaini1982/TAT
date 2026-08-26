@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Server.Data;
 
@@ -10,9 +11,11 @@ using Server.Data;
 namespace Server.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260823205118_AddKioskSupport")]
+    partial class AddKioskSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -91,11 +94,11 @@ namespace Server.Data.Migrations
                     b.Property<string>("PhotoFileName")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("PinEncrypted")
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("PinFailedAttempts")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("PinHash")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("PinLockedUntil")
                         .HasColumnType("TEXT");

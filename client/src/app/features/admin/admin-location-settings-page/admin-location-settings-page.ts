@@ -101,6 +101,7 @@ interface FormModel {
   smtpFromName: string;
   payDayStartDate: string;
   payPeriodDays: number | null;
+  kioskPasscode: string;
 }
 
 const emptyForm = (): FormModel => ({
@@ -128,6 +129,7 @@ const emptyForm = (): FormModel => ({
   smtpFromName: '',
   payDayStartDate: '',
   payPeriodDays: null,
+  kioskPasscode: '',
 });
 
 @Component({
@@ -183,6 +185,8 @@ export class AdminLocationSettingsPage implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly saved = signal(false);
   protected readonly hasSmtpPassword = signal(false);
+  protected readonly hasKioskPasscode = signal(false);
+  protected readonly clearingKioskPasscode = signal(false);
   protected readonly templates = signal<EmailTemplateDto[]>([]);
   protected readonly testingEmail = signal(false);
   protected readonly testEmailResult = signal<'success' | 'error' | null>(null);
@@ -225,6 +229,7 @@ export class AdminLocationSettingsPage implements OnInit {
 
   private applySettings(settings: LocationSettingsDto): void {
     this.hasSmtpPassword.set(settings.hasSmtpPassword);
+    this.hasKioskPasscode.set(settings.hasKioskPasscode);
     this.form = {
       timeFormat: settings.timeFormat,
       dateFormat: settings.dateFormat,
@@ -250,10 +255,11 @@ export class AdminLocationSettingsPage implements OnInit {
       smtpFromName: settings.smtpFromName ?? '',
       payDayStartDate: settings.payDayStartDate ?? '',
       payPeriodDays: settings.payPeriodDays,
+      kioskPasscode: '',
     };
   }
 
-  save(): void {
+  save(clearKioskPasscode = false): void {
     this.saving.set(true);
     this.error.set(null);
     this.saved.set(false);
@@ -284,6 +290,8 @@ export class AdminLocationSettingsPage implements OnInit {
           smtpFromName: this.form.smtpFromName || null,
           payDayStartDate: this.form.payDayStartDate || null,
           payPeriodDays: this.form.payPeriodDays,
+          kioskPasscode: this.form.kioskPasscode || null,
+          clearKioskPasscode,
         },
         this.locationCode,
       )
@@ -292,12 +300,22 @@ export class AdminLocationSettingsPage implements OnInit {
           this.applySettings(settings);
           this.saving.set(false);
           this.saved.set(true);
+          this.clearingKioskPasscode.set(false);
         },
         error: (err) => {
           this.saving.set(false);
+          this.clearingKioskPasscode.set(false);
           this.error.set(err?.error ?? 'Failed to save settings.');
         },
       });
+  }
+
+  disableKiosk(): void {
+    if (!confirm('Disable kiosk clock-in for this location? Any kiosk device currently logged in will need a new passcode to log back in.')) {
+      return;
+    }
+    this.clearingKioskPasscode.set(true);
+    this.save(true);
   }
 
   // Tests whatever SMTP fields are currently in the form, not necessarily

@@ -19,6 +19,7 @@ export class Home {
 
   protected adminLocationCode = isDevMode() ? DEV_DEFAULTS.locationCode : '';
   protected employeeLocationCode = isDevMode() ? DEV_DEFAULTS.locationCode : '';
+  protected kioskLocationCode = isDevMode() ? DEV_DEFAULTS.locationCode : '';
 
   goToAdmin(): void {
     const code = this.adminLocationCode.trim().toLowerCase();
@@ -31,6 +32,13 @@ export class Home {
     const code = this.employeeLocationCode.trim().toLowerCase();
     if (code) {
       this.router.navigate(['/', code, 'employee']);
+    }
+  }
+
+  goToKiosk(): void {
+    const code = this.kioskLocationCode.trim().toLowerCase();
+    if (code) {
+      this.router.navigate(['/', code, 'kiosk']);
     }
   }
 }

@@ -1,0 +1,16 @@
+.content {
+  min-width: 220px;
+}
+
+.pin {
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  margin: 8px 0;
+  text-align: center;
+}
+
+.empty {
+  color: var(--mat-sys-on-surface-variant);
+  margin: 8px 0;
+}

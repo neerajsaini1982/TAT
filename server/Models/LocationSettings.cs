@@ -79,6 +79,12 @@ public class LocationSettings
     public string? SmtpFromAddress { get; set; }
     public string? SmtpFromName { get; set; }
 
+    // Hashed the same way as an Admin/Lead password (PasswordHasher). Shared
+    // by every kiosk device at this location to start a kiosk session (see
+    // AuthController.KioskLogin) — null means kiosk clock-in isn't set up
+    // for this location yet.
+    public string? KioskPasscodeHash { get; set; }
+
     // A single known pay day plus the recurrence interval, from which every
     // future pay date is derived on read (see GetNextPayDate) — avoids
     // needing an ever-growing list of pay day entries. Null means pay day

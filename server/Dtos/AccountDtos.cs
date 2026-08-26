@@ -31,7 +31,11 @@ public record AccountDto(
     string? DateOfBirth,
     string? HireDate,
     string? EmploymentType,
-    bool HasPhoto);
+    bool HasPhoto,
+    // Whether this account can punch at a kiosk device (see
+    // KioskController) — the PIN itself never round-trips.
+    bool HasKioskPin,
+    DateTime? KioskPinLockedUntil);
 
 public record CreateAccountRequest(
     // Required unless Role is Employee — employees log in with a UserCode
@@ -80,3 +84,9 @@ public record SendCredentialsRequest(string LoginLink);
 // Self-service profile edit (see AccountsController.UpdateMine) — only the
 // two fields an Employee is allowed to change about themselves.
 public record UpdateMineRequest(string Email, string Phone);
+
+// Exactly 4 digits — validated in AccountsController.SetKioskPin.
+public record SetKioskPinRequest(string Pin);
+
+// Null when the account has no kiosk PIN set yet — see AccountsController.GetKioskPin.
+public record KioskPinDto(string? Pin);
