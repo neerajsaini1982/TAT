@@ -36,17 +36,7 @@ export class AdminPayrollReportPage implements OnInit {
   // on its own — renderRows() after toggling forces that re-check.
   @ViewChild(MatTable) private matTable?: MatTable<EmployeeHoursReportDto>;
 
-  protected readonly columns = [
-    'expand',
-    'employeeId',
-    'fullName',
-    'workedTime',
-    'breakTime',
-    'lunchTime',
-    'netWorkedTime',
-    'overtimeTime',
-    'notes',
-  ];
+  protected readonly columns = ['expand', 'fullName', 'netWorkedTime', 'overtimeTime', 'notes'];
 
   // Defaults to the trailing week, same as the report is most often run.
   protected startDate = formatDate(addDays(new Date(), -6));
@@ -67,9 +57,6 @@ export class AdminPayrollReportPage implements OnInit {
   protected readonly totals = computed(() => {
     const rows = this.report();
     return {
-      workedMinutes: rows.reduce((sum, r) => sum + r.totalWorkedMinutes, 0),
-      breakMinutes: rows.reduce((sum, r) => sum + r.totalBreakMinutes, 0),
-      lunchMinutes: rows.reduce((sum, r) => sum + r.totalLunchMinutes, 0),
       netWorkedMinutes: rows.reduce((sum, r) => sum + r.totalNetWorkedMinutes, 0),
       overtimeMinutes: rows.reduce((sum, r) => sum + r.totalOvertimeMinutes, 0),
       absentDays: rows.reduce((sum, r) => sum + r.absentDays, 0),

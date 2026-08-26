@@ -37,34 +37,10 @@
       <td mat-footer-cell *matFooterCellDef></td>
     </ng-container>
 
-    <ng-container matColumnDef="employeeId">
-      <th mat-header-cell *matHeaderCellDef>Employee ID</th>
-      <td mat-cell *matCellDef="let emp">{{ emp.employeeId }}</td>
-      <td mat-footer-cell *matFooterCellDef></td>
-    </ng-container>
-
     <ng-container matColumnDef="fullName">
       <th mat-header-cell *matHeaderCellDef>Full Name</th>
       <td mat-cell *matCellDef="let emp">{{ emp.fullName }}</td>
       <td mat-footer-cell *matFooterCellDef>Total</td>
-    </ng-container>
-
-    <ng-container matColumnDef="workedTime">
-      <th mat-header-cell *matHeaderCellDef>Time Worked</th>
-      <td mat-cell *matCellDef="let emp">{{ formatDuration(emp.totalWorkedMinutes) }}</td>
-      <td mat-footer-cell *matFooterCellDef>{{ formatDuration(totals().workedMinutes) }}</td>
-    </ng-container>
-
-    <ng-container matColumnDef="breakTime">
-      <th mat-header-cell *matHeaderCellDef>Break Time</th>
-      <td mat-cell *matCellDef="let emp">{{ formatDuration(emp.totalBreakMinutes) }}</td>
-      <td mat-footer-cell *matFooterCellDef>{{ formatDuration(totals().breakMinutes) }}</td>
-    </ng-container>
-
-    <ng-container matColumnDef="lunchTime">
-      <th mat-header-cell *matHeaderCellDef>Lunch Time</th>
-      <td mat-cell *matCellDef="let emp">{{ formatDuration(emp.totalLunchMinutes) }}</td>
-      <td mat-footer-cell *matFooterCellDef>{{ formatDuration(totals().lunchMinutes) }}</td>
     </ng-container>
 
     <ng-container matColumnDef="netWorkedTime">
@@ -111,24 +87,13 @@
               <tr [class.absent-row]="day.isAbsent">
                 <td class="day-date-col">{{ dayLabel(day.date) }}</td>
                 @if (day.isAbsent) {
-                  <td colspan="5" class="day-absent-col">
+                  <td colspan="2" class="day-absent-col">
                     Absent
                     @if (day.absenceNote) {
                       — {{ day.absenceNote }}
                     }
                   </td>
                 } @else {
-                  <td class="day-numeric-col">
-                    @if (day.workedMinutes !== null) {
-                      {{ formatDuration(day.workedMinutes) }}
-                    } @else if (day.stillClockedIn) {
-                      Still clocked in
-                    } @else {
-                      —
-                    }
-                  </td>
-                  <td class="day-numeric-col" [class.flag]="day.hasLongBreak">{{ formatDuration(day.breakMinutes) }}</td>
-                  <td class="day-numeric-col" [class.flag]="day.hasLongLunch">{{ formatDuration(day.lunchMinutes) }}</td>
                   <td class="day-numeric-col">{{ day.netWorkedMinutes !== null ? formatDuration(day.netWorkedMinutes) : '—' }}</td>
                   <td class="day-numeric-col" [class.flag]="day.overtimeMinutes > 0">{{ formatDuration(day.overtimeMinutes) }}</td>
                 }
