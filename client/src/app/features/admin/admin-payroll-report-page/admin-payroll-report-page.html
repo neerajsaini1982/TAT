@@ -50,17 +50,33 @@
 
       <ng-container matColumnDef="netWorkedTime">
         <th mat-header-cell *matHeaderCellDef>Net Worked Time</th>
-        <td mat-cell *matCellDef="let emp">{{ formatDuration(regularMinutes(emp)) }}</td>
-        <td mat-footer-cell *matFooterCellDef>{{ formatDuration(totals().regularMinutes) }}</td>
+        <td mat-cell *matCellDef="let emp">
+          <div class="time-cell">
+            <span class="time-primary">{{ formatDuration(regularMinutes(emp)) }}</span>
+            <span class="time-decimal">({{ formatDecimalHours(regularMinutes(emp)) }})</span>
+          </div>
+        </td>
+        <td mat-footer-cell *matFooterCellDef>
+          <div class="time-cell">
+            <span class="time-primary">{{ formatDuration(totals().regularMinutes) }}</span>
+            <span class="time-decimal">({{ formatDecimalHours(totals().regularMinutes) }})</span>
+          </div>
+        </td>
       </ng-container>
 
       <ng-container matColumnDef="overtimeTime">
         <th mat-header-cell *matHeaderCellDef>Overtime</th>
         <td mat-cell *matCellDef="let emp" [class.flag]="emp.totalOvertimeMinutes > 0">
-          {{ formatDuration(emp.totalOvertimeMinutes) }}
+          <div class="time-cell">
+            <span class="time-primary">{{ formatDuration(emp.totalOvertimeMinutes) }}</span>
+            <span class="time-decimal">({{ formatDecimalHours(emp.totalOvertimeMinutes) }})</span>
+          </div>
         </td>
         <td mat-footer-cell *matFooterCellDef [class.flag]="totals().overtimeMinutes > 0">
-          {{ formatDuration(totals().overtimeMinutes) }}
+          <div class="time-cell">
+            <span class="time-primary">{{ formatDuration(totals().overtimeMinutes) }}</span>
+            <span class="time-decimal">({{ formatDecimalHours(totals().overtimeMinutes) }})</span>
+          </div>
         </td>
       </ng-container>
 

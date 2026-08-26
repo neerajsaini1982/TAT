@@ -119,6 +119,13 @@ export class AdminPayrollReportPage implements OnInit {
     return formatDurationOrDash(minutes);
   }
 
+  // Decimal-hours form of a duration (e.g. 72h 15m -> "72.25") — this is
+  // the number that actually goes into ADP, which takes hours as a decimal
+  // rather than hours-and-minutes.
+  formatDecimalHours(minutes: number): string {
+    return (minutes / 60).toFixed(2);
+  }
+
   dayLabel(isoDate: string): string {
     return `${dayOfWeekLabel(isoDate)} ${toMmDdYyyy(isoDate)}`;
   }

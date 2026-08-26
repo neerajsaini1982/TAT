@@ -143,6 +143,25 @@ td.mat-column-netWorkedTime,
   font-size: 24px;
 }
 
+// Net Worked Time / Overtime cells stack the existing hours-and-minutes
+// value over its decimal-hours equivalent — ADP takes hours as a decimal
+// (e.g. "72.25"), not hours-and-minutes, so this is the number that
+// actually gets typed in there without anyone doing the conversion by
+// hand. Column stays right-aligned via flex rather than text-align, since
+// text-align wouldn't apply to a block-level child.
+.time-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.3;
+}
+
+.time-decimal {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .mat-column-expand {
   width: 56px;
 }
