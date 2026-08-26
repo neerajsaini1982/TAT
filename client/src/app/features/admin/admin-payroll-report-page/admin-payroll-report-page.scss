@@ -12,8 +12,19 @@
   padding: 24px;
 }
 
-.filters-card {
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 16px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.filters-card {
+  margin-bottom: 24px;
 }
 
 .filters {
@@ -28,8 +39,25 @@
   margin: 8px 0 0;
 }
 
-.empty {
+// Loading/empty placeholders otherwise sit flush against the filters card
+// above with no visual separation from the (absent) table below — center
+// them in their own breathing room so the page doesn't look broken while
+// there's nothing to show yet.
+.status {
+  margin: 0;
+  padding: 48px 0;
+  text-align: center;
   color: var(--mat-sys-on-surface-variant);
+  font-size: 15px;
+}
+
+// Rounds and clips the table's outer corners — a border-radius on the
+// <table> itself won't clip square header/footer cell backgrounds, so the
+// rounding has to live on this wrapping container instead.
+.table-container {
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--mat-sys-surface);
 }
 
 // table-layout: fixed makes every column width below exact rather than a
@@ -38,6 +66,7 @@
 .hours-report-table {
   width: 100%;
   table-layout: fixed;
+  border-collapse: collapse;
 
   // Sized up from Material's default (~14px) so the report reads clearly
   // at a glance — this is the primary payroll data, not fine print. The
@@ -52,7 +81,10 @@
 
   // Header labels ("Net Worked Time", etc.) are short phrases — keep them
   // on one line now that there's room, same as the duration values below.
+  // Shaded and weighted to read as the table's frame, distinct from the
+  // data rows below it.
   th {
+    background: var(--mat-sys-surface-container);
     font-size: 15px;
     font-weight: 700;
     white-space: nowrap;
@@ -62,6 +94,17 @@
   // below is deliberately lighter weight so it reads as subordinate detail.
   td {
     font-weight: 600;
+  }
+
+  // A hairline between rows (rather than each row's own default border)
+  // reads more even, and the hover tint gives a clear "you are here" cue
+  // when scanning a long employee list.
+  .employee-row {
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+    &:hover {
+      background: var(--mat-sys-surface-container-low);
+    }
   }
 
   // Grand-total row across every employee in the report — sized up and set

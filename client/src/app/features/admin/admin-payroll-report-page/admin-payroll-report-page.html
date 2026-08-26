@@ -1,3 +1,7 @@
+<div class="header">
+  <h2>Payroll Report — {{ locationCode }}</h2>
+</div>
+
 <mat-card class="filters-card">
   <mat-card-content>
     <div class="filters">
@@ -18,112 +22,114 @@
 </mat-card>
 
 @if (loading()) {
-  <p>Loading…</p>
+  <p class="status">Loading…</p>
 } @else if (report().length === 0) {
-  <p class="empty">No shifts scheduled in this date range.</p>
+  <p class="status">No shifts scheduled in this date range.</p>
 } @else {
-  <table mat-table [dataSource]="report()" multiTemplateDataRows class="hours-report-table mat-elevation-z1">
-    <ng-container matColumnDef="expand">
-      <th mat-header-cell *matHeaderCellDef></th>
-      <td mat-cell *matCellDef="let emp">
-        <button
-          mat-icon-button
-          (click)="toggle(emp.employeeId)"
-          [attr.aria-label]="isExpanded(emp.employeeId) ? 'Collapse' : 'Expand'"
-        >
-          <mat-icon>{{ isExpanded(emp.employeeId) ? 'remove' : 'add' }}</mat-icon>
-        </button>
-      </td>
-      <td mat-footer-cell *matFooterCellDef></td>
-    </ng-container>
+  <div class="table-container mat-elevation-z1">
+    <table mat-table [dataSource]="report()" multiTemplateDataRows class="hours-report-table">
+      <ng-container matColumnDef="expand">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let emp">
+          <button
+            mat-icon-button
+            (click)="toggle(emp.employeeId)"
+            [attr.aria-label]="isExpanded(emp.employeeId) ? 'Collapse' : 'Expand'"
+          >
+            <mat-icon>{{ isExpanded(emp.employeeId) ? 'remove' : 'add' }}</mat-icon>
+          </button>
+        </td>
+        <td mat-footer-cell *matFooterCellDef></td>
+      </ng-container>
 
-    <ng-container matColumnDef="fullName">
-      <th mat-header-cell *matHeaderCellDef>Full Name</th>
-      <td mat-cell *matCellDef="let emp">{{ emp.fullName }}</td>
-      <td mat-footer-cell *matFooterCellDef>Total</td>
-    </ng-container>
+      <ng-container matColumnDef="fullName">
+        <th mat-header-cell *matHeaderCellDef>Full Name</th>
+        <td mat-cell *matCellDef="let emp">{{ emp.fullName }}</td>
+        <td mat-footer-cell *matFooterCellDef>Total</td>
+      </ng-container>
 
-    <ng-container matColumnDef="netWorkedTime">
-      <th mat-header-cell *matHeaderCellDef>Net Worked Time</th>
-      <td mat-cell *matCellDef="let emp">{{ formatDuration(emp.totalNetWorkedMinutes) }}</td>
-      <td mat-footer-cell *matFooterCellDef>{{ formatDuration(totals().netWorkedMinutes) }}</td>
-    </ng-container>
+      <ng-container matColumnDef="netWorkedTime">
+        <th mat-header-cell *matHeaderCellDef>Net Worked Time</th>
+        <td mat-cell *matCellDef="let emp">{{ formatDuration(emp.totalNetWorkedMinutes) }}</td>
+        <td mat-footer-cell *matFooterCellDef>{{ formatDuration(totals().netWorkedMinutes) }}</td>
+      </ng-container>
 
-    <ng-container matColumnDef="overtimeTime">
-      <th mat-header-cell *matHeaderCellDef>Overtime</th>
-      <td mat-cell *matCellDef="let emp" [class.flag]="emp.totalOvertimeMinutes > 0">
-        {{ formatDuration(emp.totalOvertimeMinutes) }}
-      </td>
-      <td mat-footer-cell *matFooterCellDef [class.flag]="totals().overtimeMinutes > 0">
-        {{ formatDuration(totals().overtimeMinutes) }}
-      </td>
-    </ng-container>
+      <ng-container matColumnDef="overtimeTime">
+        <th mat-header-cell *matHeaderCellDef>Overtime</th>
+        <td mat-cell *matCellDef="let emp" [class.flag]="emp.totalOvertimeMinutes > 0">
+          {{ formatDuration(emp.totalOvertimeMinutes) }}
+        </td>
+        <td mat-footer-cell *matFooterCellDef [class.flag]="totals().overtimeMinutes > 0">
+          {{ formatDuration(totals().overtimeMinutes) }}
+        </td>
+      </ng-container>
 
-    <ng-container matColumnDef="notes">
-      <th mat-header-cell *matHeaderCellDef>Notes</th>
-      <td mat-cell *matCellDef="let emp" class="notes-cell">
-        @if (emp.absentDays > 0) {
-          <span class="flag">{{ emp.absentDays }} absent day{{ emp.absentDays > 1 ? 's' : '' }}</span>
-        }
-        @if (emp.openEntryDays > 0) {
-          <span class="flag">{{ emp.openEntryDays }} still clocked in</span>
-        }
-      </td>
-      <td mat-footer-cell *matFooterCellDef class="notes-cell">
-        @if (totals().absentDays > 0) {
-          <span class="flag">{{ totals().absentDays }} absent day{{ totals().absentDays > 1 ? 's' : '' }}</span>
-        }
-        @if (totals().openEntryDays > 0) {
-          <span class="flag">{{ totals().openEntryDays }} still clocked in</span>
-        }
-      </td>
-    </ng-container>
+      <ng-container matColumnDef="notes">
+        <th mat-header-cell *matHeaderCellDef>Notes</th>
+        <td mat-cell *matCellDef="let emp" class="notes-cell">
+          @if (emp.absentDays > 0) {
+            <span class="flag">{{ emp.absentDays }} absent day{{ emp.absentDays > 1 ? 's' : '' }}</span>
+          }
+          @if (emp.openEntryDays > 0) {
+            <span class="flag">{{ emp.openEntryDays }} still clocked in</span>
+          }
+        </td>
+        <td mat-footer-cell *matFooterCellDef class="notes-cell">
+          @if (totals().absentDays > 0) {
+            <span class="flag">{{ totals().absentDays }} absent day{{ totals().absentDays > 1 ? 's' : '' }}</span>
+          }
+          @if (totals().openEntryDays > 0) {
+            <span class="flag">{{ totals().openEntryDays }} still clocked in</span>
+          }
+        </td>
+      </ng-container>
 
-    <ng-container matColumnDef="expandedDetail">
-      <td mat-cell *matCellDef="let emp" [attr.colspan]="columns.length" class="detail-cell">
-        <table class="day-table">
-          <tbody>
-            @for (day of emp.days; track day.date) {
-              <tr [class.absent-row]="day.isAbsent">
-                <td class="day-date-col">{{ dayLabel(day.date) }}</td>
-                @if (day.isAbsent) {
-                  <td colspan="2" class="day-absent-col">
-                    Absent
-                    @if (day.absenceNote) {
-                      — {{ day.absenceNote }}
+      <ng-container matColumnDef="expandedDetail">
+        <td mat-cell *matCellDef="let emp" [attr.colspan]="columns.length" class="detail-cell">
+          <table class="day-table">
+            <tbody>
+              @for (day of emp.days; track day.date) {
+                <tr [class.absent-row]="day.isAbsent">
+                  <td class="day-date-col">{{ dayLabel(day.date) }}</td>
+                  @if (day.isAbsent) {
+                    <td colspan="2" class="day-absent-col">
+                      Absent
+                      @if (day.absenceNote) {
+                        — {{ day.absenceNote }}
+                      }
+                    </td>
+                  } @else {
+                    <td class="day-numeric-col">{{ day.netWorkedMinutes !== null ? formatDuration(day.netWorkedMinutes) : '—' }}</td>
+                    <td class="day-numeric-col" [class.flag]="day.overtimeMinutes > 0">{{ formatDuration(day.overtimeMinutes) }}</td>
+                  }
+                  <td class="notes-cell">
+                    @if (day.leftEarly) {
+                      <span class="flag">Left early{{ day.leftEarlyNote ? ' — ' + day.leftEarlyNote : '' }}</span>
+                    }
+                    @if (day.hasLongBreak) {
+                      <span class="flag">Long break.</span>
+                    }
+                    @if (day.hasLongLunch) {
+                      <span class="flag">Long lunch.</span>
+                    }
+                    @if (day.overtimeMinutes > 0) {
+                      <span class="flag">{{ formatDuration(day.overtimeMinutes) }} Overtime</span>
+                    }
+                    @for (note of day.notes; track note) {
+                      <span>{{ note }}</span>
                     }
                   </td>
-                } @else {
-                  <td class="day-numeric-col">{{ day.netWorkedMinutes !== null ? formatDuration(day.netWorkedMinutes) : '—' }}</td>
-                  <td class="day-numeric-col" [class.flag]="day.overtimeMinutes > 0">{{ formatDuration(day.overtimeMinutes) }}</td>
-                }
-                <td class="notes-cell">
-                  @if (day.leftEarly) {
-                    <span class="flag">Left early{{ day.leftEarlyNote ? ' — ' + day.leftEarlyNote : '' }}</span>
-                  }
-                  @if (day.hasLongBreak) {
-                    <span class="flag">Long break.</span>
-                  }
-                  @if (day.hasLongLunch) {
-                    <span class="flag">Long lunch.</span>
-                  }
-                  @if (day.overtimeMinutes > 0) {
-                    <span class="flag">{{ formatDuration(day.overtimeMinutes) }} Overtime</span>
-                  }
-                  @for (note of day.notes; track note) {
-                    <span>{{ note }}</span>
-                  }
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </td>
-    </ng-container>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </td>
+      </ng-container>
 
-    <tr mat-header-row *matHeaderRowDef="columns"></tr>
-    <tr mat-row *matRowDef="let row; columns: columns" class="employee-row"></tr>
-    <tr mat-row *matRowDef="let row; columns: ['expandedDetail']; when: isExpandedRow"></tr>
-    <tr mat-footer-row *matFooterRowDef="columns"></tr>
-  </table>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns" class="employee-row"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['expandedDetail']; when: isExpandedRow"></tr>
+      <tr mat-footer-row *matFooterRowDef="columns"></tr>
+    </table>
+  </div>
 }
