@@ -39,15 +39,22 @@
   width: 100%;
   table-layout: fixed;
 
+  // Sized up from Material's default (~14px) so the report reads clearly
+  // at a glance — this is the primary payroll data, not fine print. The
+  // nested day-table drill-down deliberately keeps its own smaller size
+  // (see below) since it's subordinate detail, not the headline numbers.
   th,
   td {
-    padding: 12px 16px;
+    padding: 16px;
+    font-size: 16px;
     box-sizing: border-box;
   }
 
   // Header labels ("Net Worked Time", etc.) are short phrases — keep them
   // on one line now that there's room, same as the duration values below.
   th {
+    font-size: 15px;
+    font-weight: 700;
     white-space: nowrap;
   }
 
@@ -69,7 +76,7 @@
   .mat-mdc-footer-cell {
     border-top: 4px double var(--mat-sys-outline);
     background: var(--mat-sys-surface-container);
-    font-size: 15px;
+    font-size: 18px;
     font-weight: 700;
   }
 }
@@ -82,6 +89,15 @@
   width: 150px;
   white-space: nowrap;
   text-align: right;
+}
+
+// Net Worked Time is the headline number on this report — called out at
+// 24px so it reads clearly above the rest of the top-level row (the header
+// label stays at the table's base size so it doesn't overflow the 150px
+// column).
+td.mat-column-netWorkedTime,
+.mat-mdc-footer-cell.mat-column-netWorkedTime {
+  font-size: 24px;
 }
 
 .mat-column-expand {
