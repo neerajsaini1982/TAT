@@ -50,8 +50,8 @@
 
       <ng-container matColumnDef="netWorkedTime">
         <th mat-header-cell *matHeaderCellDef>Net Worked Time</th>
-        <td mat-cell *matCellDef="let emp">{{ formatDuration(emp.totalNetWorkedMinutes) }}</td>
-        <td mat-footer-cell *matFooterCellDef>{{ formatDuration(totals().netWorkedMinutes) }}</td>
+        <td mat-cell *matCellDef="let emp">{{ formatDuration(regularMinutes(emp)) }}</td>
+        <td mat-footer-cell *matFooterCellDef>{{ formatDuration(totals().regularMinutes) }}</td>
       </ng-container>
 
       <ng-container matColumnDef="overtimeTime">

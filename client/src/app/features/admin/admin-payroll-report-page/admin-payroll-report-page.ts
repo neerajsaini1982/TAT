@@ -57,12 +57,21 @@ export class AdminPayrollReportPage implements OnInit {
   protected readonly totals = computed(() => {
     const rows = this.report();
     return {
-      netWorkedMinutes: rows.reduce((sum, r) => sum + r.totalNetWorkedMinutes, 0),
+      regularMinutes: rows.reduce((sum, r) => sum + this.regularMinutes(r), 0),
       overtimeMinutes: rows.reduce((sum, r) => sum + r.totalOvertimeMinutes, 0),
       absentDays: rows.reduce((sum, r) => sum + r.absentDays, 0),
       openEntryDays: rows.reduce((sum, r) => sum + r.openEntryDays, 0),
     };
   });
+
+  // totalNetWorkedMinutes includes overtime, but ADP takes regular and
+  // overtime hours as two separate entries — this is the "Net Worked Time"
+  // column's regular-hours-only figure (excludes whatever's already
+  // counted in the Overtime column) so the two columns add back up to the
+  // actual time worked without double-counting overtime into regular.
+  regularMinutes(emp: EmployeeHoursReportDto): number {
+    return emp.totalNetWorkedMinutes - emp.totalOvertimeMinutes;
+  }
 
   ngOnInit(): void {
     this.run();
