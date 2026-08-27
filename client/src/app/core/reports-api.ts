@@ -18,6 +18,8 @@ export interface DailyHoursDto {
   hasLongBreak: boolean;
   hasLongLunch: boolean;
   notes: string[];
+  sickMinutes: number;
+  shiftAssignmentId: number;
 }
 
 export interface EmployeeHoursReportDto {
@@ -30,6 +32,7 @@ export interface EmployeeHoursReportDto {
   totalOvertimeMinutes: number;
   absentDays: number;
   openEntryDays: number;
+  totalSickMinutes: number;
   days: DailyHoursDto[];
 }
 

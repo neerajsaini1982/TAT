@@ -115,6 +115,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(a => a.AbsentMarkedByAccountId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasOne(a => a.SickHoursRecordedByAccount)
+                .WithMany()
+                .HasForeignKey(a => a.SickHoursRecordedByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Same employee can't be assigned to the same shift twice on the same day.
             entity.HasIndex(a => new { a.ShiftId, a.AccountId, a.Date }).IsUnique();
         });

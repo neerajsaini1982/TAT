@@ -21,6 +21,9 @@ export interface ShiftAssignmentDto {
   absenceNote: string | null;
   absentMarkedByAccountId: number | null;
   absentMarkedAt: string | null;
+  sickMinutes: number;
+  sickHoursRecordedByAccountId: number | null;
+  sickHoursRecordedAt: string | null;
 }
 
 export interface CreateShiftAssignmentRequest {
@@ -37,6 +40,10 @@ export interface MoveShiftAssignmentRequest {
 export interface MarkAbsentRequest {
   isAbsent: boolean;
   note: string | null;
+}
+
+export interface SetSickMinutesRequest {
+  sickMinutes: number;
 }
 
 @Service()
@@ -70,6 +77,10 @@ export class ShiftAssignmentsApi {
 
   markAbsent(id: number, request: MarkAbsentRequest) {
     return this.http.put<ShiftAssignmentDto>(`${this.base}/${id}/absent`, request);
+  }
+
+  setSickMinutes(id: number, request: SetSickMinutesRequest) {
+    return this.http.put<ShiftAssignmentDto>(`${this.base}/${id}/sick-hours`, request);
   }
 
   publish(weekStartDate: string, locationCode?: string, sendEmail = false) {

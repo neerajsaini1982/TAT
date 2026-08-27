@@ -16,7 +16,10 @@ public record ShiftAssignmentDto(
     bool IsAbsent,
     string? AbsenceNote,
     int? AbsentMarkedByAccountId,
-    DateTime? AbsentMarkedAt);
+    DateTime? AbsentMarkedAt,
+    int SickMinutes,
+    int? SickHoursRecordedByAccountId,
+    DateTime? SickHoursRecordedAt);
 
 public record CreateShiftAssignmentRequest(int ShiftId, int AccountId, DateOnly Date);
 
@@ -27,5 +30,10 @@ public record MoveShiftAssignmentRequest(int AccountId, DateOnly Date);
 // Note is required when marking absent (explains why); optional/ignored
 // when clearing it.
 public record MarkAbsentRequest(bool IsAbsent, string? Note);
+
+// Overwrites the assignment's sick minutes outright (not an increment) —
+// the admin is transcribing what the employee texted in, so re-entering it
+// (e.g. to correct a typo) should just replace the prior value.
+public record SetSickMinutesRequest(int SickMinutes);
 
 public record PublishScheduleRequest(string? LocationCode, DateOnly WeekStartDate, bool SendEmail = false);

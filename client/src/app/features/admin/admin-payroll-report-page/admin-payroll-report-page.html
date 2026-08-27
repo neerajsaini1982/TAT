@@ -14,9 +14,21 @@
         <input matInput type="date" [(ngModel)]="endDate" />
       </mat-form-field>
       <button mat-flat-button color="primary" (click)="run()" [disabled]="loading()">Run Report</button>
+      <mat-form-field appearance="outline" class="employee-filter">
+        <mat-label>Employee</mat-label>
+        <mat-select [value]="selectedEmployeeId()" (selectionChange)="selectedEmployeeId.set($event.value)">
+          <mat-option value="all">All Employees</mat-option>
+          @for (opt of employeeOptions(); track opt.employeeId) {
+            <mat-option [value]="opt.employeeId">{{ opt.fullName }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
     </div>
     @if (error()) {
       <p class="error">{{ error() }}</p>
+    }
+    @if (sickHoursError()) {
+      <p class="error">{{ sickHoursError() }}</p>
     }
   </mat-card-content>
 </mat-card>
@@ -25,9 +37,11 @@
   <p class="status">Loading…</p>
 } @else if (report().length === 0) {
   <p class="status">No shifts scheduled in this date range.</p>
+} @else if (filteredReport().length === 0) {
+  <p class="status">No shifts scheduled in this date range for the selected employee.</p>
 } @else {
   <div class="table-container mat-elevation-z1">
-    <table mat-table [dataSource]="report()" multiTemplateDataRows class="hours-report-table">
+    <table mat-table [dataSource]="filteredReport()" multiTemplateDataRows class="hours-report-table">
       <ng-container matColumnDef="expand">
         <th mat-header-cell *matHeaderCellDef></th>
         <td mat-cell *matCellDef="let emp">
@@ -80,6 +94,38 @@
         </td>
       </ng-container>
 
+      <ng-container matColumnDef="sickTime">
+        <th mat-header-cell *matHeaderCellDef>Sick Hours</th>
+        <td mat-cell *matCellDef="let emp">
+          <div class="time-cell">
+            <span class="time-primary">{{ formatDuration(emp.totalSickMinutes) }}</span>
+            <span class="time-decimal">({{ formatDecimalHours(emp.totalSickMinutes) }})</span>
+          </div>
+        </td>
+        <td mat-footer-cell *matFooterCellDef>
+          <div class="time-cell">
+            <span class="time-primary">{{ formatDuration(totals().sickMinutes) }}</span>
+            <span class="time-decimal">({{ formatDecimalHours(totals().sickMinutes) }})</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="totalTime">
+        <th mat-header-cell *matHeaderCellDef>Total Hours</th>
+        <td mat-cell *matCellDef="let emp">
+          <div class="time-cell">
+            <span class="time-primary">{{ formatDuration(totalMinutes(emp)) }}</span>
+            <span class="time-decimal">({{ formatDecimalHours(totalMinutes(emp)) }})</span>
+          </div>
+        </td>
+        <td mat-footer-cell *matFooterCellDef>
+          <div class="time-cell">
+            <span class="time-primary">{{ formatDuration(totals().totalMinutes) }}</span>
+            <span class="time-decimal">({{ formatDecimalHours(totals().totalMinutes) }})</span>
+          </div>
+        </td>
+      </ng-container>
+
       <ng-container matColumnDef="notes">
         <th mat-header-cell *matHeaderCellDef>Notes</th>
         <td mat-cell *matCellDef="let emp" class="notes-cell">
@@ -118,6 +164,19 @@
                     <td class="day-numeric-col">{{ day.netWorkedMinutes !== null ? formatDuration(day.netWorkedMinutes) : '—' }}</td>
                     <td class="day-numeric-col" [class.flag]="day.overtimeMinutes > 0">{{ formatDuration(day.overtimeMinutes) }}</td>
                   }
+                  <td class="day-sick-col">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.25"
+                      class="sick-input"
+                      [attr.aria-label]="'Sick hours for ' + dayLabel(day.date)"
+                      [value]="(day.sickMinutes / 60).toFixed(2)"
+                      [disabled]="isSavingSickHours(day)"
+                      (change)="updateSickHours(day, $any($event.target).value)"
+                    />
+                  </td>
+                  <td class="day-numeric-col">{{ formatDuration((day.netWorkedMinutes ?? 0) + day.sickMinutes) }}</td>
                   <td class="notes-cell">
                     @if (day.leftEarly) {
                       <span class="flag">Left early{{ day.leftEarlyNote ? ' — ' + day.leftEarlyNote : '' }}</span>

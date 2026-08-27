@@ -34,6 +34,13 @@
   flex-wrap: wrap;
 }
 
+// Full employee names need more room than the default mat-form-field
+// width gives a dropdown — wide enough for most names without pushing the
+// date fields off onto their own line at typical widths.
+.employee-filter {
+  min-width: 220px;
+}
+
 .error {
   color: var(--mat-sys-error);
   margin: 8px 0 0;
@@ -100,7 +107,11 @@
   // reads more even, and the hover tint gives a clear "you are here" cue
   // when scanning a long employee list.
   .employee-row {
-    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    // Faded relative to the token's full strength — a full-strength
+    // outline-variant border reads as loudly as the numbers themselves in
+    // an empty Notes cell, competing with the one employee's row of hours
+    // it's supposed to just set apart.
+    border-bottom: 1px solid color-mix(in srgb, var(--mat-sys-outline-variant) 40%, transparent);
 
     &:hover {
       background: var(--mat-sys-surface-container-low);
@@ -128,18 +139,23 @@
 // pin a width so they line up in a neat column instead of each cell sizing
 // to its own content.
 .mat-column-netWorkedTime,
-.mat-column-overtimeTime {
+.mat-column-overtimeTime,
+.mat-column-sickTime,
+.mat-column-totalTime {
   width: 150px;
   white-space: nowrap;
   text-align: right;
 }
 
-// Net Worked Time is the headline number on this report — called out at
-// 24px so it reads clearly above the rest of the top-level row (the header
-// label stays at the table's base size so it doesn't overflow the 150px
-// column).
+// Net Worked Time and Total Hours are the two headline numbers on this
+// report (regular worked time, and the all-in figure payroll actually
+// cares about) — called out at 24px so they read clearly above the rest of
+// the row (the header label stays at the table's base size so it doesn't
+// overflow the 150px column).
 td.mat-column-netWorkedTime,
-.mat-mdc-footer-cell.mat-column-netWorkedTime {
+.mat-mdc-footer-cell.mat-column-netWorkedTime,
+td.mat-column-totalTime,
+.mat-mdc-footer-cell.mat-column-totalTime {
   font-size: 24px;
 }
 
@@ -220,12 +236,41 @@ td.mat-column-netWorkedTime,
   color: var(--mat-sys-on-surface-variant);
 }
 
-// Matches the parent row's netWorkedTime/overtimeTime column width so these
-// line up one-for-one with their parent column.
+// Matches the parent row's netWorkedTime/overtimeTime/totalTime column
+// width so these line up one-for-one with their parent column.
 .day-numeric-col {
   width: 150px;
   white-space: nowrap;
   text-align: right;
+}
+
+// Matches the parent row's sickTime column width. Unlike every other cell
+// in this drill-down, this one is admin-editable — the report's only input
+// besides the date-range filters — so it gets its own class rather than
+// reusing .day-numeric-col.
+.day-sick-col {
+  width: 150px;
+  text-align: right;
+}
+
+.sick-input {
+  width: 72px;
+  padding: 4px 6px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 4px;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  font: inherit;
+  text-align: right;
+
+  &:disabled {
+    opacity: 0.6;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 1px;
+  }
 }
 
 // The "Absent — reason" cell spans what would otherwise be the two numeric

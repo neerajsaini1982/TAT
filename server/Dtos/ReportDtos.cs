@@ -22,7 +22,13 @@ public record DailyHoursDto(
     bool StillClockedIn,
     bool HasLongBreak,
     bool HasLongLunch,
-    List<string> Notes);
+    List<string> Notes,
+    // Manually entered by an admin (ShiftAssignmentsController.SetSickMinutes),
+    // not derived from a clock. ShiftAssignmentId is the target for that
+    // write — usually the day's only assignment; see BuildDay for the rare
+    // multiple-assignment case.
+    int SickMinutes,
+    int ShiftAssignmentId);
 
 // Consolidated totals for one employee across the requested date range — the
 // top level of the drill-down report (see ReportsController). Days is the
@@ -44,4 +50,5 @@ public record EmployeeHoursReportDto(
     int TotalOvertimeMinutes,
     int AbsentDays,
     int OpenEntryDays,
+    int TotalSickMinutes,
     List<DailyHoursDto> Days);

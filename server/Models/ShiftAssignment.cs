@@ -32,4 +32,15 @@ public class ShiftAssignment
     public int? AbsentMarkedByAccountId { get; set; }
     public Account? AbsentMarkedByAccount { get; set; }
     public DateTime? AbsentMarkedAt { get; set; }
+
+    // Manually entered by an admin (see ShiftAssignmentsController.SetSickMinutes)
+    // when the employee reported in sick for this shift — there's no
+    // clock-in to derive it from, unlike worked time. Counted as paid time
+    // in the hours report (see ReportsController), separate from IsAbsent
+    // since an admin may want to record hours here without also marking the
+    // day absent, or vice versa.
+    public int SickMinutes { get; set; }
+    public int? SickHoursRecordedByAccountId { get; set; }
+    public Account? SickHoursRecordedByAccount { get; set; }
+    public DateTime? SickHoursRecordedAt { get; set; }
 }
