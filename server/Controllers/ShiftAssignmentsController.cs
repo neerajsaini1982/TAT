@@ -22,10 +22,12 @@ namespace Server.Controllers;
 public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notifier, IEmailSender emailSender) : ControllerBase
 {
     // Self-service: whoever is logged in sees their own upcoming schedule,
-    // and everyone else's too if their role has been granted Schedule
-    // Visibility for this location (see LocationSettings/CanSeeAllSchedules)
-    // — otherwise an Employee/Lead/Admin can still always answer "when am I
-    // working next, and for how long" without needing the admin roster view.
+    // and everyone else's too if they've individually been granted the
+    // Account.CanSeeAllSchedules override, or if their role has been granted
+    // Schedule Visibility for this location (see LocationSettings/
+    // CanSeeAllSchedules) — otherwise an Employee/Lead/Admin can still always
+    // answer "when am I working next, and for how long" without needing the
+    // admin roster view.
     [HttpGet("mine")]
     public ActionResult<IEnumerable<ShiftAssignmentDto>> GetMine()
     {
@@ -356,6 +358,40 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         return Ok(ToDto(assignment, breakWindows));
     }
 
+    // Lets an Admin/Sa record sick hours an employee reported for a shift
+    // (typically texted in, not clocked) — see SetSickMinutesRequest. Kept
+    // independent of MarkAbsent: entering sick hours doesn't itself flip
+    // IsAbsent, since an admin may want both, either, or neither depending
+    // on how the day is being tracked.
+    [HttpPut("{id:int}/sick-hours")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public async Task<ActionResult<ShiftAssignmentDto>> SetSickMinutes(int id, SetSickMinutesRequest request)
+    {
+        if (request.SickMinutes < 0)
+        {
+            return BadRequest("Sick minutes can't be negative.");
+        }
+
+        var assignment = db.ShiftAssignments
+            .Include(a => a.Shift).ThenInclude(s => s!.Location)
+            .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
+            .Include(a => a.Account)
+            .SingleOrDefault(a => a.Id == id);
+        if (assignment is null || !CanAccess(assignment.Shift?.Location?.LocationCode))
+        {
+            return NotFound();
+        }
+
+        assignment.SickMinutes = request.SickMinutes;
+        assignment.SickHoursRecordedByAccountId = CallerAccountId();
+        assignment.SickHoursRecordedAt = DateTime.UtcNow;
+        db.SaveChanges();
+
+        var breakWindows = ComputeBreakWindows([assignment]);
+        await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
+        return Ok(ToDto(assignment, breakWindows));
+    }
+
     private Location? ResolveLocation(string? locationCode)
     {
         if (User.IsInRole(nameof(AccountRole.Sa)))
@@ -387,11 +423,24 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .Select(s => (bool?)s.DevelopmentMode)
             .SingleOrDefault() ?? false;
 
-    // Resolves the Schedule Visibility setting against the caller's own
-    // role: disabled entirely (or no settings row yet) means everyone is
-    // restricted to their own shifts regardless of the per-role flags.
+    // Resolves whether the caller can see everyone's shifts, not just their
+    // own. A per-employee override (Account.CanSeeAllSchedules) wins outright
+    // — an admin can grant this to one specific person regardless of their
+    // role or the location's settings. Otherwise falls back to the Schedule
+    // Visibility setting against the caller's own role: disabled entirely (or
+    // no settings row yet) means everyone else is restricted to their own
+    // shifts regardless of the per-role flags.
     private bool CanSeeAllSchedules(int locationId)
     {
+        var callerOverride = db.Accounts
+            .Where(a => a.Id == CallerAccountId())
+            .Select(a => (bool?)a.CanSeeAllSchedules)
+            .SingleOrDefault() ?? false;
+        if (callerOverride)
+        {
+            return true;
+        }
+
         var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == locationId);
         if (settings is null || !settings.ScheduleVisibilityEnabled)
         {
@@ -558,5 +607,8 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         a.IsAbsent,
         a.AbsenceNote,
         a.AbsentMarkedByAccountId,
-        a.AbsentMarkedAt);
+        a.AbsentMarkedAt,
+        a.SickMinutes,
+        a.SickHoursRecordedByAccountId,
+        a.SickHoursRecordedAt);
 }

@@ -17,6 +17,16 @@ public class Account
     // Defaults true for everyone; an admin unchecks it for someone who
     // shouldn't be scheduled without deactivating their account entirely.
     public bool IsOnShiftSchedule { get; set; } = true;
+
+    // Per-employee override of LocationSettings' role-based Schedule
+    // Visibility setting (see ShiftAssignmentsController.CanSeeAllSchedules):
+    // when true, this account sees every employee's shifts on "My Schedule"
+    // regardless of their role's flag or whether ScheduleVisibilityEnabled
+    // is even on for the location. Defaults false for everyone; an admin
+    // opts a specific person in (e.g. a lead-in-training who isn't yet a
+    // Lead). Does not affect clock-in/out, which stays self-service only
+    // regardless of this flag (see TimeEntriesController.ClockIn).
+    public bool CanSeeAllSchedules { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // 6-digit code an Employee types in at /{locationCode}/employee to log in.

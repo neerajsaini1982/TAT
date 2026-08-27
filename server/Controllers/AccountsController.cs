@@ -181,6 +181,40 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         return Ok(ToDto(account));
     }
 
+    // Lets the signed-in account pick its own login code instead of getting
+    // a random one — e.g. an employee who wants something easier to
+    // remember. Must be exactly 6 digits and not already in use by another
+    // account at the same location (UserCode is only unique per-location,
+    // not globally — see AccountProvisioning.GenerateUniqueUserCode).
+    [HttpPost("mine/set-code")]
+    [Authorize]
+    public ActionResult<AccountDto> SetMyCode(SetUserCodeRequest request)
+    {
+        if (request.UserCode is not { Length: 6 } || !request.UserCode.All(char.IsAsciiDigit))
+        {
+            return BadRequest("Your code must be exactly 6 digits.");
+        }
+
+        var accountId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == accountId);
+        if (account is null || account.LocationId is null)
+        {
+            return BadRequest("This account has no user code to set.");
+        }
+
+        var inUse = db.Accounts.Any(a =>
+            a.Id != accountId && a.LocationId == account.LocationId && a.UserCode == request.UserCode);
+        if (inUse)
+        {
+            return Conflict("That code is already in use. Pick a different one.");
+        }
+
+        account.UserCode = request.UserCode;
+        db.SaveChanges();
+
+        return Ok(ToDto(account));
+    }
+
     // Lets the signed-in account view its own profile — used by the
     // Employee portal's Account menu, which only that account itself can
     // reach (AdminOrAbove would 403 an Employee).
@@ -338,6 +372,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         account.Phone = request.Phone;
         account.IsActive = request.IsActive;
         account.IsOnShiftSchedule = request.IsOnShiftSchedule;
+        account.CanSeeAllSchedules = request.CanSeeAllSchedules;
         account.Role = request.Role;
         account.HourlyRate = request.HourlyRate;
         account.DateOfBirth = request.DateOfBirth;
@@ -524,6 +559,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         a.Role.ToString(),
         a.IsActive,
         a.IsOnShiftSchedule,
+        a.CanSeeAllSchedules,
         a.UserCode,
         a.Location?.LocationCode,
         a.BirthDate,

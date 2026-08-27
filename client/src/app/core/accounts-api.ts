@@ -18,6 +18,10 @@ export interface AccountDto {
   // Whether this employee shows up as a row on the schedule screens — see
   // AvailabilityApi.getForLocation's onShiftScheduleOnly param.
   isOnShiftSchedule: boolean;
+  // Per-employee override that grants a roster view of everyone's shifts
+  // regardless of role/location Schedule Visibility settings. Defaults false;
+  // does not affect clock-in/out, which always stays self-service only.
+  canSeeAllSchedules: boolean;
   userCode: string | null;
   locationCode: string | null;
   // Populated by the ADP employee-directory import (see employee-import-api.ts);
@@ -71,6 +75,7 @@ export interface UpdateAccountRequest {
   phone: string;
   isActive: boolean;
   isOnShiftSchedule: boolean;
+  canSeeAllSchedules: boolean;
   role: Role;
   // Only required when role moves away from Employee.
   username?: string;
@@ -115,6 +120,12 @@ export class AccountsApi {
 
   resetMyCode() {
     return this.http.post<AccountDto>(`${this.base}/mine/reset-code`, {});
+  }
+
+  // Lets the signed-in account pick its own 6-digit login code instead of a
+  // random one. Server validates the digit-count/format and uniqueness.
+  setMyCode(userCode: string) {
+    return this.http.post<AccountDto>(`${this.base}/mine/set-code`, { userCode });
   }
 
   getMine() {

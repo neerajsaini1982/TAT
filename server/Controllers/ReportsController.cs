@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,12 +9,16 @@ using Server.Security;
 
 namespace Server.Controllers;
 
-// Admin-only reporting endpoints. Currently just the hours report (issue
-// #18) — a nested by-employee/by-day breakdown of worked, break, and lunch
-// time over an admin-chosen date range, including absences.
+// Reporting endpoints. Currently just the hours report (issue #18) — a
+// nested by-employee/by-day breakdown of worked, break, and lunch time over
+// a chosen date range, including absences. Any authenticated role can call
+// GetHoursReport, but only Sa/Admin get every employee's rows — a plain
+// Employee (or Lead) calling it is silently scoped down to just their own,
+// so the same admin reports page/endpoint doubles as an employee
+// self-service report with no separate route needed.
 [ApiController]
 [Route("api/reports")]
-[Authorize(Policy = "AdminOrAbove")]
+[Authorize]
 public class ReportsController(AppDbContext db) : ControllerBase
 {
     // Top level: one row per employee with totals across the range. Days is
@@ -42,10 +47,22 @@ public class ReportsController(AppDbContext db) : ControllerBase
         var lunchLimitMinutes = settings?.LunchLimitMinutes ?? 30;
         var overtimeThresholdMinutes = settings?.OvertimeDailyThresholdMinutes ?? 480;
 
-        var assignments = db.ShiftAssignments
+        // Sa/Admin see the whole location; anyone else (Lead, Employee) only
+        // ever gets their own row back, regardless of what locationCode was
+        // requested — this is what makes GetHoursReport safe to expose to
+        // every role instead of gating it behind AdminOrAbove.
+        var canSeeEveryone = User.IsInRole(nameof(AccountRole.Sa)) || User.IsInRole(nameof(AccountRole.Admin));
+        var callerAccountId = CallerAccountId();
+
+        var assignmentsQuery = db.ShiftAssignments
             .Include(a => a.Account)
-            .Where(a => a.Shift!.LocationId == location.Id && a.Date >= startDate && a.Date <= endDate && a.IsPublished)
-            .ToList();
+            .Where(a => a.Shift!.LocationId == location.Id && a.Date >= startDate && a.Date <= endDate && a.IsPublished);
+        if (!canSeeEveryone)
+        {
+            assignmentsQuery = assignmentsQuery.Where(a => a.AccountId == callerAccountId);
+        }
+
+        var assignments = assignmentsQuery.ToList();
 
         var assignmentIds = assignments.Select(a => a.Id).ToList();
         var entriesByAssignmentId = db.TimeEntries
@@ -53,9 +70,16 @@ public class ReportsController(AppDbContext db) : ControllerBase
             .Where(t => assignmentIds.Contains(t.ShiftAssignmentId))
             .ToDictionary(t => t.ShiftAssignmentId);
 
+        // Drop employees with nothing to show for the range (no net worked
+        // time, e.g. scheduled but never clocked in, or absent) — but keep
+        // them if they currently have an open entry (clocked in, whether or
+        // not any time has accrued yet, or clocked in and not yet clocked
+        // out), or have sick hours recorded, since those are still worth an
+        // admin's attention/payroll entry even at 0 worked minutes.
         var report = assignments
             .GroupBy(a => a.AccountId)
             .Select(g => BuildEmployeeReport(g.First().Account!, g.ToList(), entriesByAssignmentId, breakLimitMinutes, lunchLimitMinutes, overtimeThresholdMinutes))
+            .Where(e => e.TotalNetWorkedMinutes > 0 || e.OpenEntryDays > 0 || e.TotalSickMinutes > 0)
             .OrderBy(e => e.FullName)
             .ToList();
 
@@ -86,6 +110,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
             days.Sum(d => d.OvertimeMinutes),
             days.Count(d => d.IsAbsent),
             days.Count(d => d.StillClockedIn),
+            days.Sum(d => d.SickMinutes),
             days);
     }
 
@@ -165,9 +190,17 @@ public class ReportsController(AppDbContext db) : ControllerBase
         var netWorkedMinutes = workedMinutes is not null ? workedMinutes - lunchMinutes : null;
         var overtimeMinutes = netWorkedMinutes is not null ? Math.Max(0, netWorkedMinutes.Value - overtimeThresholdMinutes) : 0;
 
+        // Split shifts (rare) fold multiple assignments into one day row;
+        // sick minutes are summed across them, but an admin edit needs one
+        // concrete assignment to target — the first, same tiebreak as
+        // AbsenceNote above.
+        var sickMinutes = dayAssignments.Sum(a => a.SickMinutes);
+        var shiftAssignmentId = dayAssignments[0].Id;
+
         return new DailyHoursDto(
             date, workedMinutes, breakMinutes, lunchMinutes, netWorkedMinutes, overtimeMinutes,
-            isAbsent, absenceNote, leftEarly, leftEarlyNote, stillClockedIn, hasLongBreak, hasLongLunch, notes);
+            isAbsent, absenceNote, leftEarly, leftEarlyNote, stillClockedIn, hasLongBreak, hasLongLunch, notes,
+            sickMinutes, shiftAssignmentId);
     }
 
     private Location? ResolveLocation(string? locationCode)
@@ -185,4 +218,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
 
     private string? CallerLocationCode() =>
         User.FindFirst(TokenService.LocationCodeClaimType)?.Value;
+
+    private int CallerAccountId() =>
+        int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 }

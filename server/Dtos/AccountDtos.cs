@@ -12,6 +12,9 @@ public record AccountDto(
     string Role,
     bool IsActive,
     bool IsOnShiftSchedule,
+    // Per-employee override that grants a roster view of everyone's shifts
+    // regardless of role/LocationSettings — see Account.CanSeeAllSchedules.
+    bool CanSeeAllSchedules,
     string? UserCode,
     string? LocationCode,
     // Populated by the ADP employee-directory import (see
@@ -60,6 +63,7 @@ public record UpdateAccountRequest(
     string Phone,
     bool IsActive,
     bool IsOnShiftSchedule,
+    bool CanSeeAllSchedules,
     AccountRole Role,
     // Only required when Role moves away from Employee (the account has no
     // real password on file yet — Employee accounts log in with a UserCode
@@ -80,3 +84,8 @@ public record SendCredentialsRequest(string LoginLink);
 // Self-service profile edit (see AccountsController.UpdateMine) — only the
 // two fields an Employee is allowed to change about themselves.
 public record UpdateMineRequest(string Email, string Phone);
+
+// Self-service custom login code (see AccountsController.SetMyCode) — the
+// signed-in account picks its own UserCode instead of getting a random one
+// from ResetMyCode. Must be exactly 6 digits.
+public record SetUserCodeRequest(string UserCode);
