@@ -10,6 +10,10 @@
   width: 100vw;
   box-sizing: border-box;
   padding: 24px;
+
+  @media (max-width: 599.98px) {
+    padding: 12px;
+  }
 }
 
 .filters-card {
@@ -72,6 +76,82 @@
     font-size: 15px;
     font-weight: 700;
   }
+
+  // Below this the fixed 150px/220px column widths above no longer add up
+  // on screen — same problem and same fix as current-week-schedule.scss's
+  // .punch-table: drop the table/row/cell grid entirely and stack each
+  // employee as its own block, cell over cell, with the header text it
+  // lost restored per cell from data-label (set in the template).
+  @media (max-width: 599.98px) {
+    table-layout: auto;
+
+    // thead/tbody/tfoot are inserted by CdkTable's own renderer, same as
+    // the .mat-mdc-footer-cell note above — a plain scoped "thead"/"tbody"
+    // selector silently never matches, so ::ng-deep is required to reach
+    // them at all. tr/td below DO get the attribute (they come from this
+    // template's own matRowDef/matCellDef content) and don't need it, but
+    // ::ng-deep on them too is harmless.
+    ::ng-deep thead {
+      display: none;
+    }
+
+    ::ng-deep tbody,
+    ::ng-deep tfoot,
+    tr,
+    td {
+      display: block;
+      width: 100% !important;
+    }
+
+    // Material's .mat-mdc-row/.mat-mdc-footer-row set a fixed 52px row
+    // height for the normal single-line-per-column table layout — with
+    // cells now stacked several-per-row that's far too short, and since
+    // it doesn't clip (overflow stays visible) the real content spills
+    // out the bottom of the box and directly into the next row's box,
+    // which starts immediately after regardless.
+    tr {
+      height: auto !important;
+    }
+
+    tr.employee-row {
+      padding: 12px 0;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    tr.mat-mdc-footer-row {
+      padding: 12px 0 0;
+    }
+
+    td {
+      // Material's .mdc-data-table__cell also sets a fixed height (50px)
+      // with overflow hidden, tuned for one line of text in a real table
+      // cell — same class of problem as tr's fixed height above, just
+      // clipping instead of overflowing.
+      height: auto !important;
+      overflow: visible !important;
+      padding: 4px 0 !important;
+      text-align: left !important;
+      white-space: normal;
+    }
+
+    td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: var(--mat-sys-on-surface-variant);
+      margin-bottom: 2px;
+    }
+
+    // No column header to lose (it's an icon toggle, not data) — skip the
+    // padding/border every other cell gets so it sits tight against the
+    // name that follows it.
+    .mat-column-expand {
+      padding: 0 !important;
+    }
+  }
 }
 
 // Duration columns are short and fixed-shape ("4h 30m") — right-align and
@@ -119,6 +199,14 @@
 .detail-cell {
   padding: 0 16px 20px 176px !important;
   background: var(--mat-sys-surface-container-low);
+
+  @media (max-width: 599.98px) {
+    // The 176px indent lines this up under the parent table's Full Name
+    // column — meaningless once that table is stacked instead of gridded
+    // (see .hours-report-table's mobile block above), so it just reads as
+    // a big dead margin on the left.
+    padding: 0 0 12px !important;
+  }
 }
 
 // Alignment is deliberately left to the per-column classes below
@@ -140,6 +228,45 @@
     font-weight: normal;
     box-sizing: border-box;
   }
+
+  // Same table-to-stacked-block treatment as the parent table (see
+  // .hours-report-table above) — one day per block instead of a row
+  // that only fits by scrolling sideways.
+  @media (max-width: 599.98px) {
+    table-layout: auto;
+
+    tr {
+      display: block;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    tr:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    tr:first-child {
+      padding-top: 0;
+    }
+
+    td {
+      display: block;
+      width: 100% !important;
+      padding: 2px 0;
+    }
+
+    td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: var(--mat-sys-on-surface-variant);
+      margin-bottom: 2px;
+    }
+  }
 }
 
 // Matches .mat-column-fullName's width so this column sits directly under
@@ -156,6 +283,10 @@
   width: 150px;
   white-space: nowrap;
   text-align: right;
+
+  @media (max-width: 599.98px) {
+    text-align: left;
+  }
 }
 
 // The "Absent — reason" cell spans what would otherwise be the four numeric

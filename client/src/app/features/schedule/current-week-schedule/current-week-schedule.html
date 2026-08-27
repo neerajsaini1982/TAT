@@ -71,17 +71,17 @@
               @for (shift of day.shifts; track shift.assignment.id) {
                 <tr [class.absent-row]="shift.assignment.isAbsent">
                   @if (showEmployeeNames()) {
-                    <td class="employee-cell">
+                    <td class="employee-cell" data-label="Employee">
                       <span class="employee-dot" [style.--employee-color]="employeeColor(shift.assignment.accountId)"></span>
                       {{ shift.employeeName }}
                     </td>
                   }
-                  <td class="shift-cell">
+                  <td class="shift-cell" data-label="Shift">
                     <span class="shift-name">{{ shift.assignment.shiftName }}</span>
                     <span class="shift-time">{{ scheduledTime(shift.assignment) }}</span>
                   </td>
 
-                  <td class="punch-cell clock-cell">
+                  <td class="punch-cell clock-cell" data-label="Clock In / Clock Out">
                     <span class="clock-part">
                       @if (shift.entry?.clockInAt) {
                         {{ punchTime(shift.entry?.clockInAt) }}
@@ -117,7 +117,7 @@
                     }
                   </td>
 
-                  <td class="punch-cell breaks-cell">
+                  <td class="punch-cell breaks-cell" data-label="Breaks">
                     @for (seg of segmentsFor(shift); track seg.id) {
                       <div class="segment-line">
                         {{ seg.kind }}: {{ punchTime(seg.startAt) }}–{{ seg.endAt ? punchTime(seg.endAt) : 'ongoing' }}
@@ -143,7 +143,7 @@
                     }
                   </td>
 
-                  <td class="status-cell">
+                  <td class="status-cell" data-label="Status">
                     @if (shift.assignment.isAbsent) {
                       <span class="attendance-badge absent" [title]="shift.assignment.absenceNote ?? ''">Absent</span>
                     }

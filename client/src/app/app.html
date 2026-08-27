@@ -3,14 +3,14 @@
     @if (titleIcon()) {
       <mat-icon class="title-icon">{{ titleIcon() }}</mat-icon>
     }
-    {{ title() }}
+    <span class="title-text">{{ title() }}</span>
   </span>
   <span class="spacer"></span>
 
   @if (isAdminMenu()) {
-    <button mat-button [matMenuTriggerFor]="accountMenu" class="account-btn">
+    <button mat-button [matMenuTriggerFor]="accountMenu" class="account-btn" aria-label="Account menu">
       <mat-icon>settings</mat-icon>
-      <span>{{ auth.session()?.firstName }}</span>
+      <span class="account-name">{{ auth.session()?.firstName }}</span>
     </button>
     <mat-menu #accountMenu="matMenu">
       <button mat-menu-item (click)="themeService.toggleScheme()">
@@ -22,14 +22,18 @@
         <span>Theme color</span>
       </button>
       <mat-divider />
-      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'accounts']">Manage Accounts</a>
+      @if (auth.role() === 'Admin') {
+        <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'accounts']">Manage Accounts</a>
+      }
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'shifts']">Manage Shifts</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'availability']">Availability</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'schedule']">Schedule</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'schedule-assign']">Schedule (Quick Assign)</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'reports']">Reports</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'payroll-report']">Payroll Report</a>
-      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'settings']">Settings</a>
+      @if (auth.role() === 'Admin') {
+        <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'settings']">Settings</a>
+      }
       <mat-divider />
       <button mat-menu-item (click)="logout()">Log Out</button>
     </mat-menu>
@@ -41,9 +45,9 @@
       }
     </mat-menu>
   } @else if (isEmployeeMenu()) {
-    <button mat-button [matMenuTriggerFor]="employeeMenu" class="account-btn">
+    <button mat-button [matMenuTriggerFor]="employeeMenu" class="account-btn" aria-label="Account menu">
       <mat-icon>settings</mat-icon>
-      <span>{{ auth.session()?.firstName }}</span>
+      <span class="account-name">{{ auth.session()?.firstName }}</span>
     </button>
     <mat-menu #employeeMenu="matMenu">
       <button mat-menu-item (click)="themeService.toggleScheme()">
@@ -57,8 +61,7 @@
       <mat-divider />
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'schedule']">My Schedule</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'availability']">My Availability</a>
-      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'availability2']">Calendar View</a>
-      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'documents']">My Documents</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'reports']">Report</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'help']">Help</a>
       <button mat-menu-item (click)="openAccountDialog()">Account</button>
       <button mat-menu-item (click)="resetCode()" [disabled]="resettingCode()">Reset My Code</button>

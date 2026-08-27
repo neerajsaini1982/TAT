@@ -108,6 +108,16 @@
 
 .table-scroll {
   overflow-x: auto;
+
+  // Below this the table no longer fits without horizontal scrolling (the
+  // whole reason for .table-scroll above), so it stops behaving like a
+  // table at all: every row becomes its own block, stacked top to bottom,
+  // and each cell relabels itself from the header text it would otherwise
+  // have lost (see .punch-table td::before and the data-label attributes
+  // in the template) — everything on screen at once, nothing to scroll.
+  @media (max-width: 599.98px) {
+    overflow-x: visible;
+  }
 }
 
 .punch-table {
@@ -137,6 +147,52 @@
 
   tr.absent-row td {
     opacity: 0.7;
+  }
+
+  @media (max-width: 599.98px) {
+    thead {
+      display: none;
+    }
+
+    tbody,
+    tr,
+    td {
+      display: block;
+      width: 100%;
+    }
+
+    tr {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    tr:first-child {
+      padding-top: 0;
+    }
+
+    tr:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    td {
+      padding: 4px 0;
+      border-bottom: none;
+      white-space: normal;
+    }
+
+    // Each cell relabels itself with the column header it lost when thead
+    // was hidden — data-label is set per-cell in the template.
+    td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+      color: var(--mat-sys-on-surface-variant);
+      margin-bottom: 2px;
+    }
   }
 }
 
@@ -198,6 +254,10 @@
 .breaks-cell {
   white-space: normal;
   min-width: 200px;
+
+  @media (max-width: 599.98px) {
+    min-width: 0;
+  }
 }
 
 .segment-line {
@@ -222,6 +282,16 @@
   height: 26px;
   font-size: 12px;
   line-height: 26px;
+
+  // Bigger tap targets once the layout is a single touch-scrolled column
+  // (see .punch-table's mobile block conversion above) instead of a dense
+  // multi-column table — accuracy matters more than density here.
+  @media (max-width: 599.98px) {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 14px;
+    line-height: 40px;
+  }
 }
 
 .status-cell {
@@ -262,6 +332,18 @@
       width: 18px;
       height: 18px;
       line-height: 18px;
+    }
+
+    @media (max-width: 599.98px) {
+      width: 44px;
+      height: 44px;
+
+      mat-icon {
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
+        line-height: 22px;
+      }
     }
   }
 }

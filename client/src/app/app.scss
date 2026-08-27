@@ -6,9 +6,6 @@ mat-toolbar {
   display: flex;
   align-items: center;
   gap: 6px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   min-width: 0;
   // True centering (ignoring how wide the button group on the right is)
   // only kicks in once there's enough room for it not to collide with
@@ -23,6 +20,20 @@ mat-toolbar {
 
   .title-icon {
     flex: 0 0 auto;
+  }
+
+  // The actual truncation target: text-overflow/white-space only take
+  // effect on an element with its own shrinkable box, not on a bare text
+  // node sharing .title's flex row with title-icon — without this wrapper
+  // the icon holds its size but the text silently overflows past .title's
+  // edge (and behind whatever the toolbar renders next, e.g. the account
+  // menu button) instead of ellipsizing.
+  .title-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
@@ -39,6 +50,23 @@ mat-toolbar {
   align-items: center;
   gap: 6px;
   text-transform: none;
+  // Fixed icon-only width on mobile — without this, the name text
+  // (up to a full first name long) fights the title for space and, since
+  // flex text-overflow doesn't clip cleanly in this row (see .title-text),
+  // ends up rendered on top of/behind the title instead of just squeezing
+  // it. Icon-only still opens the same menu, so nothing is lost, only the
+  // label — that's an acceptable trade for guaranteeing the menu trigger
+  // itself is always visible and tappable.
+  @media (max-width: 599.98px) {
+    min-width: 0;
+    padding: 0 8px;
+  }
+}
+
+.account-name {
+  @media (max-width: 599.98px) {
+    display: none;
+  }
 }
 
 .content {

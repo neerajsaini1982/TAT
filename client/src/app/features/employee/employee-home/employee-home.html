@@ -8,7 +8,16 @@
       <form (ngSubmit)="login()" class="form">
         <mat-form-field appearance="outline">
           <mat-label>6-Digit Code</mat-label>
-          <input matInput name="userCode" [(ngModel)]="userCode" maxlength="6" required />
+          <input
+            matInput
+            name="userCode"
+            [(ngModel)]="userCode"
+            maxlength="6"
+            required
+            inputmode="numeric"
+            pattern="[0-9]*"
+            autocomplete="off"
+          />
         </mat-form-field>
         @if (error()) {
           <p class="error">{{ error() }}</p>
