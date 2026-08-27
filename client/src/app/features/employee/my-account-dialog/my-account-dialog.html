@@ -8,6 +8,24 @@
     <mat-label>Phone</mat-label>
     <input matInput name="phone" [(ngModel)]="phone" />
   </mat-form-field>
+  <h3 class="code-heading">Login Code</h3>
+  <p class="current-code">Current code: <strong>{{ userCode() ?? '—' }}</strong></p>
+  <button mat-stroked-button type="button" (click)="resetCode()" [disabled]="resettingCode() || saving()">
+    Reset to New Code
+  </button>
+
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>Set Your Own Code</mat-label>
+    <input
+      matInput
+      name="customCode"
+      inputmode="numeric"
+      maxlength="6"
+      placeholder="6 digits, then hit Save below"
+      [ngModel]="customCode"
+      (ngModelChange)="customCode = sanitizeCode($event)"
+    />
+  </mat-form-field>
   @if (error()) {
     <p class="error">{{ error() }}</p>
   }

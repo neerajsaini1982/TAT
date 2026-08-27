@@ -23,7 +23,7 @@ import { AvailabilityCalendarPage } from './features/employee/availability-calen
 import { EmployeeSchedulePage } from './features/employee/employee-schedule-page/employee-schedule-page';
 import { MyDocumentsPage } from './features/employee/my-documents-page/my-documents-page';
 import { HelpPage } from './features/employee/help-page/help-page';
-import { saGuard, adminGuard, employeeGuard } from './core/guards';
+import { saGuard, adminGuard, adminOnlyGuard, employeeGuard } from './core/guards';
 
 export const routes: Routes = [
   { path: '', component: Home, pathMatch: 'full' },
@@ -37,14 +37,14 @@ export const routes: Routes = [
   { path: 'sa/shifts', component: SaShiftsPage, canActivate: [saGuard] },
 
   { path: ':locationCode/admin', component: AdminHome },
-  { path: ':locationCode/admin/accounts', component: AdminAccountsPage, canActivate: [adminGuard] },
-  { path: ':locationCode/admin/accounts/import', component: EmployeeImportPage, canActivate: [adminGuard] },
-  { path: ':locationCode/admin/accounts/:id/documents', component: EmployeeDocumentsPage, canActivate: [adminGuard] },
+  { path: ':locationCode/admin/accounts', component: AdminAccountsPage, canActivate: [adminOnlyGuard] },
+  { path: ':locationCode/admin/accounts/import', component: EmployeeImportPage, canActivate: [adminOnlyGuard] },
+  { path: ':locationCode/admin/accounts/:id/documents', component: EmployeeDocumentsPage, canActivate: [adminOnlyGuard] },
   { path: ':locationCode/admin/shifts', component: AdminShiftsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/availability', component: AdminAvailabilityPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/schedule', component: AdminSchedulePage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/schedule-assign', component: AdminScheduleAssignPage, canActivate: [adminGuard] },
-  { path: ':locationCode/admin/settings', component: AdminLocationSettingsPage, canActivate: [adminGuard] },
+  { path: ':locationCode/admin/settings', component: AdminLocationSettingsPage, canActivate: [adminOnlyGuard] },
   { path: ':locationCode/admin/reports', component: AdminReportsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/payroll-report', component: AdminPayrollReportPage, canActivate: [adminGuard] },
 
@@ -54,6 +54,10 @@ export const routes: Routes = [
   { path: ':locationCode/employee/schedule', component: EmployeeSchedulePage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/documents', component: MyDocumentsPage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/help', component: HelpPage, canActivate: [employeeGuard] },
+  // Reuses the admin reports page/component as-is — GetHoursReport scopes
+  // a non-Admin caller down to just their own row server-side (see
+  // ReportsController), so the same page doubles as a self-service report.
+  { path: ':locationCode/employee/reports', component: AdminReportsPage, canActivate: [employeeGuard] },
 
   { path: ':locationCode', component: LocationHome, pathMatch: 'full' },
 ];
