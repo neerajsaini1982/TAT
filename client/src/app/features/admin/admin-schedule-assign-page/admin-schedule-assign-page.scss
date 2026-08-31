@@ -560,16 +560,17 @@ tfoot .employee-col {
   }
 }
 
-// Anchored under .cell-input by .day-cell's position: relative — sits above
-// the table's sticky header/column (z-index up to 3, see th/th.employee-col
-// above) so it's never clipped behind them.
+// position: fixed at a rect computed from the input's getBoundingClientRect
+// (see activeCellRect in the component) rather than position: absolute
+// anchored under .cell-input — an ancestor as close as .day-cell would clip
+// this against .table-scroll's overflow whenever the table is short (few
+// rows, e.g. right after filtering down to one employee — see issue #66).
+// Fixed positioning escapes that clipping entirely; top/left/width come in
+// as inline styles instead of being relative to an ancestor.
 .cell-suggestions {
   all: unset;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  z-index: 5;
+  position: fixed;
+  z-index: 1000;
   max-height: 180px;
   overflow-y: auto;
   margin-top: 2px;

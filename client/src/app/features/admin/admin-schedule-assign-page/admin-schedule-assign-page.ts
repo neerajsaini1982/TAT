@@ -9,7 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, fromEvent, of } from 'rxjs';
 
 import { AvailabilityApi } from '../../../core/availability-api';
 import { ShiftDto, ShiftsApi } from '../../../core/shifts-api';
@@ -127,6 +127,21 @@ export class AdminScheduleAssignPage implements OnInit {
   private readonly cellQueries = signal<Map<string, string>>(new Map());
   // Which cell's suggestion list is open (the one currently focused).
   protected readonly activeCellKey = signal<string | null>(null);
+  // Viewport position of the focused cell's input, captured on focus. The
+  // suggestion list is rendered position:fixed at this rect instead of
+  // position:absolute under the input, so it isn't clipped by
+  // .table-scroll's overflow — which, now that the table's height is
+  // unbounded (see .table-scroll in the stylesheet), is often just tall
+  // enough to hold the visible rows and no taller, clipping a dropdown that
+  // opens below the last one (see issue #66: this is what made "the shifts
+  // aren't showing" reproduce specifically after filtering down to one
+  // employee, since a filtered table is short by construction).
+  protected readonly activeCellRect = signal<{ top: number; left: number; width: number } | null>(null);
+
+  private closeActiveCell(): void {
+    this.activeCellKey.set(null);
+    this.activeCellRect.set(null);
+  }
 
   cellKey(row: EmployeeRow, day: DayCell): string {
     return `${row.accountId}|${day.date}`;
@@ -156,13 +171,15 @@ export class AdminScheduleAssignPage implements OnInit {
     this.setCellQuery(row, day, (event.target as HTMLInputElement).value);
   }
 
-  onCellFocus(row: EmployeeRow, day: DayCell): void {
+  onCellFocus(event: FocusEvent, row: EmployeeRow, day: DayCell): void {
     this.activeCellKey.set(this.cellKey(row, day));
+    const rect = (event.target as HTMLInputElement).getBoundingClientRect();
+    this.activeCellRect.set({ top: rect.bottom, left: rect.left, width: rect.width });
   }
 
   onCellBlur(row: EmployeeRow, day: DayCell): void {
     if (this.activeCellKey() === this.cellKey(row, day)) {
-      this.activeCellKey.set(null);
+      this.closeActiveCell();
     }
   }
 
@@ -360,6 +377,18 @@ export class AdminScheduleAssignPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.load());
     this.load();
+
+    // The suggestion list is position:fixed at a rect captured on focus (see
+    // activeCellRect), so it has to close on scroll/resize rather than
+    // silently drifting away from the input it's anchored to. Capture phase
+    // catches scrolling on any ancestor, e.g. .table-scroll's horizontal
+    // scroll, not just the window's own scroll.
+    fromEvent(window, 'scroll', { capture: true })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.closeActiveCell());
+    fromEvent(window, 'resize')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.closeActiveCell());
   }
 
   load(): void {
