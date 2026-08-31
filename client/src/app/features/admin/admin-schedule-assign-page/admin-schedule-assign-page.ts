@@ -260,7 +260,7 @@ export class AdminScheduleAssignPage implements OnInit {
     this.dayColumns().map((col, i) => ({
       label: col.label,
       dateLabel: col.dateLabel,
-      assignments: this.rows().flatMap((row) => row.days[i]?.assignments ?? []),
+      assignments: this.visibleRows().flatMap((row) => row.days[i]?.assignments ?? []),
     })),
   );
   // Index into DAY_HEADERS/dayColumns (0 = Monday). Defaults to today if
@@ -271,7 +271,7 @@ export class AdminScheduleAssignPage implements OnInit {
 
   protected readonly selectedDayAssignments = computed(() => {
     const dayIndex = this.selectedDayIndex();
-    return this.rows().flatMap((row) => row.days[dayIndex]?.assignments ?? []);
+    return this.visibleRows().flatMap((row) => row.days[dayIndex]?.assignments ?? []);
   });
 
   // Full weekday + date for the Day view's print-only header (e.g.

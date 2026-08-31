@@ -385,17 +385,17 @@
   }
 }
 
-// A bounded height is what makes position:sticky work correctly here — an
-// unbounded auto-height div never actually scrolls internally, so it can't
-// be a real sticky "scrollport": the header/column would just render at a
-// fixed CSS offset instead of tracking the visible area. Capping the height
-// makes .table-scroll the true scrolling region (both axes), so the sticky
-// header row and sticky first column below track it properly, and
-// everything above (title, week nav, Post Schedule bar) stays on-screen
-// without needing to be pinned itself.
+// Only the horizontal axis scrolls here (issue #66: a capped vertical
+// height forced every employee behind an inner scrollbar instead of just
+// letting the page grow). The table's own height is now unbounded, so the
+// page scrolls normally and every employee row is visible without it.
+// One tradeoff: the sticky header row/first column below no longer track
+// the *page's* scroll position (there's no bounded scrollport left for them
+// to stick within), so they scroll away with the rest of the table instead
+// of staying pinned — acceptable since the goal here is "no scrollbar",
+// not a persistently-visible header.
 .table-scroll {
-  overflow: auto;
-  max-height: 65vh;
+  overflow-x: auto;
 }
 
 table {
