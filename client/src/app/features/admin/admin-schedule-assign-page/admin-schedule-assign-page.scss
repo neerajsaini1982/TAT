@@ -566,7 +566,11 @@ tfoot .employee-col {
 // this against .table-scroll's overflow whenever the table is short (few
 // rows, e.g. right after filtering down to one employee — see issue #66).
 // Fixed positioning escapes that clipping entirely; top/left/width come in
-// as inline styles instead of being relative to an ancestor.
+// as inline styles instead of being relative to an ancestor. Those styles
+// are computed relative to :host, not the viewport — :host's own
+// transform (see :host above) makes it the containing block for this
+// fixed-position element per the CSS spec, so viewport-relative coordinates
+// would land in the wrong place.
 .cell-suggestions {
   all: unset;
   position: fixed;
