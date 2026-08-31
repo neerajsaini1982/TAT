@@ -9,7 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, fromEvent, of } from 'rxjs';
 
 import { AvailabilityApi } from '../../../core/availability-api';
 import { ShiftDto, ShiftsApi } from '../../../core/shifts-api';
@@ -85,6 +85,13 @@ export class AdminScheduleAssignPage implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
+  // :host has `transform: translateX(-50%)` (see the stylesheet — it's how
+  // this page breaks out of the app shell's centered content column). Any
+  // transform on an ancestor makes it the containing block for
+  // position:fixed descendants instead of the viewport, so activeCellRect
+  // below has to be computed relative to :host's own rect, not the raw
+  // viewport-relative getBoundingClientRect() the input reports.
+  private readonly hostRef = inject(ElementRef<HTMLElement>);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
   // Edit Times is only offered for today's chips: a TimeEntry can only ever
@@ -127,6 +134,42 @@ export class AdminScheduleAssignPage implements OnInit {
   private readonly cellQueries = signal<Map<string, string>>(new Map());
   // Which cell's suggestion list is open (the one currently focused).
   protected readonly activeCellKey = signal<string | null>(null);
+  // Viewport position of the focused cell's input, captured on focus and
+  // recomputed on scroll/resize (see recomputeActiveCellRect). The
+  // suggestion list is rendered position:fixed at this rect instead of
+  // position:absolute under the input, so it isn't clipped by
+  // .table-scroll's overflow — which, now that the table's height is
+  // unbounded (see .table-scroll in the stylesheet), is often just tall
+  // enough to hold the visible rows and no taller, clipping a dropdown that
+  // opens below the last one (see issue #66: this is what made "the shifts
+  // aren't showing" reproduce specifically after filtering down to one
+  // employee, since a filtered table is short by construction).
+  protected readonly activeCellRect = signal<{ top: number; left: number; width: number } | null>(null);
+  // The focused input itself, so scroll/resize can recompute activeCellRect
+  // against its current position instead of just closing the dropdown —
+  // the page now scrolls as a whole (see .table-scroll), so scrolling to
+  // reach a cell before typing into it is a completely normal flow, not
+  // something that should make the just-opened dropdown disappear.
+  private activeInputEl: HTMLInputElement | null = null;
+
+  private closeActiveCell(): void {
+    this.activeCellKey.set(null);
+    this.activeCellRect.set(null);
+    this.activeInputEl = null;
+  }
+
+  private recomputeActiveCellRect(): void {
+    if (!this.activeInputEl) {
+      return;
+    }
+    const rect = this.activeInputEl.getBoundingClientRect();
+    const hostRect = this.hostRef.nativeElement.getBoundingClientRect();
+    this.activeCellRect.set({
+      top: rect.bottom - hostRect.top,
+      left: rect.left - hostRect.left,
+      width: rect.width,
+    });
+  }
 
   cellKey(row: EmployeeRow, day: DayCell): string {
     return `${row.accountId}|${day.date}`;
@@ -156,26 +199,30 @@ export class AdminScheduleAssignPage implements OnInit {
     this.setCellQuery(row, day, (event.target as HTMLInputElement).value);
   }
 
-  onCellFocus(row: EmployeeRow, day: DayCell): void {
+  onCellFocus(event: FocusEvent, row: EmployeeRow, day: DayCell): void {
     this.activeCellKey.set(this.cellKey(row, day));
+    this.activeInputEl = event.target as HTMLInputElement;
+    this.recomputeActiveCellRect();
   }
 
   onCellBlur(row: EmployeeRow, day: DayCell): void {
     if (this.activeCellKey() === this.cellKey(row, day)) {
-      this.activeCellKey.set(null);
+      this.closeActiveCell();
     }
   }
 
-  // Shifts matching the typed text against name, start time, and end time
-  // (e.g. "10:45" matches any shift starting or ending at 10:45) — an
-  // empty query matches everything, same as an unfiltered dropdown would.
+  // Shifts matching the typed text against name (substring) or start time
+  // (prefix only, e.g. "15" matches 15:00/15:30 but not a shift merely
+  // ending at 15:00 — typing a time means "find what starts here", and a
+  // substring match against end times too was pulling in unrelated shifts).
+  // An empty query matches everything, same as an unfiltered dropdown would.
   filteredShifts(query: string): ShiftDto[] {
     const q = query.trim().toLowerCase();
     if (!q) {
       return this.sortedShifts();
     }
-    return this.sortedShifts().filter((s) =>
-      `${s.name} ${s.startTime.slice(0, 5)} ${s.endTime.slice(0, 5)}`.toLowerCase().includes(q),
+    return this.sortedShifts().filter(
+      (s) => s.name.toLowerCase().includes(q) || s.startTime.slice(0, 5).startsWith(q),
     );
   }
 
@@ -260,7 +307,7 @@ export class AdminScheduleAssignPage implements OnInit {
     this.dayColumns().map((col, i) => ({
       label: col.label,
       dateLabel: col.dateLabel,
-      assignments: this.rows().flatMap((row) => row.days[i]?.assignments ?? []),
+      assignments: this.visibleRows().flatMap((row) => row.days[i]?.assignments ?? []),
     })),
   );
   // Index into DAY_HEADERS/dayColumns (0 = Monday). Defaults to today if
@@ -271,7 +318,7 @@ export class AdminScheduleAssignPage implements OnInit {
 
   protected readonly selectedDayAssignments = computed(() => {
     const dayIndex = this.selectedDayIndex();
-    return this.rows().flatMap((row) => row.days[dayIndex]?.assignments ?? []);
+    return this.visibleRows().flatMap((row) => row.days[dayIndex]?.assignments ?? []);
   });
 
   // Full weekday + date for the Day view's print-only header (e.g.
@@ -360,6 +407,21 @@ export class AdminScheduleAssignPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.load());
     this.load();
+
+    // The suggestion list is position:fixed at a rect captured on focus (see
+    // activeCellRect), so it has to track scroll/resize instead of silently
+    // drifting away from the input it's anchored to. This recomputes rather
+    // than closes: the whole page scrolls now (see .table-scroll), so
+    // scrolling down to reach a cell and then typing into it is a normal
+    // flow, not something that should make the dropdown disappear. Capture
+    // phase catches scrolling on any ancestor, e.g. .table-scroll's
+    // horizontal scroll, not just the window's own scroll.
+    fromEvent(window, 'scroll', { capture: true })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.recomputeActiveCellRect());
+    fromEvent(window, 'resize')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.recomputeActiveCellRect());
   }
 
   load(): void {

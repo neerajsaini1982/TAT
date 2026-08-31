@@ -234,14 +234,19 @@
                       [value]="cellQuery(row, day)"
                       (input)="onCellQueryInput($event, row, day)"
                       (keydown)="onCellKeydown($event, row, day, rowIndex, dayIndex)"
-                      (focus)="onCellFocus(row, day)"
+                      (focus)="onCellFocus($event, row, day)"
                       (blur)="onCellBlur(row, day)"
                       [attr.aria-label]="'Add shift for ' + row.name + ' on ' + day.dayLabel"
                     />
-                    @if (activeCellKey() === cellKey(row, day)) {
+                    @if (activeCellKey() === cellKey(row, day) && activeCellRect(); as rect) {
                       @let matches = filteredShifts(cellQuery(row, day));
                       @if (matches.length > 0) {
-                        <ul class="cell-suggestions">
+                        <ul
+                          class="cell-suggestions"
+                          [style.top.px]="rect.top"
+                          [style.left.px]="rect.left"
+                          [style.width.px]="rect.width"
+                        >
                           @for (shift of matches; track shift.id; let i = $index) {
                             <li [class.top-match]="i === 0" (mousedown)="onSuggestionPick($event, row, day, shift)">
                               <span class="suggestion-time">{{ shiftTime(shift) }}</span>
