@@ -1,3 +1,11 @@
+// Super Admin portal — unchanged except for `MatIconModule`, which the
+// redesigned template needs for the icons in the error notice, the submit
+// button, the three grid cells and Log Out.
+//
+// `MatCardModule` is no longer used by the template (mat-card gave way to
+// the poster-panel layout). It is left in place so this file stays a
+// one-line diff; remove it if you prefer a clean imports array.
+
 import { Component, inject, isDevMode, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -12,8 +20,15 @@ import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 
 @Component({
   selector: 'app-sa-home',
-  imports: [FormsModule, RouterLink, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
-
+  imports: [
+    FormsModule,
+    RouterLink,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatButtonModule,
+    MatIconModule,
+  ],
   templateUrl: './sa-home.html',
   styleUrl: './sa-home.scss',
 })

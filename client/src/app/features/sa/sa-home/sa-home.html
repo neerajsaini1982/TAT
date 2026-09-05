@@ -8,9 +8,9 @@
   poster-panel layout the Modernist system asks for, which tokens alone
   can't produce.
 
-  Requires no TypeScript change. `MatCardModule` is now unused by this
-  template; it can stay in the component's `imports` harmlessly, or be
-  removed.
+  Requires one TypeScript change: `MatIconModule` added to the component's
+  `imports` (the icons below need it). `MatCardModule` is now unused by this
+  template; it can stay harmlessly, or be removed.
 -->
 
 @if (!auth.isAuthenticated() || auth.role() !== 'Sa') {

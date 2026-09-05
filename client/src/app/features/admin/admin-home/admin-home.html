@@ -1,26 +1,70 @@
+<!--
+  Admin home — login + signed-in week view.
+
+  Same treatment as the Super Admin login, with two deliberate differences:
+  the poster panel is ink rather than red (red is reserved for the
+  system-wide portal, so the two logins are told apart at a glance), and the
+  location code is the panel's second statement line, since it is the one
+  fact an admin needs to confirm before signing in.
+
+  Angular structure is unchanged: same `@if (!isSignedIn)` split, same
+  `login()`, same ngModel names, same `app-pay-day-banner` and
+  `app-current-week-schedule` in the signed-in branch.
+
+  Requires one TypeScript change: `MatIconModule` added to the component's
+  `imports`. `MatCardModule` is no longer used by this template.
+-->
+
 @if (!isSignedIn) {
-  <mat-card class="login-card">
-    <mat-card-header>
-      <mat-card-title>Admin Login</mat-card-title>
-      <mat-card-subtitle>Location: {{ locationCode }}</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content>
-      <form (ngSubmit)="login()" class="form">
-        <mat-form-field appearance="outline">
-          <mat-label>Username</mat-label>
-          <input matInput name="username" [(ngModel)]="username" required />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Password</mat-label>
-          <input matInput type="password" name="password" [(ngModel)]="password" required />
-        </mat-form-field>
-        @if (error()) {
-          <p class="error">{{ error() }}</p>
-        }
-        <button mat-flat-button color="primary" type="submit" [disabled]="loading()">Log In</button>
-      </form>
-    </mat-card-content>
-  </mat-card>
+  <div class="admin-login">
+    <aside class="poster">
+      <div class="poster-brand">
+        <span class="poster-wordmark">TAT</span>
+        <span class="poster-tagline">Time &amp; attendance</span>
+      </div>
+      <div class="poster-statement">
+        <span class="poster-line">ADMIN</span>
+        <div class="poster-location">
+          <span class="poster-location-label">Location</span>
+          <span class="poster-location-code">{{ locationCode }}</span>
+        </div>
+      </div>
+      <span class="poster-foot">Schedules, accounts, payroll</span>
+    </aside>
+
+    <div class="login-panel">
+      <div class="login-form-wrap">
+        <span class="eyebrow">Sign in</span>
+        <h1 class="login-title">Admin Login</h1>
+        <hr class="rule" />
+
+        <form (ngSubmit)="login()" class="form">
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput name="username" [(ngModel)]="username" required autocomplete="username" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" name="password" [(ngModel)]="password" required autocomplete="current-password" />
+          </mat-form-field>
+
+          @if (error()) {
+            <p class="error">
+              <mat-icon aria-hidden="true">error_outline</mat-icon>
+              <span>{{ error() }}</span>
+            </p>
+          }
+
+          <button mat-flat-button color="primary" type="submit" class="submit" [disabled]="loading()">
+            <span>Log In</span>
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+          </button>
+        </form>
+
+        <a [routerLink]="['/', locationCode, 'employee']" class="secondary-link">Clocking in instead? Go to the employee screen</a>
+      </div>
+    </div>
+  </div>
 } @else {
   <app-pay-day-banner />
 

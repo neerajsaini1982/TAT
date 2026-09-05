@@ -1,6 +1,129 @@
-.login-card {
-  max-width: 360px;
-  margin: 0 auto;
+// Admin home — login + signed-in week view.
+//
+// Values come from the `--mat-sys-*` tokens in styles.scss. The `.eyebrow`,
+// `.rule` and `.section-title` classes are styled globally there, so they
+// are not repeated here.
+//
+// Layout note: `app.scss` gives `.content` 24px padding and a 960px
+// max-width. The login cancels that padding so the poster panel reaches the
+// column edges; `.schedule-section` keeps its original full-bleed escape
+// for the week table.
+
+.admin-login {
+  display: flex;
+  margin: -24px;
+  min-height: calc(100dvh - 64px);
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+  background: var(--mat-sys-surface);
+
+  @media (max-width: 839px) {
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
+// Ink, not red: the accent field is reserved for the Super Admin portal so
+// the two login screens are distinguishable at a glance.
+.poster {
+  flex: 0 0 360px;
+  background: var(--mat-sys-inverse-surface);
+  color: var(--mat-sys-inverse-on-surface);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+
+  @media (max-width: 839px) {
+    flex: none;
+    gap: 24px;
+    padding: 28px 24px;
+  }
+}
+
+.poster-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.poster-wordmark {
+  font: var(--mat-sys-label-large);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.poster-tagline {
+  font: var(--mat-sys-label-medium);
+  letter-spacing: 0.06em;
+}
+
+.poster-statement {
+  display: flex;
+  flex-direction: column;
+}
+
+.poster-line {
+  font-size: clamp(48px, 6vw, 68px);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+}
+
+.poster-location {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 2px solid color-mix(in srgb, currentColor 50%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.poster-location-label {
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mat-sys-primary-fixed-dim); // the accent's light step, legible on ink
+}
+
+.poster-location-code {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.poster-foot {
+  font: var(--mat-sys-label-medium);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 56px 72px;
+
+  @media (max-width: 839px) {
+    padding: 40px 24px;
+  }
+}
+
+.login-form-wrap {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-title {
+  font: var(--mat-sys-headline-medium);
+  margin: 8px 0 0;
+  color: var(--mat-sys-on-surface);
 }
 
 .form {
@@ -10,19 +133,54 @@
 }
 
 .error {
-  color: var(--mat-sys-error);
-  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 8px;
+  padding: 12px 14px;
+  background: var(--mat-sys-error-container);
+  border-left: 4px solid var(--mat-sys-error);
+  color: var(--mat-sys-on-error-container);
+  font: var(--mat-sys-body-medium);
+  font-weight: 500;
+
+  mat-icon {
+    flex: 0 0 auto;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
 }
 
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 12px;
+.submit.mat-mdc-button-base {
+  width: 100%;
+  height: 48px;
+  margin-top: 16px;
+  padding: 0 18px;
+
+  .mdc-button__label {
+    flex: 1;
+    text-align: left;
+  }
 }
 
-// Full-bleed so the schedule table can use the full viewport width instead
-// of being squeezed into the app shell's centered ~960px .content column —
-// same left:50%/translateX(-50%) technique as admin-schedule-page.scss.
+.secondary-link {
+  margin-top: 20px;
+  font: var(--mat-sys-body-medium);
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--mat-sys-primary);
+    text-decoration: underline;
+  }
+}
+
+// Unchanged from the original: full-bleed so the schedule table can use the
+// full viewport width instead of the app shell's centered ~960px .content
+// column — same left:50%/translateX(-50%) technique as
+// admin-schedule-page.scss.
 .schedule-section {
   position: relative;
   left: 50%;

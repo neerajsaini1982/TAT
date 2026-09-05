@@ -472,6 +472,76 @@ body {
 .header {
   flex-wrap: wrap;
   row-gap: 8px;
+  align-items: center;
+}
+
+// -----------------------------------------------------------------------------
+// 6. PAGE FURNITURE
+//
+// Still no component markup: these reach the patterns every admin and SA
+// page already uses, so all ~15 screens pick up the Modernist page header
+// and table treatment without being edited individually.
+// -----------------------------------------------------------------------------
+
+// A page's title row (the `.header` that contains the page's `<h2>`) becomes
+// a ruled band. `:has()` separates it from the *filter* rows that reuse the
+// same class for selects and action buttons (see accounts-manager,
+// shifts-manager) — without this both would draw a rule and the page would
+// read as two stacked headers.
+.header:has(h2) {
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+
+  h2 {
+    font: var(--mat-sys-headline-small);
+    letter-spacing: -0.015em;
+    margin: 0;
+  }
+}
+
+// Filter rows sit under the title band with air, no rule of their own.
+.header:not(:has(h2)) {
+  margin-bottom: 4px;
+}
+
+// Row-count and similar meta lines read as small caps labels rather than
+// body paragraphs.
+.result-count {
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 16px 0 12px;
+}
+
+// Material's elevation utility classes are applied directly in markup
+// (e.g. `class="mat-elevation-z1"` on the accounts and shifts tables), so
+// they bypass the system elevation tokens. Flatten them to a 1px rule.
+.mat-elevation-z1,
+.mat-elevation-z2,
+.mat-elevation-z3,
+.mat-elevation-z4,
+.mat-elevation-z5,
+.mat-elevation-z6,
+.mat-elevation-z8 {
+  box-shadow: none !important;
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+// Section headings inside pages (`.section-title` in admin-home and
+// elsewhere) match the title band's voice at a smaller size.
+.section-title {
+  font: var(--mat-sys-title-large);
+  margin: 0 0 12px;
+}
+
+// Toggles read as squared switches; the pill track is the one place M3's
+// `corner-full` would otherwise survive as a shape decision.
+.mat-mdc-slide-toggle {
+  --mdc-switch-track-shape: 0;
+  --mdc-switch-handle-shape: 0;
 }
 
 /* You can add global styles to this file, and also import other style files */

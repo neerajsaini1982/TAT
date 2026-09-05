@@ -1,10 +1,18 @@
+// Admin home — unchanged except for two added imports the redesigned
+// template needs: `MatIconModule` (icons in the error notice and the submit
+// button) and `RouterLink` (the "go to the employee screen" link).
+//
+// `MatCardModule` is no longer used by the template; left in place to keep
+// the diff small.
+
 import { Component, inject, isDevMode, signal } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 import { Auth } from '../../../core/auth';
 import { DEV_DEFAULTS } from '../../../core/dev-defaults';
@@ -15,10 +23,12 @@ import { PayDayBanner } from '../../schedule/pay-day-banner/pay-day-banner';
   selector: 'app-admin-home',
   imports: [
     FormsModule,
+    RouterLink,
     MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatIconModule,
     CurrentWeekSchedule,
     PayDayBanner,
   ],
