@@ -197,5 +197,8 @@
   transform: translateX(-50%);
   width: 100vw;
   box-sizing: border-box;
-  padding: 20px 24px 0;
+  // Centers the schedule (title included) on wide monitors instead of
+  // leaving it in the left third: the gutter grows to whatever a 1320px
+  // column leaves over, and collapses back to 24px on narrow screens.
+  padding: 20px max(24px, calc((100vw - 1320px) / 2)) 0;
 }

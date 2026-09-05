@@ -1,113 +1,183 @@
-// Shared week schedule — the only edits are the ones the global theme
-// cannot reach, because component styles load after `styles.scss` and win
-// on equal specificity. Everything else in this file is unchanged.
+// Shared week schedule — used by the employee clock-in screen, admin home
+// and the SA views alike, so every change here lands on all of them.
 //
-// Four hardcoded radii are set to 0 (`.summary`, `.today-badge`,
-// `.attendance-badge`, `.employee-dot`), and the day card's left accent is
-// re-split: it was `primary` by default and `tertiary` for today, which in
-// the Modernist palette are both the same red, so "today" stopped being
-// distinguishable. Default is now a neutral rule and only today carries the
-// accent.
+// Retheme notes: this file is styling only (the template is untouched).
+// It follows the same Modernist furniture as the payroll report — flat
+// blocks separated by 2px rules, uppercase micro-labels, tabular figures,
+// zero radius, red reserved for today and for exceptions.
 //
-// Used by the employee clock-in screen, admin home and the SA views alike.
+// The mobile breakpoint is 767.98px rather than the old 599.98px: with the
+// Employee column present the punch table doesn't fit a large phone in
+// portrait either, and horizontal scrolling inside a card is the worst way
+// to read a shift.
 
+$mobile: 767.98px;
+
+// The admin shell hands this component the full viewport width. A schedule
+// row stretched across 2500px puts the employee name and their status a
+// screen apart, so the content caps out — and centers, so it doesn't sit in
+// the left third of a wide monitor.
 :host {
   display: block;
+  width: 100%;
+  max-width: 1320px;
+  margin-inline: auto;
 }
 
+// Week paddle: the range label is the heading, the arrows are subordinate.
 .week-nav {
   display: flex;
   align-items: center;
   gap: 4px;
-  margin: 0 0 12px;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--mat-sys-on-surface);
 
   .week-range {
-    font-weight: 600;
-    font-size: 15px;
-    min-width: 150px;
+    order: -1;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (max-width: $mobile) {
+    .week-range {
+      font-size: 17px;
+    }
   }
 }
 
+// Week totals as a ruled line rather than a tinted pill — the figures carry
+// it, and the red fill is kept for today's rule and for exceptions.
 .summary {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 16px;
-  padding: 12px 16px;
-  border-radius: 0; // was 8px
-  background: var(--mat-sys-primary-container);
-  color: var(--mat-sys-on-primary-container);
+  gap: 10px;
+  margin: 0 0 20px;
+  padding: 0 0 16px;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  background: transparent;
+  color: var(--mat-sys-on-surface);
   font-size: 15px;
+  font-weight: 500;
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+    flex: none;
+  }
 
   strong {
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
   }
 }
 
 .error {
   color: var(--mat-sys-error);
-  text-align: center;
+  font-weight: 600;
+  text-align: left;
   margin: 0 0 16px;
 }
 
 .days {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 20px;
 }
 
-// The accent is reserved for today; other days carry a neutral rule.
+// Each day is a closed box: a 3px rule on top, 1px around, a titled header
+// band carrying the day's total hours, and the shift rows inside it. Being
+// enclosed is what makes "how many hours went to this day" readable at a
+// glance. The accent is reserved for today.
 .day-card {
-  border-left: 4px solid var(--mat-sys-outline-variant);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-top: 3px solid var(--mat-sys-outline);
+  border-radius: 0 !important;
+  background: var(--mat-sys-surface);
+  box-shadow: none !important;
+  overflow: hidden;
+
+  .mat-mdc-card-content {
+    padding: 0;
+  }
 
   &.today {
-    border-left-color: var(--mat-sys-primary);
+    border-top-color: var(--mat-sys-primary);
   }
 }
 
 .today-badge {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--mat-sys-on-primary-container);
-  background: var(--mat-sys-primary-container);
-  border-radius: 0; // was 999px
-  padding: 2px 10px;
+  color: var(--mat-sys-on-primary);
+  background: var(--mat-sys-primary);
+  border-radius: 0;
+  padding: 3px 8px;
 }
 
+// Header band of the day box — day and date left, the day's hours right.
 .day-heading {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
+  margin: 0;
+  padding: 12px 16px;
+  background: var(--mat-sys-surface-container-low);
+  border-bottom: 1px solid var(--mat-sys-on-surface);
 }
 
 .day-title {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .day-name {
   font-weight: 700;
-  font-size: 20px;
+  font-size: 22px;
+  letter-spacing: -0.01em;
 }
 
 .day-date {
-  font-weight: 400;
-  font-size: 15px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
 }
 
+// Logged / scheduled hours. Labelled via ::after so the two numbers aren't
+// a bare ratio floating at the end of the row.
 .day-hours {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.1;
   font-weight: 700;
-  font-size: 16px;
-  color: var(--mat-sys-primary);
+  font-size: 20px;
+  color: var(--mat-sys-on-surface);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+
+  &::after {
+    content: 'logged / scheduled';
+    margin-top: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+  }
 }
 
 // Same per-employee color as the admin Schedule grid (see employeeColor()),
@@ -115,23 +185,26 @@
 // the system doesn't round anything, including data markers.
 .employee-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 0; // was 50%
-  margin-right: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 0;
+  margin-right: 8px;
   background: var(--employee-color, var(--mat-sys-primary));
 }
 
 .table-scroll {
   overflow-x: auto;
+  padding: 4px 16px 12px;
 
-  // Below this the table no longer fits without horizontal scrolling (the
-  // whole reason for .table-scroll above), so it stops behaving like a
-  // table at all: every row becomes its own block, stacked top to bottom,
-  // and each cell relabels itself from the header text it would otherwise
-  // have lost (see .punch-table td::before and the data-label attributes
-  // in the template) — everything on screen at once, nothing to scroll.
-  @media (max-width: 599.98px) {
+  @media (max-width: $mobile) {
+    padding: 4px 14px 12px;
+  }
+
+  // Below this the table stops behaving like a table at all: every row
+  // becomes its own block and each cell relabels itself from the header it
+  // would otherwise have lost (see the data-label attributes in the
+  // template) — everything on screen at once, nothing to scroll.
+  @media (max-width: $mobile) {
     overflow-x: visible;
   }
 }
@@ -142,11 +215,22 @@
 
   th,
   td {
-    padding: 6px 10px;
+    padding: 10px 14px;
     text-align: left;
-    font-size: 13px;
+    font-size: 14px;
     white-space: nowrap;
     border-bottom: 1px solid var(--mat-sys-outline-variant);
+    vertical-align: top;
+  }
+
+  th:first-child,
+  td:first-child {
+    padding-left: 0;
+  }
+
+  th:last-child,
+  td:last-child {
+    padding-right: 0;
   }
 
   th {
@@ -154,18 +238,27 @@
     font-weight: 700;
     font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.1em;
+    border-bottom: 1px solid var(--mat-sys-on-surface);
+    padding-top: 0;
+    padding-bottom: 8px;
+  }
+
+  tbody tr:hover {
+    background: var(--mat-sys-surface-container-low);
   }
 
   tr:last-child td {
     border-bottom: none;
   }
 
+  // Absent rows stay legible — the Absent badge already carries the
+  // message, so the row doesn't need to be faded into unreadability.
   tr.absent-row td {
-    opacity: 0.7;
+    color: var(--mat-sys-on-surface-variant);
   }
 
-  @media (max-width: 599.98px) {
+  @media (max-width: $mobile) {
     thead {
       display: none;
     }
@@ -177,8 +270,12 @@
       width: 100%;
     }
 
+    tbody tr:hover {
+      background: transparent;
+    }
+
     tr {
-      padding: 10px 0;
+      padding: 14px 0;
       border-bottom: 1px solid var(--mat-sys-outline-variant);
     }
 
@@ -192,41 +289,69 @@
     }
 
     td {
-      padding: 4px 0;
+      padding: 5px 0;
       border-bottom: none;
       white-space: normal;
     }
 
-    // Each cell relabels itself with the column header it lost when thead
-    // was hidden — data-label is set per-cell in the template.
+    // Label left, value right on one line — a phone compares pairs faster
+    // than it reads a stacked list.
+    td[data-label] {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
     td[data-label]::before {
       content: attr(data-label);
-      display: block;
+      flex: none;
       font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.08em;
       color: var(--mat-sys-on-surface-variant);
-      margin-bottom: 2px;
+    }
+
+    td.status-cell:empty,
+    td.actions-cell:empty {
+      display: none;
+    }
+
+    // Employee is the row's own heading on mobile, not one field among
+    // several — it gets the full width and drops its label.
+    td.employee-cell {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 16px;
+
+      &::before {
+        content: none;
+      }
     }
   }
 }
 
 .employee-cell {
-  font-weight: 600;
+  font-weight: 700;
 }
 
+// NOTE: display:flex on a <td> takes the cell out of the table row (it
+// becomes a block-level flex container), which is what was pushing the
+// Shift and Status cells onto their own lines. These cells stay
+// table-cells; their contents stack as blocks instead.
 .shift-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  display: table-cell;
 }
 
 .shift-name {
-  font-weight: 500;
+  display: block;
+  font-weight: 700;
 }
 
 .shift-time {
+  display: block;
+  margin-top: 2px;
   font-size: 12px;
   color: var(--mat-sys-on-surface-variant);
   font-variant-numeric: tabular-nums;
@@ -254,26 +379,33 @@
 
 .clock-part {
   color: var(--mat-sys-on-surface);
+  font-weight: 600;
 }
 
 .clock-sep {
-  margin: 0 4px;
+  margin: 0 6px;
   color: var(--mat-sys-outline);
 }
 
 .hours-worked-line {
   font-size: 12px;
-  margin-top: 2px;
-  color: var(--mat-sys-on-surface);
+  margin-top: 4px;
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+
+  strong {
+    color: var(--mat-sys-on-surface);
+  }
 }
 
-// Any number of scheduled/actual break-lunch lines, so unlike the other
-// punch cells this one wraps and stacks instead of staying single-line.
+// Any number of break/lunch lines, so unlike the other punch cells this one
+// wraps and stacks instead of staying single-line.
 .breaks-cell {
   white-space: normal;
-  min-width: 200px;
+  min-width: 210px;
+  font-variant-numeric: tabular-nums;
 
-  @media (max-width: 599.98px) {
+  @media (max-width: $mobile) {
     min-width: 0;
   }
 }
@@ -281,68 +413,93 @@
 .segment-line {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-bottom: 2px;
+  gap: 8px;
+  margin-bottom: 3px;
   white-space: nowrap;
 }
 
 .segment-actions {
   display: flex;
-  gap: 6px;
-  margin-top: 2px;
+  gap: 8px;
+  margin-top: 4px;
 }
 
-// Compact override of Material's default button sizing — these sit inside
-// a table cell, not a toolbar.
+// Compact override of Material's default button sizing — these sit inside a
+// table cell, not a toolbar.
 .punch-btn {
   min-width: unset;
-  padding: 0 10px;
-  height: 26px;
+  padding: 0 12px;
+  height: 30px;
   font-size: 12px;
-  line-height: 26px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 30px;
+  border-radius: 0;
 
-  // Bigger tap targets once the layout is a single touch-scrolled column
-  // (see .punch-table's mobile block conversion above) instead of a dense
-  // multi-column table — accuracy matters more than density here.
-  @media (max-width: 599.98px) {
-    height: 40px;
-    padding: 0 16px;
+  // 44px tap targets once the layout is a single touch-scrolled column —
+  // accuracy matters more than density there.
+  @media (max-width: $mobile) {
+    height: 44px;
+    padding: 0 18px;
     font-size: 14px;
-    line-height: 40px;
+    line-height: 44px;
   }
 }
 
+// Same table-cell rule as .shift-cell above — the badges are inline-block
+// with margins rather than flex children, so the cell keeps its column.
 .status-cell {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
+  display: table-cell;
+  white-space: normal;
+
+  .attendance-badge {
+    margin: 0 6px 4px 0;
+  }
+
+  @media (max-width: $mobile) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
 }
 
+// Badges read as squared outlined labels, matching the payroll report's
+// note tags — filled tints at this size fought with the data.
 .attendance-badge {
   display: inline-block;
-  padding: 2px 8px;
-  border-radius: 0; // was 999px
+  padding: 3px 8px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 0;
   font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
 
   &.absent {
-    background: var(--mat-sys-error-container);
-    color: var(--mat-sys-on-error-container);
+    background: var(--mat-sys-error);
+    border-color: var(--mat-sys-error);
+    color: var(--mat-sys-on-error);
   }
 
   &.warn {
-    background: var(--mat-sys-secondary-container);
-    color: var(--mat-sys-on-secondary-container);
+    background: transparent;
+    border-color: var(--mat-sys-error);
+    color: var(--mat-sys-error);
   }
 }
 
 .actions-cell {
+  display: table-cell;
+  white-space: nowrap;
+  text-align: right;
+
   button {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     padding: 0;
 
     mat-icon {
@@ -352,7 +509,7 @@
       line-height: 18px;
     }
 
-    @media (max-width: 599.98px) {
+    @media (max-width: $mobile) {
       width: 44px;
       height: 44px;
 
@@ -363,5 +520,12 @@
         line-height: 22px;
       }
     }
+  }
+
+  @media (max-width: $mobile) {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-start;
+    margin-top: 6px;
   }
 }
