@@ -212,6 +212,10 @@ $mobile: 767.98px;
 .punch-table {
   border-collapse: collapse;
   width: 100%;
+  // Fixed layout + the header widths below make every day box use the same
+  // column grid, so Employee / Shift / Clock / Breaks / Status line up down
+  // the whole week instead of each day sizing to its own content.
+  table-layout: fixed;
 
   th,
   td {
@@ -221,6 +225,33 @@ $mobile: 767.98px;
     white-space: nowrap;
     border-bottom: 1px solid var(--mat-sys-outline-variant);
     vertical-align: top;
+  }
+
+  // Percentages, so the grid holds at any window width. They don't need to
+  // total 100 — the employee-scope table (no Employee or Actions column)
+  // scales the remainder up proportionally.
+  .col-employee {
+    width: 23%;
+  }
+
+  .col-shift {
+    width: 20%;
+  }
+
+  .col-clock {
+    width: 19%;
+  }
+
+  .col-breaks {
+    width: 20%;
+  }
+
+  .col-status {
+    width: 12%;
+  }
+
+  .col-actions {
+    width: 92px;
   }
 
   th:first-child,
@@ -259,6 +290,8 @@ $mobile: 767.98px;
   }
 
   @media (max-width: $mobile) {
+    table-layout: auto;
+
     thead {
       display: none;
     }
@@ -334,6 +367,7 @@ $mobile: 767.98px;
 
 .employee-cell {
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 // NOTE: display:flex on a <td> takes the cell out of the table row (it
@@ -402,7 +436,7 @@ $mobile: 767.98px;
 // wraps and stacks instead of staying single-line.
 .breaks-cell {
   white-space: normal;
-  min-width: 210px;
+  min-width: 0;
   font-variant-numeric: tabular-nums;
 
   @media (max-width: $mobile) {
@@ -450,6 +484,7 @@ $mobile: 767.98px;
 // with margins rather than flex children, so the cell keeps its column.
 .status-cell {
   display: table-cell;
+  vertical-align: top;
   white-space: normal;
 
   .attendance-badge {
@@ -494,6 +529,7 @@ $mobile: 767.98px;
 
 .actions-cell {
   display: table-cell;
+  vertical-align: top;
   white-space: nowrap;
   text-align: right;
 

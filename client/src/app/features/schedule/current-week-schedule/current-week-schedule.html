@@ -52,18 +52,22 @@
         </div>
 
         <div class="table-scroll">
+          <!-- Header cells carry column classes so every day box can size its
+               columns identically (table-layout: fixed reads widths from the
+               header row) — otherwise each day's table auto-sized to its own
+               content and the columns zig-zagged down the page. -->
           <table class="punch-table">
             <thead>
               <tr>
                 @if (showEmployeeNames()) {
-                  <th>Employee</th>
+                  <th class="col-employee">Employee</th>
                 }
-                <th>Shift</th>
-                <th>Clock In / Clock Out</th>
-                <th>Breaks</th>
-                <th>Status</th>
+                <th class="col-shift">Shift</th>
+                <th class="col-clock">Clock In / Clock Out</th>
+                <th class="col-breaks">Breaks</th>
+                <th class="col-status">Status</th>
                 @if (showEmployeeNames() && canManageOthers()) {
-                  <th></th>
+                  <th class="col-actions"></th>
                 }
               </tr>
             </thead>

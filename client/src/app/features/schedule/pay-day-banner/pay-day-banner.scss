@@ -1,22 +1,51 @@
 :host {
   display: block;
-  margin: 0 0 16px;
+  margin: 0 0 20px;
 }
 
+// Reads as a stated fact rather than a hint — the date is the largest thing
+// in the band. Flat and squared like the rest of the retheme; the tint is
+// kept so it still registers as a notice.
 .pay-day-banner {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-left: 4px solid var(--mat-sys-primary);
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+
   mat-card-content {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 16px !important;
-    font-size: 15px;
+    gap: 12px;
+    padding: 16px 20px !important;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.005em;
   }
 
-  background: var(--mat-sys-secondary-container);
-  color: var(--mat-sys-on-secondary-container);
+  strong {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  mat-icon {
+    flex: none;
+    font-size: 26px;
+    width: 26px;
+    height: 26px;
+    color: var(--mat-sys-primary);
+  }
 
   &.today {
     background: var(--mat-sys-tertiary-container);
     color: var(--mat-sys-on-tertiary-container);
+  }
+
+  @media (max-width: 767.98px) {
+    mat-card-content {
+      font-size: 17px;
+      padding: 14px 16px !important;
+    }
   }
 }
