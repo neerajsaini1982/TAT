@@ -1,6 +1,131 @@
-.login-card {
-  max-width: 360px;
-  margin: 0 auto;
+// Super Admin portal — login + signed-in landing.
+//
+// Every value here comes from the `--mat-sys-*` tokens set in styles.scss,
+// so this page follows the theme (including the light/dark toggle) without
+// naming a colour of its own.
+//
+// Layout note: `app.scss` gives `.content` 24px padding and a 960px
+// max-width. The login screen cancels that padding with a negative margin
+// so the red poster panel reaches the edges of the content column, rather
+// than using viewport-width hacks that would fight the centred column.
+
+.eyebrow {
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mat-sys-error); // the deep accent step — legible at label size
+}
+
+.rule {
+  height: 2px;
+  border: none;
+  background: var(--mat-sys-on-surface);
+  margin: 24px 0 32px;
+}
+
+// -----------------------------------------------------------------------------
+// Login
+// -----------------------------------------------------------------------------
+.sa-login {
+  display: flex;
+  margin: -24px;
+  min-height: calc(100dvh - 64px - 0px); // viewport less the toolbar
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+  background: var(--mat-sys-surface);
+
+  @media (max-width: 839px) {
+    flex-direction: column;
+    min-height: 0;
+  }
+}
+
+.poster {
+  flex: 0 0 360px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+
+  @media (max-width: 839px) {
+    flex: none;
+    gap: 24px;
+    padding: 28px 24px;
+  }
+}
+
+.poster-brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.poster-wordmark {
+  font: var(--mat-sys-label-large);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+}
+
+.poster-tagline {
+  font: var(--mat-sys-label-medium);
+  letter-spacing: 0.06em;
+}
+
+.poster-statement {
+  display: flex;
+  flex-direction: column;
+}
+
+.poster-line {
+  font-size: clamp(48px, 6vw, 68px);
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+}
+
+.poster-note {
+  margin: 24px 0 0;
+  padding-top: 16px;
+  border-top: 2px solid color-mix(in srgb, currentColor 50%, transparent);
+  font: var(--mat-sys-body-large);
+  max-width: 300px;
+}
+
+.poster-foot {
+  // Full-opacity white: the accent ground is only ~3.4:1 against white, so
+  // alpha-muting text on it would drop below the readable floor.
+  font: var(--mat-sys-label-medium);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.login-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 56px 72px;
+
+  @media (max-width: 839px) {
+    padding: 40px 24px;
+  }
+}
+
+.login-form-wrap {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-title {
+  font: var(--mat-sys-headline-medium);
+  margin: 8px 0 0;
+  color: var(--mat-sys-on-surface);
 }
 
 .form {
@@ -9,13 +134,141 @@
   gap: 4px;
 }
 
+// The error notice reads as a ruled notice rather than loose red text.
 .error {
-  color: var(--mat-sys-error);
-  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0 8px;
+  padding: 12px 14px;
+  background: var(--mat-sys-error-container);
+  border-left: 4px solid var(--mat-sys-error);
+  color: var(--mat-sys-on-error-container);
+  font: var(--mat-sys-body-medium);
+  font-weight: 500;
+
+  mat-icon {
+    flex: 0 0 auto;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
 }
 
-mat-card-content {
+// Full-width primary action with the label flush left — Modernist's rule
+// for any button wider than its own text.
+.submit.mat-mdc-button-base {
+  width: 100%;
+  height: 48px;
+  margin-top: 16px;
+  padding: 0 18px;
+
+  .mdc-button__label {
+    flex: 1;
+    text-align: left;
+  }
+}
+
+.secondary-link {
+  margin-top: 20px;
+  font: var(--mat-sys-body-medium);
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: none;
+
+  &:hover {
+    color: var(--mat-sys-primary);
+    text-decoration: underline;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Signed-in landing
+// -----------------------------------------------------------------------------
+.sa-home {
+  display: flex;
+  flex-direction: column;
+  padding-top: 24px;
+}
+
+.sa-title {
+  font: var(--mat-sys-display-small);
+  margin: 10px 0 0;
+  color: var(--mat-sys-on-surface);
+}
+
+.sa-home .rule {
+  margin: 28px 0 0;
+}
+
+// The modular grid: three equal cells divided by structural 2px rules, not
+// three floating cards.
+.sa-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+
+  @media (max-width: 719px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sa-cell {
+  display: flex;
+  flex-direction: column;
+  padding: 32px 28px 28px;
+  background: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface);
+  text-decoration: none;
+  border-right: 2px solid var(--mat-sys-on-surface);
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &:hover {
+    background: var(--mat-sys-primary-container);
+  }
+
+  @media (max-width: 719px) {
+    border-right: none;
+    border-bottom: 2px solid var(--mat-sys-outline-variant);
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+}
+
+.sa-cell-icon {
+  color: var(--mat-sys-primary);
+  font-size: 24px;
+  width: 24px;
+  height: 24px;
+}
+
+.sa-cell-title {
+  margin-top: 20px;
+  font: var(--mat-sys-title-large);
+}
+
+.sa-cell-body {
+  margin-top: 8px;
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.sa-cell-cta {
+  margin-top: 24px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mat-sys-error);
+}
+
+.sa-actions {
+  margin-top: 32px;
   display: flex;
   gap: 12px;
-  align-items: center;
 }

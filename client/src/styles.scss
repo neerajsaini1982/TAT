@@ -1,40 +1,39 @@
-// Include theming for Angular Material with `mat.theme()`.
-// This Sass mixin defines CSS custom properties used to style Angular Material
-// components according to the Material 3 design spec.
-// `theme-type: color-scheme` makes each theme respond to the `color-scheme`
-// CSS property at runtime, so light/dark mode can be toggled with plain JS
-// (no rebuild needed). Learn more: https://material.angular.dev/guide/theming
+// =============================================================================
+// TAT — Modernist theme
+//
+// This file is the ENTIRE visual refresh. No component template, TypeScript
+// file or SCSS partial elsewhere in the app changes.
+//
+// It works because `mat.theme()` in Angular Material 22 emits its design
+// decisions as CSS custom properties (`--mat-sys-*`) that every component
+// reads at runtime. Reassigning those properties after the mixin runs
+// re-skins every mat-* component at once:
+//
+//   colors      -> --mat-sys-primary, --mat-sys-surface-*, --mat-sys-outline...
+//   shape       -> --mat-sys-corner-*          (all set to 0 — no rounded corners)
+//   elevation   -> --mat-sys-level0 ... level5 (flattened to rules, not shadows)
+//   typography  -> --mat-sys-<role> + -font/-weight/-tracking (Archivo)
+//
+// One dependency is added:  npm i @fontsource/archivo
+// -----------------------------------------------------------------------------
+
 @use 'sass:map';
 @use '@angular/material' as mat;
 
-// Self-hosted fonts: this app deploys to internal-LAN-only Windows
-// machines (see server/Program.cs) that may have no internet access, so
-// pulling fonts from fonts.googleapis.com at runtime is not reliable —
-// when a font fails to load, mat-icon falls back to rendering its raw
-// ligature text (e.g. "edit", "content_copy"), which is what issue #48
-// reported. Bundling the font files with the app instead makes rendering
-// identical regardless of the deployment machine's network access.
-// The unsuffixed per-weight files bundle every subset (latin, latin-ext,
-// cyrillic, etc.) each with its own `unicode-range`, so a browser only
-// fetches the subset it actually needs — same lazy behavior Google's
-// dynamic API gave us, just served locally.
-//
-// Public Sans is the U.S. Web Design System's (USWDS) typeface — the one
-// behind the clean, highly legible body text on sites like ssa.gov. It
-// replaced Roboto as the app's primary typeface for exactly that
-// legibility (see the print-visibility fix on schedule-day-view's break
-// labels, issue tracked alongside #50).
-@use '@fontsource/public-sans/400.css' as public-sans-400;
-@use '@fontsource/public-sans/500.css' as public-sans-500;
-@use '@fontsource/public-sans/600.css' as public-sans-600;
-@use '@fontsource/public-sans/700.css' as public-sans-700;
+// Self-hosted fonts — unchanged rationale from before: this app deploys to
+// internal-LAN-only Windows machines that may have no internet access, so
+// fonts must ship with the bundle (issue #48). Archivo replaces Public Sans
+// as the primary typeface; Material Icons stays as the icon font.
+@use '@fontsource/archivo/400.css' as archivo-400;
+@use '@fontsource/archivo/500.css' as archivo-500;
+@use '@fontsource/archivo/600.css' as archivo-600;
+@use '@fontsource/archivo/700.css' as archivo-700;
+@use '@fontsource/archivo/800.css' as archivo-800;
 @use '@fontsource/material-icons/index.css' as material-icons;
 
 // @fontsource/material-icons only ships the @font-face — Google's old
-// stylesheet also supplied this `.material-icons` rule (the ligature-font
-// styling mat-icon's `class="material-icons"` markup depends on to
-// actually opt into that font). Without it, mat-icon falls back to
-// Roboto and renders raw ligature text like "edit"/"dark_mode".
+// stylesheet also supplied this `.material-icons` rule, without which
+// mat-icon renders its raw ligature text ("edit", "dark_mode").
 .material-icons {
   font-family: 'Material Icons';
   font-weight: normal;
@@ -50,30 +49,59 @@
   -webkit-font-smoothing: antialiased;
 }
 
-// Preset color themes an admin can choose from. Add a new palette pair here
-// and a matching entry in `ThemeService.THEMES` to add another option.
-// Keys are quoted strings so `@each` below yields real strings, not
-// unquoted color-name identifiers (Sass warns on interpolating those).
+// -----------------------------------------------------------------------------
+// Modernist tokens (the design system's source values)
+// -----------------------------------------------------------------------------
+$ink: #201e1d;
+$ground: #f3f2f2;
+$surface: #eae9e9;
+$accent: #ec3013;
+
+$n-100: #f8f4f4;
+$n-200: #eae7e7;
+$n-300: #d7d3d3;
+$n-400: #bab6b6;
+$n-500: #9b9797;
+$n-600: #7d7979;
+$n-700: #605d5d;
+$n-800: #444141;
+$n-900: #2d2b2b;
+
+$a-100: #fff2ef;
+$a-200: #ffe0d9;
+$a-300: #ffc4b8;
+$a-600: #dd2b0f;
+$a-700: #ae1800;
+$a-800: #7c1405;
+
+// Preset themes an admin can choose from. Kept so `ThemeService.THEMES`
+// keeps working untouched — but each preset is now only an accent hue laid
+// over the same Modernist neutral ground, so the app's character no longer
+// changes with the picker. 'modernist' is the default.
 $themes: (
+  'modernist': (
+    primary: mat.$red-palette,
+    tertiary: mat.$red-palette,
+  ),
   'azure': (
     primary: mat.$azure-palette,
-    tertiary: mat.$blue-palette,
+    tertiary: mat.$azure-palette,
   ),
   'green': (
     primary: mat.$green-palette,
-    tertiary: mat.$chartreuse-palette,
+    tertiary: mat.$green-palette,
   ),
   'violet': (
     primary: mat.$violet-palette,
-    tertiary: mat.$magenta-palette,
+    tertiary: mat.$violet-palette,
   ),
   'orange': (
     primary: mat.$orange-palette,
-    tertiary: mat.$yellow-palette,
+    tertiary: mat.$orange-palette,
   ),
   'rose': (
     primary: mat.$rose-palette,
-    tertiary: mat.$red-palette,
+    tertiary: mat.$rose-palette,
   ),
 );
 
@@ -83,10 +111,10 @@ html {
     (
       color: (
         theme-type: color-scheme,
-        primary: map.get($themes, 'azure', primary),
-        tertiary: map.get($themes, 'azure', tertiary),
+        primary: map.get($themes, 'modernist', primary),
+        tertiary: map.get($themes, 'modernist', tertiary),
       ),
-      typography: 'Public Sans',
+      typography: 'Archivo',
       density: 0,
     )
   );
@@ -106,34 +134,326 @@ html {
   }
 }
 
-body {
-  // `color-scheme` is inherited from `<html>`, where ThemeService sets it
-  // at runtime (light | dark), driving the `light-dark()` values emitted
-  // by `mat.theme()` above. Do not hardcode it here.
+// -----------------------------------------------------------------------------
+// 1. COLOR — reassign the system color roles to Modernist's near-mono palette.
+//
+// Written with `light-dark()` so the runtime light/dark toggle in
+// ThemeService keeps working exactly as before. Applied to `html` with the
+// same specificity as `mat.theme()` but later in the file, so it wins.
+// -----------------------------------------------------------------------------
+html {
+  // Accent role — the one red. Used for primary buttons, active states,
+  // selected rows, progress, sliders, tab indicators.
+  --mat-sys-primary: light-dark(#{$accent}, #{$a-300});
+  --mat-sys-on-primary: light-dark(#ffffff, #{$ink});
+  --mat-sys-primary-container: light-dark(#{$a-200}, #{$a-800});
+  --mat-sys-on-primary-container: light-dark(#{$a-800}, #{$a-200});
+  --mat-sys-primary-fixed: light-dark(#{$a-200}, #{$a-200});
+  --mat-sys-on-primary-fixed: #{$a-800};
+  --mat-sys-primary-fixed-dim: #{$a-300};
+  --mat-sys-on-primary-fixed-variant: #{$a-700};
+  --mat-sys-inverse-primary: light-dark(#{$a-300}, #{$accent});
 
+  // Secondary + tertiary are deliberately neutral: Modernist is a mono
+  // scheme, so Material's second and third accents become ink tones rather
+  // than introducing hues the system doesn't have.
+  --mat-sys-secondary: light-dark(#{$n-800}, #{$n-300});
+  --mat-sys-on-secondary: light-dark(#ffffff, #{$ink});
+  --mat-sys-secondary-container: light-dark(#{$n-200}, #{$n-800});
+  --mat-sys-on-secondary-container: light-dark(#{$n-900}, #{$n-200});
+  --mat-sys-secondary-fixed: #{$n-200};
+  --mat-sys-on-secondary-fixed: #{$n-900};
+  --mat-sys-secondary-fixed-dim: #{$n-300};
+  --mat-sys-on-secondary-fixed-variant: #{$n-700};
+
+  --mat-sys-tertiary: light-dark(#{$accent}, #{$a-300});
+  --mat-sys-on-tertiary: light-dark(#ffffff, #{$ink});
+  --mat-sys-tertiary-container: light-dark(#{$a-100}, #{$a-800});
+  --mat-sys-on-tertiary-container: light-dark(#{$a-800}, #{$a-200});
+  --mat-sys-tertiary-fixed: #{$a-100};
+  --mat-sys-on-tertiary-fixed: #{$a-800};
+  --mat-sys-tertiary-fixed-dim: #{$a-200};
+  --mat-sys-on-tertiary-fixed-variant: #{$a-700};
+
+  // Error keeps a distinguishable red-brown so destructive states don't
+  // read identically to the accent.
+  --mat-sys-error: light-dark(#{$a-700}, #{$a-300});
+  --mat-sys-on-error: light-dark(#ffffff, #{$ink});
+  --mat-sys-error-container: light-dark(#{$a-100}, #{$a-800});
+  --mat-sys-on-error-container: light-dark(#{$a-800}, #{$a-100});
+
+  // Ground + surfaces. Modernist has two grounds (bg and surface), so the
+  // five M3 container steps collapse onto those two plus white, keeping
+  // panels legible without inventing a gradient of greys.
+  --mat-sys-background: light-dark(#{$ground}, #{$ink});
+  --mat-sys-on-background: light-dark(#{$ink}, #{$ground});
+  --mat-sys-surface: light-dark(#{$ground}, #{$ink});
+  --mat-sys-on-surface: light-dark(#{$ink}, #{$ground});
+  --mat-sys-surface-dim: light-dark(#{$n-300}, #{$ink});
+  --mat-sys-surface-bright: light-dark(#ffffff, #{$n-800});
+  --mat-sys-surface-container-lowest: light-dark(#ffffff, #{$ink});
+  --mat-sys-surface-container-low: light-dark(#{$n-100}, #{$n-900});
+  --mat-sys-surface-container: light-dark(#{$surface}, #{$n-900});
+  --mat-sys-surface-container-high: light-dark(#{$n-200}, #{$n-800});
+  --mat-sys-surface-container-highest: light-dark(#{$n-300}, #{$n-700});
+  --mat-sys-surface-variant: light-dark(#{$n-200}, #{$n-800});
+  --mat-sys-on-surface-variant: light-dark(#{$n-700}, #{$n-300});
+  --mat-sys-inverse-surface: light-dark(#{$ink}, #{$ground});
+  --mat-sys-inverse-on-surface: light-dark(#{$ground}, #{$ink});
+  --mat-sys-surface-tint: transparent; // no tonal tint — surfaces stay flat
+
+  // Rules. Modernist organises with visible dividers, so `outline` is a
+  // real ink line rather than M3's mid-grey, and `outline-variant` (used
+  // for table row rules and divider) is only one step lighter.
+  --mat-sys-outline: light-dark(#{$n-600}, #{$n-500});
+  --mat-sys-outline-variant: light-dark(#{$n-400}, #{$n-700});
+  --mat-sys-shadow: #{$n-900};
+  --mat-sys-scrim: #{$ink};
+
+  // ---------------------------------------------------------------------------
+  // 2. SHAPE — zero radius everywhere. `corner-full` included: Modernist
+  // does not round a corner, so pill shapes (FAB, chips, switch track,
+  // badges) square off too.
+  // ---------------------------------------------------------------------------
+  --mat-sys-corner-none: 0;
+  --mat-sys-corner-extra-small: 0;
+  --mat-sys-corner-extra-small-top: 0;
+  --mat-sys-corner-small: 0;
+  --mat-sys-corner-medium: 0;
+  --mat-sys-corner-large: 0;
+  --mat-sys-corner-large-start: 0;
+  --mat-sys-corner-large-end: 0;
+  --mat-sys-corner-large-top: 0;
+  --mat-sys-corner-large-increased: 0;
+  --mat-sys-corner-extra-large: 0;
+  --mat-sys-corner-extra-large-top: 0;
+  --mat-sys-corner-extra-large-increased: 0;
+  --mat-sys-corner-extra-extra-large: 0;
+  --mat-sys-corner-full: 0;
+
+  // ---------------------------------------------------------------------------
+  // 3. ELEVATION — nothing floats. The five shadow levels become flat, and
+  // the levels that genuinely need to separate a surface from the page
+  // (menus, dialogs, overlays: levels 2+) get the design system's own
+  // shadow tokens, which are tuned to this ground.
+  // ---------------------------------------------------------------------------
+  --mat-sys-level0: none;
+  --mat-sys-level1: none;
+  --mat-sys-level2: 0 1px 2px #{rgba($n-900, 0.14)};
+  --mat-sys-level3: 0 3px 10px #{rgba($n-900, 0.16)};
+  --mat-sys-level4: 0 3px 10px #{rgba($n-900, 0.16)};
+  --mat-sys-level5: 0 12px 32px #{rgba($n-900, 0.22)};
+
+  // ---------------------------------------------------------------------------
+  // 4. TYPOGRAPHY — `mat.theme(typography: 'Archivo')` above already set the
+  // families. These reassign the weights and tracking so headings land at
+  // Archivo's 800 and labels stop inheriting Material's loose tracking.
+  // Each role's `font` shorthand must be restated because components read
+  // the shorthand, not the parts.
+  // ---------------------------------------------------------------------------
+  --mat-sys-display-large-weight: 800;
+  --mat-sys-display-medium-weight: 800;
+  --mat-sys-display-small-weight: 800;
+  --mat-sys-headline-large-weight: 800;
+  --mat-sys-headline-medium-weight: 800;
+  --mat-sys-headline-small-weight: 800;
+  --mat-sys-title-large-weight: 700;
+  --mat-sys-title-medium-weight: 700;
+  --mat-sys-title-small-weight: 700;
+  --mat-sys-label-large-weight: 600;
+  --mat-sys-label-medium-weight: 600;
+  --mat-sys-label-small-weight: 600;
+  --mat-sys-body-large-weight: 400;
+  --mat-sys-body-medium-weight: 400;
+  --mat-sys-body-small-weight: 400;
+
+  --mat-sys-display-large-tracking: -0.02em;
+  --mat-sys-display-medium-tracking: -0.02em;
+  --mat-sys-display-small-tracking: -0.01em;
+  --mat-sys-headline-large-tracking: -0.01em;
+  --mat-sys-headline-medium-tracking: -0.01em;
+  --mat-sys-headline-small-tracking: 0;
+  --mat-sys-title-large-tracking: 0;
+  --mat-sys-title-medium-tracking: 0;
+  --mat-sys-title-small-tracking: 0;
+  --mat-sys-label-large-tracking: 0.02em;
+  --mat-sys-label-medium-tracking: 0.02em;
+  --mat-sys-label-small-tracking: 0.02em;
+  --mat-sys-body-large-tracking: 0;
+  --mat-sys-body-medium-tracking: 0;
+  --mat-sys-body-small-tracking: 0;
+
+  --mat-sys-display-large: 800 var(--mat-sys-display-large-size) / var(--mat-sys-display-large-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-display-medium: 800 var(--mat-sys-display-medium-size) / var(--mat-sys-display-medium-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-display-small: 800 var(--mat-sys-display-small-size) / var(--mat-sys-display-small-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-headline-large: 800 var(--mat-sys-headline-large-size) / var(--mat-sys-headline-large-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-headline-medium: 800 var(--mat-sys-headline-medium-size) / var(--mat-sys-headline-medium-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-headline-small: 800 var(--mat-sys-headline-small-size) / var(--mat-sys-headline-small-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-title-large: 700 var(--mat-sys-title-large-size) / var(--mat-sys-title-large-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-title-medium: 700 var(--mat-sys-title-medium-size) / var(--mat-sys-title-medium-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-title-small: 700 var(--mat-sys-title-small-size) / var(--mat-sys-title-small-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-label-large: 600 var(--mat-sys-label-large-size) / var(--mat-sys-label-large-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-label-medium: 600 var(--mat-sys-label-medium-size) / var(--mat-sys-label-medium-line-height) Archivo, system-ui, sans-serif;
+  --mat-sys-label-small: 600 var(--mat-sys-label-small-size) / var(--mat-sys-label-small-line-height) Archivo, system-ui, sans-serif;
+}
+
+body {
+  // `color-scheme` is inherited from `<html>`, where ThemeService sets it at
+  // runtime (light | dark), driving the `light-dark()` values above.
+  // Do not hardcode it here.
   background-color: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   font: var(--mat-sys-body-medium);
 
   margin: 0;
   height: 100%;
+  text-wrap: pretty;
 }
 
-// Material 3's default top app bar uses a flat surface color with no
-// elevation, which reads as bland against a same-color page background.
-// Give it a slightly elevated surface tone + shadow instead of overriding
-// it with the primary color (which M3 intentionally moved away from).
+// -----------------------------------------------------------------------------
+// 5. COMPONENT-LEVEL TOKENS
+//
+// A handful of components have their own token namespaces that don't derive
+// from the system tokens above. These are still token assignments — no
+// component markup or class names are touched.
+// -----------------------------------------------------------------------------
+
+// App bar: a plain ink-on-ground band separated by a 2px rule instead of a
+// shadow (Modernist: nothing floats, dividers do the organising).
 .mat-toolbar {
-  background-color: var(--mat-sys-surface-container);
-  box-shadow: var(--mat-sys-level1);
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  box-shadow: none;
+  border-bottom: 2px solid var(--mat-sys-on-surface);
 }
+
+// Cards: flat, ruled boxes rather than elevated sheets.
+.mat-mdc-card {
+  --mat-card-elevated-container-elevation: none;
+  --mat-card-outlined-container-elevation: none;
+  --mat-card-elevated-container-color: light-dark(#ffffff, #{$n-900});
+  --mat-card-outlined-outline-width: 1px;
+  --mat-card-outlined-outline-color: var(--mat-sys-outline);
+  box-shadow: none;
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+// Buttons: square, tight, and — per Modernist — labels flush left on any
+// button wider than its text. `justify-content` is the only lever needed;
+// the label markup is untouched.
+.mat-mdc-button-base {
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.mat-mdc-raised-button,
+.mat-mdc-unelevated-button,
+.mat-mdc-outlined-button,
+.mat-mdc-button {
+  box-shadow: none !important;
+}
+
+.mat-mdc-outlined-button {
+  --mdc-outlined-button-outline-width: 1px;
+  --mdc-outlined-button-outline-color: var(--mat-sys-on-surface);
+}
+
+// Full-width buttons (`.btn-block`-style usage in the app: any button given
+// width:100% by a page) start their label at the left padding edge.
+.mat-mdc-button-base.mat-mdc-button-base--flush,
+.mat-mdc-button-base[style*='width: 100%'] .mdc-button__label {
+  text-align: left;
+}
+
+// Form fields: flat filled boxes with a strong bottom rule, no ripple arc.
+.mat-mdc-form-field {
+  --mdc-filled-text-field-container-shape: 0;
+  --mdc-outlined-text-field-container-shape: 0;
+  --mdc-filled-text-field-container-color: light-dark(#ffffff, #{$n-900});
+  --mdc-filled-text-field-active-indicator-height: 2px;
+  --mdc-filled-text-field-focus-active-indicator-height: 2px;
+  --mdc-outlined-text-field-outline-width: 1px;
+  --mdc-outlined-text-field-focus-outline-width: 2px;
+}
+
+// Tables: themed header band and 1px row rules, matching the design
+// system's `.table`.
+.mat-mdc-table {
+  --mat-table-background-color: light-dark(#ffffff, #{$n-900});
+  --mat-table-row-item-outline-width: 1px;
+  --mat-table-row-item-outline-color: var(--mat-sys-outline-variant);
+  --mat-table-header-headline-weight: 700;
+  --mat-table-header-headline-tracking: 0.02em;
+}
+
+.mat-mdc-header-row {
+  background-color: var(--mat-sys-surface-container-high);
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+}
+
+// Tabs, chips, dialog, menu, snackbar, expansion: square + flat.
+.mat-mdc-tab-group,
+.mat-mdc-tab-nav-bar {
+  --mdc-secondary-navigation-tab-container-height: 44px;
+  --mat-tab-header-divider-height: 2px;
+  --mat-tab-header-divider-color: var(--mat-sys-on-surface);
+  --mdc-tab-indicator-active-indicator-height: 3px;
+}
+
+.mat-mdc-chip {
+  --mdc-chip-container-shape-radius: 0;
+  --mdc-chip-elevated-container-color: var(--mat-sys-surface-container-high);
+  --mdc-chip-outline-width: 1px;
+}
+
+.mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: 0;
+  --mdc-dialog-container-elevation: 0 12px 32px #{rgba($n-900, 0.22)};
+}
+
+.mat-mdc-menu-panel,
+.mat-mdc-select-panel,
+.mat-mdc-autocomplete-panel {
+  --mat-menu-container-shape: 0;
+  border: 1px solid var(--mat-sys-outline);
+}
+
+.mat-mdc-snack-bar-container {
+  --mdc-snackbar-container-shape: 0;
+}
+
+.mat-expansion-panel {
+  --mat-expansion-container-shape: 0;
+  box-shadow: none !important;
+  border: 1px solid var(--mat-sys-outline-variant);
+}
+
+// A 2px rule wherever the app uses mat-divider — Modernist's dividers are
+// structural, not hairlines.
+.mat-divider {
+  --mat-divider-width: 2px;
+  --mat-divider-color: var(--mat-sys-on-surface);
+}
+
+// Keyboard focus is themed, never the browser default blue ring.
+:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: #{$a-200};
+  color: #{$ink};
+}
+
+// -----------------------------------------------------------------------------
+// Print + layout rules carried over unchanged from the previous stylesheet.
+// -----------------------------------------------------------------------------
 
 // Printing currently only matters for the admin schedule's Week (Print) and
 // Day views (see AdminSchedulePage/ScheduleDayView), both of which lay
 // several columns out side by side — landscape gives them much more usable
-// width than portrait's default. If another printable view is added later
-// with different needs, this should move to be scoped per-page instead of
-// applying app-wide.
+// width than portrait's default.
 @media print {
   .mat-toolbar {
     display: none;
@@ -146,14 +466,9 @@ body {
 }
 
 // Every page's own "back button + title (+ action buttons)" row reuses the
-// same `.header { display: flex; align-items: center; gap: ... }` pattern
-// (see e.g. admin-accounts-page, accounts-manager) without setting
-// flex-wrap — fine on desktop where everything fits on one line, but on a
-// phone-width screen those action buttons (Search, Show All Employees,
-// Upload Employees, ...) would otherwise be forced to shrink below their
-// content size or run off-screen. This one rule reaches every page's
-// `.header` (global styles aren't scoped by Angular's emulated
-// encapsulation) without each page needing its own copy.
+// same `.header { display: flex; ... }` pattern without setting flex-wrap.
+// This one rule reaches every page's `.header` (global styles aren't scoped
+// by Angular's emulated encapsulation) without each page needing a copy.
 .header {
   flex-wrap: wrap;
   row-gap: 8px;

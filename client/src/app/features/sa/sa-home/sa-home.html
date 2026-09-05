@@ -1,36 +1,99 @@
+<!--
+  Super Admin portal — login + signed-in landing.
+
+  Angular structure, bindings and control flow are unchanged from the
+  original: same `@if (!auth.isAuthenticated() || auth.role() !== 'Sa')`
+  split, same `login()`/`logout()` handlers, same `[(ngModel)]` names, same
+  routerLinks. Only the surrounding markup changed — mat-card gave way to a
+  poster-panel layout the Modernist system asks for, which tokens alone
+  can't produce.
+
+  Requires no TypeScript change. `MatCardModule` is now unused by this
+  template; it can stay in the component's `imports` harmlessly, or be
+  removed.
+-->
+
 @if (!auth.isAuthenticated() || auth.role() !== 'Sa') {
-  <mat-card class="login-card">
-    <mat-card-header>
-      <mat-card-title>Super Admin Login</mat-card-title>
-    </mat-card-header>
-    <mat-card-content>
-      <form (ngSubmit)="login()" class="form">
-        <mat-form-field appearance="outline">
-          <mat-label>Username</mat-label>
-          <input matInput name="username" [(ngModel)]="username" required />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Password</mat-label>
-          <input matInput type="password" name="password" [(ngModel)]="password" required />
-        </mat-form-field>
-        @if (error()) {
-          <p class="error">{{ error() }}</p>
-        }
-        <button mat-flat-button color="primary" type="submit" [disabled]="loading()">Log In</button>
-      </form>
-    </mat-card-content>
-  </mat-card>
+  <div class="sa-login">
+    <!-- The one place red runs as a field: the poster panel. -->
+    <aside class="poster">
+      <div class="poster-brand">
+        <span class="poster-wordmark">TAT</span>
+        <span class="poster-tagline">Time &amp; attendance</span>
+      </div>
+      <div class="poster-statement">
+        <span class="poster-line">SUPER</span>
+        <span class="poster-line">ADMIN</span>
+        <p class="poster-note">Locations, accounts and shifts across every site in the system.</p>
+      </div>
+      <span class="poster-foot">Authorised personnel only</span>
+    </aside>
+
+    <div class="login-panel">
+      <div class="login-form-wrap">
+        <span class="eyebrow">Sign in</span>
+        <h1 class="login-title">Super Admin Login</h1>
+        <hr class="rule" />
+
+        <form (ngSubmit)="login()" class="form">
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput name="username" [(ngModel)]="username" required autocomplete="username" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Password</mat-label>
+            <input matInput type="password" name="password" [(ngModel)]="password" required autocomplete="current-password" />
+          </mat-form-field>
+
+          @if (error()) {
+            <p class="error">
+              <mat-icon aria-hidden="true">error_outline</mat-icon>
+              <span>{{ error() }}</span>
+            </p>
+          }
+
+          <button mat-flat-button color="primary" type="submit" class="submit" [disabled]="loading()">
+            <span>Log In</span>
+            <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+          </button>
+        </form>
+
+        <a routerLink="/" class="secondary-link">Not a super admin? Return to the location picker</a>
+      </div>
+    </div>
+  </div>
 } @else {
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Super Admin</mat-card-title>
-      <mat-card-subtitle>Signed in as {{ auth.session()?.username }}</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content>
-      <a mat-flat-button color="primary" routerLink="/sa/locations">Manage Locations</a>
-      <a mat-flat-button color="primary" routerLink="/sa/accounts">Manage Accounts</a>
-      <a mat-flat-button color="primary" routerLink="/sa/shifts">Manage Shifts</a>
-      <button mat-stroked-button (click)="logout()">Log Out</button>
-    </mat-card-content>
-  </mat-card>
+  <div class="sa-home">
+    <span class="eyebrow">Signed in as {{ auth.session()?.username }}</span>
+    <h1 class="sa-title">System administration</h1>
+    <hr class="rule" />
+
+    <nav class="sa-grid">
+      <a routerLink="/sa/locations" class="sa-cell">
+        <mat-icon class="sa-cell-icon" aria-hidden="true">place</mat-icon>
+        <span class="sa-cell-title">Locations</span>
+        <span class="sa-cell-body">Create sites, set codes and time zones.</span>
+        <span class="sa-cell-cta">Manage &rarr;</span>
+      </a>
+      <a routerLink="/sa/accounts" class="sa-cell">
+        <mat-icon class="sa-cell-icon" aria-hidden="true">group</mat-icon>
+        <span class="sa-cell-title">Accounts</span>
+        <span class="sa-cell-body">Admins and employees, every location.</span>
+        <span class="sa-cell-cta">Manage &rarr;</span>
+      </a>
+      <a routerLink="/sa/shifts" class="sa-cell">
+        <mat-icon class="sa-cell-icon" aria-hidden="true">schedule</mat-icon>
+        <span class="sa-cell-title">Shifts</span>
+        <span class="sa-cell-body">Shift templates available to sites.</span>
+        <span class="sa-cell-cta">Manage &rarr;</span>
+      </a>
+    </nav>
+
+    <div class="sa-actions">
+      <button mat-stroked-button (click)="logout()">
+        <mat-icon>logout</mat-icon>
+        <span>Log Out</span>
+      </button>
+    </div>
+  </div>
 }

@@ -5,13 +5,15 @@ import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 import { Auth } from '../../../core/auth';
 import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 
 @Component({
   selector: 'app-sa-home',
-  imports: [FormsModule, RouterLink, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule],
+  imports: [FormsModule, RouterLink, MatCardModule, MatFormFieldModule, MatInputModule, MatButtonModule, MatIconModule],
+
   templateUrl: './sa-home.html',
   styleUrl: './sa-home.scss',
 })
