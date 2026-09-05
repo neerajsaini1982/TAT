@@ -1,38 +1,82 @@
+<!--
+  Employee clock in — keypad + clocked-in view.
+
+  This is the one screen where the interaction changes, not just the styling.
+  The original used a `mat-form-field` text input for the 6-digit code, which
+  on the shared wall device raises the OS keyboard over the screen. A fixed
+  keypad replaces it: six code boxes showing progress, a 3×4 pad, and a
+  full-width Clock In.
+
+  The signed-in branch keeps `app-pay-day-banner` and
+  `app-current-week-schedule` exactly as before — only the welcome card
+  became a ruled band.
+
+  TypeScript: `userCode` becomes a signal and three methods are added
+  (`press`, `backspace`, `clear`). See employee-home.ts. `MatIconModule` is
+  added; `MatCardModule`, `MatFormFieldModule`, `MatInputModule` and
+  `FormsModule` are no longer used by this template.
+-->
+
 @if (!isSignedIn) {
-  <mat-card class="login-card">
-    <mat-card-header>
-      <mat-card-title>Employee Clock In</mat-card-title>
-      <mat-card-subtitle>Location: {{ locationCode }}</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content>
-      <form (ngSubmit)="login()" class="form">
-        <mat-form-field appearance="outline">
-          <mat-label>6-Digit Code</mat-label>
-          <input
-            matInput
-            name="userCode"
-            [(ngModel)]="userCode"
-            maxlength="6"
-            required
-            inputmode="numeric"
-            pattern="[0-9]*"
-            autocomplete="off"
-          />
-        </mat-form-field>
-        @if (error()) {
-          <p class="error">{{ error() }}</p>
-        }
-        <button mat-flat-button color="primary" type="submit" [disabled]="loading()">Login</button>
-      </form>
-    </mat-card-content>
-  </mat-card>
+  <div class="clock-in">
+    <div class="clock-in-head">
+      <span class="clock-in-title">Clock In</span>
+      <span class="clock-in-location">{{ locationCode }}</span>
+    </div>
+
+    <span class="code-label" id="code-label">Enter your 6-digit code</span>
+
+    <!-- The six boxes are the code's only display: filled boxes show the
+         digits entered so far, the next box carries the caret rule, and a
+         failed attempt rules all six in the error tone. -->
+    <div class="code-boxes" role="group" aria-labelledby="code-label">
+      @for (i of positions; track i) {
+        <div
+          class="code-box"
+          [class.filled]="userCode().length > i"
+          [class.active]="userCode().length === i && !error()"
+          [class.errored]="!!error()"
+        >{{ error() ? '•' : (userCode()[i] ?? '') }}</div>
+      }
+    </div>
+
+    @if (error()) {
+      <p class="error">
+        <mat-icon aria-hidden="true">error_outline</mat-icon>
+        <span>{{ error() }}</span>
+      </p>
+      <span class="error-help">Ask your manager to reset your code if you have forgotten it.</span>
+    }
+
+    <div class="keypad">
+      @for (d of digits; track d) {
+        <button type="button" class="key" (click)="press(d)" [attr.aria-label]="d">{{ d }}</button>
+      }
+      <button type="button" class="key key-alt" (click)="clear()">Clear</button>
+      <button type="button" class="key" (click)="press('0')" aria-label="0">0</button>
+      <button type="button" class="key key-alt" (click)="backspace()" aria-label="Delete last digit">
+        <mat-icon>backspace</mat-icon>
+      </button>
+    </div>
+
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      class="submit"
+      [disabled]="loading() || userCode().length < 6"
+      (click)="login()"
+    >
+      <span>Clock In</span>
+      <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+    </button>
+  </div>
 } @else {
-  <mat-card>
-    <mat-card-content>
-      <h1 class="welcome-title">Welcome, {{ auth.session()?.firstName }}</h1>
-      <p class="location-label">{{ locationCode }}</p>
-    </mat-card-content>
-  </mat-card>
+  <div class="welcome">
+    <span class="eyebrow">Signed in</span>
+    <h1 class="welcome-title">Welcome, {{ auth.session()?.firstName }}</h1>
+    <p class="location-label">{{ locationCode }}</p>
+  </div>
 
   <app-pay-day-banner />
 

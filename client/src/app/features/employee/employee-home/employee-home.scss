@@ -1,39 +1,196 @@
-.login-card {
-  max-width: 360px;
-  margin: 0 auto;
-}
+// Employee clock in — keypad + clocked-in view.
+//
+// Values come from the `--mat-sys-*` tokens in styles.scss. `.eyebrow`,
+// `.rule` and `.section-title` are styled globally there.
+//
+// Sizing note: every key is 72px tall — well above the 44px minimum for a
+// touch target, since this screen is used standing at a shared device,
+// often quickly and sometimes with gloves on.
 
-.form {
+.clock-in {
+  max-width: 420px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 4px;
 }
 
-.error {
-  color: var(--mat-sys-error);
-  margin: 0 0 8px;
+.clock-in-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--mat-sys-on-surface);
 }
 
-.welcome-title {
-  font-size: 34px;
-  font-weight: 600;
-  margin: 0;
+.clock-in-title {
+  font: var(--mat-sys-headline-small);
+  letter-spacing: -0.015em;
+  color: var(--mat-sys-on-surface);
 }
 
-.location-label {
-  margin: 4px 0 0;
+.clock-in-location {
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--mat-sys-on-surface-variant);
 }
 
-.section-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 12px;
+.code-label {
+  margin-top: 24px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
 }
 
-// Full-bleed so the schedule table can use the full viewport width instead
-// of being squeezed into the app shell's centered ~960px .content column —
-// same left:50%/translateX(-50%) technique as admin-schedule-page.scss.
+.code-boxes {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.code-box {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--mat-sys-outline-variant);
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--mat-sys-on-surface);
+  font-variant-numeric: tabular-nums;
+
+  &.filled {
+    border-color: var(--mat-sys-outline);
+  }
+
+  // The next box to be filled — the keypad's equivalent of a caret.
+  &.active {
+    border: 2px solid var(--mat-sys-primary);
+  }
+
+  &.errored {
+    border: 2px solid var(--mat-sys-error);
+  }
+}
+
+.keypad {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.key {
+  height: 72px;
+  background: var(--mat-sys-surface-container-lowest);
+  border: 1px solid var(--mat-sys-on-surface);
+  color: var(--mat-sys-on-surface);
+  font-family: inherit;
+  font-size: 26px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &:active {
+    background: var(--mat-sys-primary-container);
+  }
+}
+
+// Clear and backspace: same size, quieter weight, so the digits stay the
+// obvious targets.
+.key-alt {
+  background: transparent;
+  border-color: var(--mat-sys-outline);
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  background: var(--mat-sys-error-container);
+  border-left: 4px solid var(--mat-sys-error);
+  color: var(--mat-sys-on-error-container);
+  font: var(--mat-sys-body-medium);
+  font-weight: 600;
+
+  mat-icon {
+    flex: 0 0 auto;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.error-help {
+  margin-top: 12px;
+  font: var(--mat-sys-body-medium);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.submit.mat-mdc-button-base {
+  width: 100%;
+  height: 56px;
+  margin-top: 20px;
+  padding: 0 18px;
+  font-size: 16px;
+
+  .mdc-button__label {
+    flex: 1;
+    text-align: left;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Clocked-in view
+// -----------------------------------------------------------------------------
+.welcome {
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+}
+
+.welcome-title {
+  font: var(--mat-sys-display-small);
+  margin: 8px 0 0;
+  color: var(--mat-sys-on-surface);
+}
+
+.location-label {
+  margin: 6px 0 0;
+  font: var(--mat-sys-label-medium);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+// Unchanged from the original: full-bleed so the schedule table can use the
+// full viewport width instead of the app shell's centered ~960px .content
+// column.
 .schedule-section {
   position: relative;
   left: 50%;
