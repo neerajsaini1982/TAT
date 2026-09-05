@@ -1,37 +1,35 @@
-<div class="header">
-  <h2>Payroll Report — {{ locationCode }}</h2>
+<div class="report-head">
+  <p class="kicker">Location {{ locationCode }}</p>
+  <h2>Payroll Report</h2>
 </div>
 
-<mat-card class="filters-card">
-  <mat-card-content>
-    <div class="filters">
-      <mat-form-field appearance="outline">
-        <mat-label>Start Date</mat-label>
-        <input matInput type="date" [(ngModel)]="startDate" />
-      </mat-form-field>
-      <mat-form-field appearance="outline">
-        <mat-label>End Date</mat-label>
-        <input matInput type="date" [(ngModel)]="endDate" />
-      </mat-form-field>
-      <button mat-flat-button color="primary" (click)="run()" [disabled]="loading()">Run Report</button>
-      <mat-form-field appearance="outline" class="employee-filter">
-        <mat-label>Employee</mat-label>
-        <mat-select [value]="selectedEmployeeId()" (selectionChange)="selectedEmployeeId.set($event.value)">
-          <mat-option value="all">All Employees</mat-option>
-          @for (opt of employeeOptions(); track opt.employeeId) {
-            <mat-option [value]="opt.employeeId">{{ opt.fullName }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    </div>
-    @if (error()) {
-      <p class="error">{{ error() }}</p>
-    }
-    @if (sickHoursError()) {
-      <p class="error">{{ sickHoursError() }}</p>
-    }
-  </mat-card-content>
-</mat-card>
+<div class="controls">
+  <mat-form-field appearance="outline">
+    <mat-label>Start Date</mat-label>
+    <input matInput type="date" [(ngModel)]="startDate" />
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>End Date</mat-label>
+    <input matInput type="date" [(ngModel)]="endDate" />
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="employee-filter">
+    <mat-label>Employee</mat-label>
+    <mat-select [value]="selectedEmployeeId()" (selectionChange)="selectedEmployeeId.set($event.value)">
+      <mat-option value="all">All Employees</mat-option>
+      @for (opt of employeeOptions(); track opt.employeeId) {
+        <mat-option [value]="opt.employeeId">{{ opt.fullName }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+  <button mat-flat-button color="primary" class="run-btn" (click)="run()" [disabled]="loading()">Run Report</button>
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+@if (sickHoursError()) {
+  <p class="error">{{ sickHoursError() }}</p>
+}
 
 @if (loading()) {
   <p class="status">Loading…</p>
@@ -40,13 +38,56 @@
 } @else if (filteredReport().length === 0) {
   <p class="status">No shifts scheduled in this date range for the selected employee.</p>
 } @else {
-  <div class="table-container mat-elevation-z1">
+  <!-- Grand totals lifted to the top of the page: on a long report these are
+       the figures payroll actually keys into ADP, and reading them off a
+       footer row means scrolling past everyone first. The footer row is kept
+       for desktop (it anchors the columns) and hidden on mobile, where this
+       strip is the only summary. -->
+  <section class="summary" aria-label="Report totals">
+    <div class="summary-cell">
+      <p class="summary-label">Regular</p>
+      <p class="summary-value">{{ formatDecimalHours(totals().regularMinutes) }}</p>
+      <p class="summary-sub">{{ formatDuration(totals().regularMinutes) }}</p>
+    </div>
+    <div class="summary-cell" [class.is-flagged]="totals().overtimeMinutes > 0">
+      <p class="summary-label">Overtime</p>
+      <p class="summary-value">{{ formatDecimalHours(totals().overtimeMinutes) }}</p>
+      <p class="summary-sub">{{ formatDuration(totals().overtimeMinutes) }}</p>
+    </div>
+    <div class="summary-cell">
+      <p class="summary-label">Sick</p>
+      <p class="summary-value">{{ formatDecimalHours(totals().sickMinutes) }}</p>
+      <p class="summary-sub">{{ formatDuration(totals().sickMinutes) }}</p>
+    </div>
+    <div class="summary-cell is-total">
+      <p class="summary-label">Total Paid</p>
+      <p class="summary-value">{{ formatDecimalHours(totals().totalMinutes) }}</p>
+      <p class="summary-sub">{{ formatDuration(totals().totalMinutes) }}</p>
+    </div>
+  </section>
+
+  <div class="meta-line">
+    <span class="result-count">{{ filteredReport().length }} employee{{ filteredReport().length > 1 ? 's' : '' }}</span>
+    <span class="meta-sep">/</span>
+    <span class="result-count">{{ startDate }} → {{ endDate }}</span>
+    @if (totals().absentDays > 0) {
+      <span class="meta-sep">/</span>
+      <span class="flag">{{ totals().absentDays }} absent day{{ totals().absentDays > 1 ? 's' : '' }}</span>
+    }
+    @if (totals().openEntryDays > 0) {
+      <span class="meta-sep">/</span>
+      <span class="flag">{{ totals().openEntryDays }} still clocked in</span>
+    }
+  </div>
+
+  <div class="table-container">
     <table mat-table [dataSource]="filteredReport()" multiTemplateDataRows class="hours-report-table">
       <ng-container matColumnDef="expand">
         <th mat-header-cell *matHeaderCellDef></th>
         <td mat-cell *matCellDef="let emp">
           <button
             mat-icon-button
+            class="expand-btn"
             (click)="toggle(emp.employeeId)"
             [attr.aria-label]="isExpanded(emp.employeeId) ? 'Collapse' : 'Expand'"
           >
@@ -58,70 +99,73 @@
 
       <ng-container matColumnDef="fullName">
         <th mat-header-cell *matHeaderCellDef>Full Name</th>
-        <td mat-cell *matCellDef="let emp">{{ emp.fullName }}</td>
+        <td mat-cell *matCellDef="let emp" class="name-cell">{{ emp.fullName }}</td>
         <td mat-footer-cell *matFooterCellDef>Total</td>
       </ng-container>
 
+      <!-- Every duration is shown decimal-first: the decimal figure is what
+           gets typed into ADP, so it leads, with hours-and-minutes underneath
+           as the human-readable check. -->
       <ng-container matColumnDef="netWorkedTime">
-        <th mat-header-cell *matHeaderCellDef>Net Worked Time</th>
-        <td mat-cell *matCellDef="let emp">
+        <th mat-header-cell *matHeaderCellDef>Regular</th>
+        <td mat-cell *matCellDef="let emp" data-label="Regular">
           <div class="time-cell">
-            <span class="time-primary">{{ formatDuration(regularMinutes(emp)) }}</span>
-            <span class="time-decimal">({{ formatDecimalHours(regularMinutes(emp)) }})</span>
+            <span class="time-decimal">{{ formatDecimalHours(regularMinutes(emp)) }}</span>
+            <span class="time-hm">{{ formatDuration(regularMinutes(emp)) }}</span>
           </div>
         </td>
         <td mat-footer-cell *matFooterCellDef>
           <div class="time-cell">
-            <span class="time-primary">{{ formatDuration(totals().regularMinutes) }}</span>
-            <span class="time-decimal">({{ formatDecimalHours(totals().regularMinutes) }})</span>
+            <span class="time-decimal">{{ formatDecimalHours(totals().regularMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(totals().regularMinutes) }}</span>
           </div>
         </td>
       </ng-container>
 
       <ng-container matColumnDef="overtimeTime">
         <th mat-header-cell *matHeaderCellDef>Overtime</th>
-        <td mat-cell *matCellDef="let emp" [class.flag]="emp.totalOvertimeMinutes > 0">
+        <td mat-cell *matCellDef="let emp" data-label="Overtime" [class.flag]="emp.totalOvertimeMinutes > 0">
           <div class="time-cell">
-            <span class="time-primary">{{ formatDuration(emp.totalOvertimeMinutes) }}</span>
-            <span class="time-decimal">({{ formatDecimalHours(emp.totalOvertimeMinutes) }})</span>
+            <span class="time-decimal">{{ formatDecimalHours(emp.totalOvertimeMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(emp.totalOvertimeMinutes) }}</span>
           </div>
         </td>
         <td mat-footer-cell *matFooterCellDef [class.flag]="totals().overtimeMinutes > 0">
           <div class="time-cell">
-            <span class="time-primary">{{ formatDuration(totals().overtimeMinutes) }}</span>
-            <span class="time-decimal">({{ formatDecimalHours(totals().overtimeMinutes) }})</span>
+            <span class="time-decimal">{{ formatDecimalHours(totals().overtimeMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(totals().overtimeMinutes) }}</span>
           </div>
         </td>
       </ng-container>
 
       <ng-container matColumnDef="sickTime">
-        <th mat-header-cell *matHeaderCellDef>Sick Hours</th>
-        <td mat-cell *matCellDef="let emp">
+        <th mat-header-cell *matHeaderCellDef>Sick</th>
+        <td mat-cell *matCellDef="let emp" data-label="Sick">
           <div class="time-cell">
-            <span class="time-primary">{{ formatDuration(emp.totalSickMinutes) }}</span>
-            <span class="time-decimal">({{ formatDecimalHours(emp.totalSickMinutes) }})</span>
+            <span class="time-decimal">{{ formatDecimalHours(emp.totalSickMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(emp.totalSickMinutes) }}</span>
           </div>
         </td>
         <td mat-footer-cell *matFooterCellDef>
           <div class="time-cell">
-            <span class="time-primary">{{ formatDuration(totals().sickMinutes) }}</span>
-            <span class="time-decimal">({{ formatDecimalHours(totals().sickMinutes) }})</span>
+            <span class="time-decimal">{{ formatDecimalHours(totals().sickMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(totals().sickMinutes) }}</span>
           </div>
         </td>
       </ng-container>
 
       <ng-container matColumnDef="totalTime">
-        <th mat-header-cell *matHeaderCellDef>Total Hours</th>
-        <td mat-cell *matCellDef="let emp">
+        <th mat-header-cell *matHeaderCellDef>Total Paid</th>
+        <td mat-cell *matCellDef="let emp" data-label="Total Paid" class="total-col">
           <div class="time-cell">
-            <span class="time-primary">{{ formatDuration(totalMinutes(emp)) }}</span>
-            <span class="time-decimal">({{ formatDecimalHours(totalMinutes(emp)) }})</span>
+            <span class="time-decimal">{{ formatDecimalHours(totalMinutes(emp)) }}</span>
+            <span class="time-hm">{{ formatDuration(totalMinutes(emp)) }}</span>
           </div>
         </td>
-        <td mat-footer-cell *matFooterCellDef>
+        <td mat-footer-cell *matFooterCellDef class="total-col">
           <div class="time-cell">
-            <span class="time-primary">{{ formatDuration(totals().totalMinutes) }}</span>
-            <span class="time-decimal">({{ formatDecimalHours(totals().totalMinutes) }})</span>
+            <span class="time-decimal">{{ formatDecimalHours(totals().totalMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(totals().totalMinutes) }}</span>
           </div>
         </td>
       </ng-container>
@@ -130,41 +174,49 @@
         <th mat-header-cell *matHeaderCellDef>Notes</th>
         <td mat-cell *matCellDef="let emp" class="notes-cell">
           @if (emp.absentDays > 0) {
-            <span class="flag">{{ emp.absentDays }} absent day{{ emp.absentDays > 1 ? 's' : '' }}</span>
+            <span class="tag tag-flag">{{ emp.absentDays }} absent day{{ emp.absentDays > 1 ? 's' : '' }}</span>
           }
           @if (emp.openEntryDays > 0) {
-            <span class="flag">{{ emp.openEntryDays }} still clocked in</span>
+            <span class="tag tag-flag">{{ emp.openEntryDays }} still clocked in</span>
           }
         </td>
         <td mat-footer-cell *matFooterCellDef class="notes-cell">
           @if (totals().absentDays > 0) {
-            <span class="flag">{{ totals().absentDays }} absent day{{ totals().absentDays > 1 ? 's' : '' }}</span>
+            <span class="tag tag-flag">{{ totals().absentDays }} absent day{{ totals().absentDays > 1 ? 's' : '' }}</span>
           }
           @if (totals().openEntryDays > 0) {
-            <span class="flag">{{ totals().openEntryDays }} still clocked in</span>
+            <span class="tag tag-flag">{{ totals().openEntryDays }} still clocked in</span>
           }
         </td>
       </ng-container>
 
       <ng-container matColumnDef="expandedDetail">
         <td mat-cell *matCellDef="let emp" [attr.colspan]="columns.length" class="detail-cell">
+          <div class="day-head">
+            <span class="day-head-date">Day</span>
+            <span class="day-head-num">Regular</span>
+            <span class="day-head-num">Overtime</span>
+            <span class="day-head-num">Sick (editable)</span>
+            <span class="day-head-num">Total</span>
+            <span class="day-head-notes">Notes</span>
+          </div>
           <table class="day-table">
             <tbody>
               @for (day of emp.days; track day.date) {
                 <tr [class.absent-row]="day.isAbsent">
                   <td class="day-date-col">{{ dayLabel(day.date) }}</td>
                   @if (day.isAbsent) {
-                    <td colspan="2" class="day-absent-col">
+                    <td colspan="2" class="day-absent-col" data-label="Status">
                       Absent
                       @if (day.absenceNote) {
                         — {{ day.absenceNote }}
                       }
                     </td>
                   } @else {
-                    <td class="day-numeric-col">{{ day.netWorkedMinutes !== null ? formatDuration(day.netWorkedMinutes) : '—' }}</td>
-                    <td class="day-numeric-col" [class.flag]="day.overtimeMinutes > 0">{{ formatDuration(day.overtimeMinutes) }}</td>
+                    <td class="day-numeric-col" data-label="Regular">{{ day.netWorkedMinutes !== null ? formatDuration(day.netWorkedMinutes) : '—' }}</td>
+                    <td class="day-numeric-col" data-label="Overtime" [class.flag]="day.overtimeMinutes > 0">{{ formatDuration(day.overtimeMinutes) }}</td>
                   }
-                  <td class="day-sick-col">
+                  <td class="day-sick-col" data-label="Sick hrs">
                     <input
                       type="number"
                       min="0"
@@ -176,22 +228,22 @@
                       (change)="updateSickHours(day, $any($event.target).value)"
                     />
                   </td>
-                  <td class="day-numeric-col">{{ formatDuration((day.netWorkedMinutes ?? 0) + day.sickMinutes) }}</td>
+                  <td class="day-numeric-col day-total-col" data-label="Total">{{ formatDuration((day.netWorkedMinutes ?? 0) + day.sickMinutes) }}</td>
                   <td class="notes-cell">
                     @if (day.leftEarly) {
-                      <span class="flag">Left early{{ day.leftEarlyNote ? ' — ' + day.leftEarlyNote : '' }}</span>
+                      <span class="tag tag-flag">Left early{{ day.leftEarlyNote ? ' — ' + day.leftEarlyNote : '' }}</span>
                     }
                     @if (day.hasLongBreak) {
-                      <span class="flag">Long break.</span>
+                      <span class="tag tag-flag">Long break</span>
                     }
                     @if (day.hasLongLunch) {
-                      <span class="flag">Long lunch.</span>
+                      <span class="tag tag-flag">Long lunch</span>
                     }
                     @if (day.overtimeMinutes > 0) {
-                      <span class="flag">{{ formatDuration(day.overtimeMinutes) }} Overtime</span>
+                      <span class="tag tag-flag">{{ formatDuration(day.overtimeMinutes) }} overtime</span>
                     }
                     @for (note of day.notes; track note) {
-                      <span>{{ note }}</span>
+                      <span class="tag">{{ note }}</span>
                     }
                   </td>
                 </tr>
@@ -203,8 +255,8 @@
 
       <tr mat-header-row *matHeaderRowDef="columns"></tr>
       <tr mat-row *matRowDef="let row; columns: columns" class="employee-row"></tr>
-      <tr mat-row *matRowDef="let row; columns: ['expandedDetail']; when: isExpandedRow"></tr>
-      <tr mat-footer-row *matFooterRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: ['expandedDetail']; when: isExpandedRow" class="detail-row"></tr>
+      <tr mat-footer-row *matFooterRowDef="columns" class="totals-row"></tr>
     </table>
   </div>
 }
