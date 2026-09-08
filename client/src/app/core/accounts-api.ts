@@ -68,6 +68,11 @@ export interface UpdateMineRequest {
   phone: string;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export interface UpdateAccountRequest {
   firstName: string;
   lastName: string;
@@ -134,6 +139,15 @@ export class AccountsApi {
 
   updateMine(request: UpdateMineRequest) {
     return this.http.put<AccountDto>(`${this.base}/mine`, request);
+  }
+
+  changeMyPassword(request: ChangePasswordRequest) {
+    return this.http.post<void>(`${this.base}/mine/change-password`, request);
+  }
+
+  // Admin/Sa setting a new password on an account they manage.
+  resetPassword(id: number, newPassword: string) {
+    return this.http.post<void>(`${this.base}/${id}/reset-password`, { newPassword });
   }
 
   // Emails the employee their login link and user code (LoginCredentials

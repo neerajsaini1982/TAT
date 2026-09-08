@@ -140,6 +140,42 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         return CreatedAtAction(nameof(Get), new { id = account.Id }, ToDto(account));
     }
 
+    // Lets an admin (or Sa) set a new password on an Admin/Lead/Sa account
+    // they manage, e.g. after the holder forgot it — mirrors ResetCode's
+    // shape but takes the new value directly rather than generating one,
+    // since a password (unlike a numeric code) is usually something the
+    // admin wants to hand the person themselves.
+    [HttpPost("{id:int}/reset-password")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public IActionResult ResetPassword(int id, ResetPasswordRequest request)
+    {
+        var account = db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == id);
+        if (account is null || !CanAccess(account))
+        {
+            return NotFound();
+        }
+
+        if (account.Role == AccountRole.Sa && !User.IsInRole(nameof(AccountRole.Sa)))
+        {
+            return Forbid();
+        }
+
+        if (account.Role == AccountRole.Employee)
+        {
+            return BadRequest("Employees log in with a code, not a password.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return BadRequest("New password is required.");
+        }
+
+        account.PasswordHash = PasswordHasher.Hash(request.NewPassword);
+        db.SaveChanges();
+
+        return NoContent();
+    }
+
     // Lets an admin regenerate a lost/leaked user code for one of their accounts.
     [HttpPost("{id:int}/reset-code")]
     [Authorize(Policy = "AdminOrAbove")]
@@ -248,6 +284,40 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         db.SaveChanges();
 
         return Ok(ToDto(account));
+    }
+
+    // Lets the signed-in account (Admin/Lead/Sa — anyone who actually logs
+    // in with a password, unlike an Employee's random unknown one) change
+    // their own password after confirming they know the current one.
+    [HttpPost("mine/change-password")]
+    [Authorize]
+    public IActionResult ChangeMyPassword(ChangePasswordRequest request)
+    {
+        var account = db.Accounts.Find(CallerAccountId());
+        if (account is null)
+        {
+            return NotFound();
+        }
+
+        if (account.Role == AccountRole.Employee)
+        {
+            return BadRequest("Employees log in with a code, not a password.");
+        }
+
+        if (!PasswordHasher.Verify(request.CurrentPassword, account.PasswordHash))
+        {
+            return BadRequest("Current password is incorrect.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.NewPassword))
+        {
+            return BadRequest("New password is required.");
+        }
+
+        account.PasswordHash = PasswordHasher.Hash(request.NewPassword);
+        db.SaveChanges();
+
+        return NoContent();
     }
 
     // Emails an Employee their login link and user code, using the

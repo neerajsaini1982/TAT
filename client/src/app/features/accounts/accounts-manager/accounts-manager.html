@@ -227,6 +227,16 @@
         >
           <mat-icon>{{ sendingId() === a.id ? 'hourglass_top' : 'mail' }}</mat-icon>
         </button>
+      } @else {
+        <button
+          mat-icon-button
+          (click)="resetPassword(a)"
+          [disabled]="resettingPasswordId() === a.id"
+          title="Reset password"
+          aria-label="Reset password"
+        >
+          <mat-icon>lock_reset</mat-icon>
+        </button>
       }
       @if (lockedLocationCode) {
         <a

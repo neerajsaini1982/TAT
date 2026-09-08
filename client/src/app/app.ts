@@ -15,6 +15,7 @@ import { Theme, THEMES } from './core/theme';
 import { Auth } from './core/auth';
 import { AccountsApi } from './core/accounts-api';
 import { MyAccountDialog } from './features/employee/my-account-dialog/my-account-dialog';
+import { ChangePasswordDialog } from './features/admin/change-password-dialog/change-password-dialog';
 
 type Portal = 'admin' | 'employee' | null;
 
@@ -155,6 +156,10 @@ export class App {
   async openAccountDialog(): Promise<void> {
     const account = await firstValueFrom(this.accountsApi.getMine());
     this.dialog.open(MyAccountDialog, { data: account });
+  }
+
+  openChangePasswordDialog(): void {
+    this.dialog.open(ChangePasswordDialog);
   }
 
   async resetCode(): Promise<void> {

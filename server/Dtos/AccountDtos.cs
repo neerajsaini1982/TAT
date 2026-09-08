@@ -89,3 +89,12 @@ public record UpdateMineRequest(string Email, string Phone);
 // signed-in account picks its own UserCode instead of getting a random one
 // from ResetMyCode. Must be exactly 6 digits.
 public record SetUserCodeRequest(string UserCode);
+
+// Self-service password change (see AccountsController.ChangeMyPassword) —
+// requires the current password, unlike ResetPassword below where the admin
+// doing the resetting doesn't know it.
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
+// An admin (or Sa) setting a new password on an account they manage, e.g.
+// after the holder forgot it (see AccountsController.ResetPassword).
+public record ResetPasswordRequest(string NewPassword);

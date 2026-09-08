@@ -9,10 +9,12 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCardModule } from '@angular/material/card';
+import { MatDialog } from '@angular/material/dialog';
 
 import { AccountsApi, AccountDto, EmploymentType } from '../../../core/accounts-api';
 import { LocationsApi, LocationDto } from '../../../core/locations-api';
 import { Role } from '../../../core/auth';
+import { ResetPasswordDialog } from '../reset-password-dialog/reset-password-dialog';
 
 interface FormModel {
   username: string;
@@ -81,6 +83,7 @@ export class AccountsManager implements OnInit, OnDestroy {
 
   private readonly accountsApi = inject(AccountsApi);
   private readonly locationsApi = inject(LocationsApi);
+  private readonly dialog = inject(MatDialog);
 
   protected readonly roles: Role[] = ['Admin', 'Lead', 'Employee'];
   protected readonly employmentTypes: EmploymentType[] = ['FullTime', 'PartTime'];
@@ -96,6 +99,7 @@ export class AccountsManager implements OnInit, OnDestroy {
   protected readonly error = signal<string | null>(null);
   protected readonly resettingId = signal<number | null>(null);
   protected readonly sendingId = signal<number | null>(null);
+  protected readonly resettingPasswordId = signal<number | null>(null);
   protected form: FormModel = emptyForm();
 
   // Local object URL for whatever photo is currently shown in the preview
@@ -426,6 +430,25 @@ export class AccountsManager implements OnInit, OnDestroy {
         alert(err?.error ?? 'Failed to reset user code.');
       },
     });
+  }
+
+  resetPassword(account: AccountDto): void {
+    this.dialog
+      .open(ResetPasswordDialog, { data: { accountName: `${account.firstName} ${account.lastName}` } })
+      .afterClosed()
+      .subscribe((newPassword: string | undefined) => {
+        if (!newPassword) {
+          return;
+        }
+        this.resettingPasswordId.set(account.id);
+        this.accountsApi.resetPassword(account.id, newPassword).subscribe({
+          next: () => this.resettingPasswordId.set(null),
+          error: (err) => {
+            this.resettingPasswordId.set(null);
+            alert(err?.error ?? 'Failed to reset password.');
+          },
+        });
+      });
   }
 
   canSendCredentials(account: AccountDto): boolean {
