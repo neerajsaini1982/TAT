@@ -2,6 +2,7 @@ import { Component, DestroyRef, ElementRef, OnInit, computed, inject, signal, vi
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -9,7 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
-import { catchError, forkJoin, fromEvent, of } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 
 import { AvailabilityApi } from '../../../core/availability-api';
 import { ShiftDto, ShiftsApi } from '../../../core/shifts-api';
@@ -63,6 +64,7 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   imports: [
     RouterLink,
     FormsModule,
+    OverlayModule,
     MatButtonModule,
     MatButtonToggleModule,
     MatCheckboxModule,
@@ -85,13 +87,6 @@ export class AdminScheduleAssignPage implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
-  // :host has `transform: translateX(-50%)` (see the stylesheet — it's how
-  // this page breaks out of the app shell's centered content column). Any
-  // transform on an ancestor makes it the containing block for
-  // position:fixed descendants instead of the viewport, so activeCellRect
-  // below has to be computed relative to :host's own rect, not the raw
-  // viewport-relative getBoundingClientRect() the input reports.
-  private readonly hostRef = inject(ElementRef<HTMLElement>);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
   // Edit Times is only offered for today's chips: a TimeEntry can only ever
@@ -134,61 +129,25 @@ export class AdminScheduleAssignPage implements OnInit {
   private readonly cellQueries = signal<Map<string, string>>(new Map());
   // Which cell's suggestion list is open (the one currently focused).
   protected readonly activeCellKey = signal<string | null>(null);
-  // Viewport position of the focused cell's input, captured on focus and
-  // recomputed on scroll/resize (see recomputeActiveCellRect). The
-  // suggestion list is rendered position:fixed at this rect instead of
-  // position:absolute under the input, so it isn't clipped by
-  // .table-scroll's overflow — which, now that the table's height is
-  // unbounded (see .table-scroll in the stylesheet), is often just tall
-  // enough to hold the visible rows and no taller, clipping a dropdown that
-  // opens below the last one (see issue #66: this is what made "the shifts
-  // aren't showing" reproduce specifically after filtering down to one
-  // employee, since a filtered table is short by construction).
-  // top/bottom are mutually exclusive: filtering can leave a single row
-  // sitting anywhere on screen (including near the bottom edge), and a
-  // dropdown that only ever opens downward can render entirely below the
-  // viewport in that case — invisible with no way to scroll to it, since a
-  // fixed-position element doesn't push the page taller (issue #68). When
-  // there isn't room below, it opens upward instead (bottom set, top null).
-  protected readonly activeCellRect = signal<{
-    left: number;
-    width: number;
-    top: number | null;
-    bottom: number | null;
-  } | null>(null);
-  // The focused input itself, so scroll/resize can recompute activeCellRect
-  // against its current position instead of just closing the dropdown —
-  // the page now scrolls as a whole (see .table-scroll), so scrolling to
-  // reach a cell before typing into it is a completely normal flow, not
-  // something that should make the just-opened dropdown disappear.
-  private activeInputEl: HTMLInputElement | null = null;
+
+  // Positioning for the suggestion list is delegated to the CDK Overlay
+  // (see cdkConnectedOverlay in the template) rather than hand-computed —
+  // three rounds of manually tracking the input's screen rect (position:
+  // fixed anchored to a transformed :host, flipping up near the viewport
+  // edge, out-stacking a sibling table) each fixed one failure mode and
+  // missed another (issue #66, issue #68). The overlay is portaled to the
+  // CDK overlay container appended to <body>, so it isn't confined to any
+  // ancestor's stacking context, and FlexibleConnectedPositionStrategy
+  // repositions it on scroll/resize and flips between these two positions
+  // on its own — below-and-left-aligned first, above as the fallback once
+  // there isn't room below.
+  protected readonly overlayPositions: ConnectedPosition[] = [
+    { originX: 'start', originY: 'bottom', overlayX: 'start', overlayY: 'top', offsetY: 2 },
+    { originX: 'start', originY: 'top', overlayX: 'start', overlayY: 'bottom', offsetY: -2 },
+  ];
 
   private closeActiveCell(): void {
     this.activeCellKey.set(null);
-    this.activeCellRect.set(null);
-    this.activeInputEl = null;
-  }
-
-  // Suggestion list is capped at 180px tall (see .cell-suggestions) plus a
-  // couple px of margin — below that much room, flip it above the input
-  // instead of letting it run off the bottom of the screen.
-  private static readonly SUGGESTIONS_MAX_HEIGHT = 190;
-
-  private recomputeActiveCellRect(): void {
-    if (!this.activeInputEl) {
-      return;
-    }
-    const rect = this.activeInputEl.getBoundingClientRect();
-    const hostRect = this.hostRef.nativeElement.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - rect.bottom;
-    const openUpward =
-      spaceBelow < AdminScheduleAssignPage.SUGGESTIONS_MAX_HEIGHT && rect.top > spaceBelow;
-    this.activeCellRect.set({
-      left: rect.left - hostRect.left,
-      width: rect.width,
-      top: openUpward ? null : rect.bottom - hostRect.top,
-      bottom: openUpward ? hostRect.bottom - rect.top : null,
-    });
   }
 
   cellKey(row: EmployeeRow, day: DayCell): string {
@@ -219,10 +178,8 @@ export class AdminScheduleAssignPage implements OnInit {
     this.setCellQuery(row, day, (event.target as HTMLInputElement).value);
   }
 
-  onCellFocus(event: FocusEvent, row: EmployeeRow, day: DayCell): void {
+  onCellFocus(row: EmployeeRow, day: DayCell): void {
     this.activeCellKey.set(this.cellKey(row, day));
-    this.activeInputEl = event.target as HTMLInputElement;
-    this.recomputeActiveCellRect();
   }
 
   onCellBlur(row: EmployeeRow, day: DayCell): void {
@@ -441,21 +398,6 @@ export class AdminScheduleAssignPage implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => this.load());
     this.load();
-
-    // The suggestion list is position:fixed at a rect captured on focus (see
-    // activeCellRect), so it has to track scroll/resize instead of silently
-    // drifting away from the input it's anchored to. This recomputes rather
-    // than closes: the whole page scrolls now (see .table-scroll), so
-    // scrolling down to reach a cell and then typing into it is a normal
-    // flow, not something that should make the dropdown disappear. Capture
-    // phase catches scrolling on any ancestor, e.g. .table-scroll's
-    // horizontal scroll, not just the window's own scroll.
-    fromEvent(window, 'scroll', { capture: true })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.recomputeActiveCellRect());
-    fromEvent(window, 'resize')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.recomputeActiveCellRect());
   }
 
   load(): void {

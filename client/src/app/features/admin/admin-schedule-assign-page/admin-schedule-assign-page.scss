@@ -392,17 +392,6 @@
 // not a persistently-visible header.
 .table-scroll {
   overflow-x: auto;
-  // Stacking context of its own, ranked above .table-footer-scroll below
-  // (see that rule) — without this, the fixed-position .cell-suggestions
-  // dropdown, though visually escaping this element's overflow, is still
-  // confined to its ancestor's paint layer for z-order purposes. Neither
-  // this nor .table-footer-scroll was a stacking context before (no
-  // position set), so the footer — being later in the DOM, and otherwise
-  // unpositioned content always paints after positioned content of the
-  // same context — painted over the dropdown instead of under it (issue
-  // #68: "the shifts dropdown hides behind the Daily Total row").
-  position: relative;
-  z-index: 1;
 }
 
 table {
@@ -470,9 +459,6 @@ th.employee-col {
 .table-footer-scroll {
   overflow: hidden;
   border-top: 2px solid var(--mat-sys-outline-variant);
-  // Ranked below .table-scroll (see that rule) so its dropdown always wins.
-  position: relative;
-  z-index: 0;
 }
 
 tfoot .employee-col {
@@ -504,22 +490,6 @@ tfoot .employee-col {
 
 .day-cell {
   min-height: 64px;
-  // Anchors .cell-suggestions (position: absolute) to this cell rather
-  // than the table/viewport.
-  position: relative;
-  // position: relative alone does NOT create a stacking context (that only
-  // happens once z-index is also set to something other than auto) — so
-  // without this, a plain td has no stacking context of its own, and the
-  // row rendered right below it (also plain, unpositioned, later in DOM
-  // order) paints on top of anything that visually spills out of this
-  // cell's bottom edge, e.g. .cell-suggestions here. z-index: 0 is enough
-  // to opt in to a stacking context; cell-active bumps it further so the
-  // one cell with its dropdown open always wins over its neighbors too.
-  z-index: 0;
-
-  &.cell-active {
-    z-index: 10;
-  }
 
   &.unavailable {
     background: var(--mat-sys-error-container);
@@ -544,7 +514,6 @@ tfoot .employee-col {
 // admin-schedule-assign-page.ts) — sized to fit inside a narrow day column
 // without forcing it wider than the drag-and-drop page's.
 .cell-autocomplete {
-  position: relative;
   margin-top: 4px;
 }
 
@@ -570,29 +539,24 @@ tfoot .employee-col {
   }
 }
 
-// position: fixed at a rect computed from the input's getBoundingClientRect
-// (see activeCellRect in the component) rather than position: absolute
-// anchored under .cell-input — an ancestor as close as .day-cell would clip
-// this against .table-scroll's overflow whenever the table is short (few
-// rows, e.g. right after filtering down to one employee — see issue #66).
-// Fixed positioning escapes that clipping entirely; top/left/width come in
-// as inline styles instead of being relative to an ancestor. Those styles
-// are computed relative to :host, not the viewport — :host's own
-// transform (see :host above) makes it the containing block for this
-// fixed-position element per the CSS spec, so viewport-relative coordinates
-// would land in the wrong place.
+// Positioned via cdkConnectedOverlay (see the template), which portals this
+// into the CDK overlay container appended to <body> — outside any ancestor's
+// stacking context or overflow, so it can't be clipped by .table-scroll or
+// painted over by a sibling like .table-footer-scroll, and it flips above
+// the input on its own once there isn't room below (see overlayPositions in
+// the component). Three earlier attempts at hand-computing this element's
+// position and z-index each fixed one failure mode and missed another
+// (issue #66, issue #68) — letting the CDK handle viewport-aware overlay
+// positioning is the actual fix.
 .cell-suggestions {
   all: unset;
-  position: fixed;
-  z-index: 1000;
+  display: block;
   max-height: 180px;
   overflow-y: auto;
-  margin-top: 2px;
   background: var(--mat-sys-surface-container-high);
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 4px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-  display: block;
 
   li {
     display: flex;
