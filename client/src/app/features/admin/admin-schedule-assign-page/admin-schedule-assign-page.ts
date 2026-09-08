@@ -144,7 +144,18 @@ export class AdminScheduleAssignPage implements OnInit {
   // opens below the last one (see issue #66: this is what made "the shifts
   // aren't showing" reproduce specifically after filtering down to one
   // employee, since a filtered table is short by construction).
-  protected readonly activeCellRect = signal<{ top: number; left: number; width: number } | null>(null);
+  // top/bottom are mutually exclusive: filtering can leave a single row
+  // sitting anywhere on screen (including near the bottom edge), and a
+  // dropdown that only ever opens downward can render entirely below the
+  // viewport in that case — invisible with no way to scroll to it, since a
+  // fixed-position element doesn't push the page taller (issue #68). When
+  // there isn't room below, it opens upward instead (bottom set, top null).
+  protected readonly activeCellRect = signal<{
+    left: number;
+    width: number;
+    top: number | null;
+    bottom: number | null;
+  } | null>(null);
   // The focused input itself, so scroll/resize can recompute activeCellRect
   // against its current position instead of just closing the dropdown —
   // the page now scrolls as a whole (see .table-scroll), so scrolling to
@@ -158,16 +169,25 @@ export class AdminScheduleAssignPage implements OnInit {
     this.activeInputEl = null;
   }
 
+  // Suggestion list is capped at 180px tall (see .cell-suggestions) plus a
+  // couple px of margin — below that much room, flip it above the input
+  // instead of letting it run off the bottom of the screen.
+  private static readonly SUGGESTIONS_MAX_HEIGHT = 190;
+
   private recomputeActiveCellRect(): void {
     if (!this.activeInputEl) {
       return;
     }
     const rect = this.activeInputEl.getBoundingClientRect();
     const hostRect = this.hostRef.nativeElement.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUpward =
+      spaceBelow < AdminScheduleAssignPage.SUGGESTIONS_MAX_HEIGHT && rect.top > spaceBelow;
     this.activeCellRect.set({
-      top: rect.bottom - hostRect.top,
       left: rect.left - hostRect.left,
       width: rect.width,
+      top: openUpward ? null : rect.bottom - hostRect.top,
+      bottom: openUpward ? hostRect.bottom - rect.top : null,
     });
   }
 
