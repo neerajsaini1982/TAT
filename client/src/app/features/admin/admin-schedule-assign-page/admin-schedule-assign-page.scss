@@ -560,9 +560,7 @@ tfoot .employee-col {
 
   li {
     display: flex;
-    gap: 6px;
-    padding: 4px 6px;
-    font-size: 11px;
+    padding: 6px 8px;
     cursor: pointer;
     white-space: nowrap;
 
@@ -573,14 +571,22 @@ tfoot .employee-col {
     // The match Tab/Enter will commit — bolded so it's clear which one
     // typing more characters (or Backspace) would narrow away from.
     &.top-match {
-      font-weight: 700;
       background: var(--mat-sys-secondary-container);
       color: var(--mat-sys-on-secondary-container);
+
+      .suggestion-time {
+        font-weight: 700;
+      }
     }
   }
 
+  // The shift name is dropped from view entirely (still reachable as a
+  // hover tooltip on the <li>) so the time — the only thing admins scan
+  // for while typing a time query — reads at a glance instead of being
+  // squeezed next to a name in an 11px row.
   .suggestion-time {
-    color: var(--mat-sys-on-surface-variant);
+    font-size: 15px;
+    font-weight: 600;
   }
 }
 
