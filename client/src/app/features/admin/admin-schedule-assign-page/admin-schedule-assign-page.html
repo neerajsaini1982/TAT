@@ -255,7 +255,7 @@
                     >
                       @let matches = filteredShifts(cellQuery(row, day));
                       @if (matches.length > 0) {
-                        <ul class="cell-suggestions" [style.width.px]="cellOrigin.elementRef.nativeElement.offsetWidth">
+                        <ul class="cell-suggestions">
                           @for (shift of matches; track shift.id; let i = $index) {
                             <li [class.top-match]="i === 0" [title]="shift.name" (mousedown)="onSuggestionPick($event, row, day, shift)">
                               <span class="suggestion-time">{{ shiftTime(shift) }}</span>

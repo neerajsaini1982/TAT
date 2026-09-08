@@ -551,6 +551,11 @@ tfoot .employee-col {
 .cell-suggestions {
   all: unset;
   display: block;
+  // Shrink-wraps to its li content rather than matching the (much
+  // narrower) day-cell width it's anchored to — needed so the 20px time
+  // text below has room; min-width just keeps very short content from
+  // looking like a sliver.
+  min-width: 140px;
   max-height: 180px;
   overflow-y: auto;
   background: var(--mat-sys-surface-container-high);
@@ -585,7 +590,7 @@ tfoot .employee-col {
   // for while typing a time query — reads at a glance instead of being
   // squeezed next to a name in an 11px row.
   .suggestion-time {
-    font-size: 15px;
+    font-size: 20px;
     font-weight: 600;
   }
 }
