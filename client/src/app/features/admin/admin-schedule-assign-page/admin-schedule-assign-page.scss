@@ -392,6 +392,17 @@
 // not a persistently-visible header.
 .table-scroll {
   overflow-x: auto;
+  // Stacking context of its own, ranked above .table-footer-scroll below
+  // (see that rule) — without this, the fixed-position .cell-suggestions
+  // dropdown, though visually escaping this element's overflow, is still
+  // confined to its ancestor's paint layer for z-order purposes. Neither
+  // this nor .table-footer-scroll was a stacking context before (no
+  // position set), so the footer — being later in the DOM, and otherwise
+  // unpositioned content always paints after positioned content of the
+  // same context — painted over the dropdown instead of under it (issue
+  // #68: "the shifts dropdown hides behind the Daily Total row").
+  position: relative;
+  z-index: 1;
 }
 
 table {
@@ -459,6 +470,9 @@ th.employee-col {
 .table-footer-scroll {
   overflow: hidden;
   border-top: 2px solid var(--mat-sys-outline-variant);
+  // Ranked below .table-scroll (see that rule) so its dropdown always wins.
+  position: relative;
+  z-index: 0;
 }
 
 tfoot .employee-col {
