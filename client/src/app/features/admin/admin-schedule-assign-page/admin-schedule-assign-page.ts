@@ -215,15 +215,23 @@ export class AdminScheduleAssignPage implements OnInit {
   // (prefix only, e.g. "15" matches 15:00/15:30 but not a shift merely
   // ending at 15:00 — typing a time means "find what starts here", and a
   // substring match against end times too was pulling in unrelated shifts).
+  // The colon is optional: "1045" is matched digit-by-digit against the
+  // start time with its colon stripped ("1045"), so admins don't have to
+  // reach for shift+; mid-keystroke (issue #68).
   // An empty query matches everything, same as an unfiltered dropdown would.
   filteredShifts(query: string): ShiftDto[] {
     const q = query.trim().toLowerCase();
     if (!q) {
       return this.sortedShifts();
     }
-    return this.sortedShifts().filter(
-      (s) => s.name.toLowerCase().includes(q) || s.startTime.slice(0, 5).startsWith(q),
-    );
+    const digits = q.replace(/[^0-9]/g, '');
+    return this.sortedShifts().filter((s) => {
+      if (s.name.toLowerCase().includes(q)) {
+        return true;
+      }
+      const time = s.startTime.slice(0, 5);
+      return time.startsWith(q) || (digits.length > 0 && time.replace(':', '').startsWith(digits));
+    });
   }
 
   // Mouse pick from the suggestion list. mousedown (not click) + preventDefault
@@ -349,6 +357,12 @@ export class AdminScheduleAssignPage implements OnInit {
   // of what's currently filtered into view.
   protected readonly employeeSearch = signal('');
   protected readonly showOnlyScheduled = signal(false);
+  protected readonly hasActiveFilters = computed(() => !!this.employeeSearch() || this.showOnlyScheduled());
+
+  clearFilters(): void {
+    this.employeeSearch.set('');
+    this.showOnlyScheduled.set(false);
+  }
 
   protected readonly visibleRows = computed(() => {
     const query = this.employeeSearch().trim().toLowerCase();

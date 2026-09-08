@@ -420,6 +420,13 @@
   opacity: 0.85;
 }
 
+// Assignment chips no longer show the shift name (issue #68) — their time
+// is the only label, so it takes over the name's emphasis.
+.assignment-chip .chip-time {
+  font-weight: 600;
+  opacity: 1;
+}
+
 .chip-remove {
   all: unset;
   position: absolute;

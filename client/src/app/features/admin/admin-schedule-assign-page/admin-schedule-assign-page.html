@@ -116,6 +116,12 @@
     <mat-checkbox [ngModel]="showOnlyScheduled()" (ngModelChange)="showOnlyScheduled.set($event)">
       Show only scheduled employees
     </mat-checkbox>
+    @if (hasActiveFilters()) {
+      <button type="button" mat-button (click)="clearFilters()">
+        <mat-icon>close</mat-icon>
+        Clear filters
+      </button>
+    }
   </div>
 
   <div class="table-wrap">
@@ -159,8 +165,8 @@
                     [class.clocked-in]="isClockedIn(a)"
                     [class.clocked-out]="isClockedOut(a)"
                     [style.--employee-color]="employeeColor(a.accountId)"
+                    [title]="a.shiftName"
                   >
-                    <span class="chip-name">{{ a.shiftName }}</span>
                     <span class="chip-time">{{ a.shiftStartTime.slice(0, 5) }}–{{ a.shiftEndTime.slice(0, 5) }}</span>
 
                     @if (isClockedIn(a)) {

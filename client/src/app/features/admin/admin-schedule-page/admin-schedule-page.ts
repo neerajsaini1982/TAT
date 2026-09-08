@@ -200,6 +200,12 @@ export class AdminSchedulePage implements OnInit {
   // of what's currently filtered into view.
   protected readonly employeeSearch = signal('');
   protected readonly showOnlyScheduled = signal(false);
+  protected readonly hasActiveFilters = computed(() => !!this.employeeSearch() || this.showOnlyScheduled());
+
+  clearFilters(): void {
+    this.employeeSearch.set('');
+    this.showOnlyScheduled.set(false);
+  }
 
   protected readonly visibleRows = computed(() => {
     const query = this.employeeSearch().trim().toLowerCase();

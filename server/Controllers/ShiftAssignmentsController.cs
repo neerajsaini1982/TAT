@@ -225,10 +225,10 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         }
 
         var alreadyAssigned = db.ShiftAssignments.Any(a =>
-            a.ShiftId == shift.Id && a.AccountId == account.Id && a.Date == request.Date);
+            a.AccountId == account.Id && a.Date == request.Date);
         if (alreadyAssigned)
         {
-            return Conflict("This employee is already assigned to this shift on this date.");
+            return Conflict("This employee is already assigned a shift on this date.");
         }
 
         var assignment = new ShiftAssignment
@@ -278,10 +278,10 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         }
 
         var alreadyAssigned = db.ShiftAssignments.Any(a =>
-            a.Id != assignment.Id && a.ShiftId == assignment.ShiftId && a.AccountId == account.Id && a.Date == request.Date);
+            a.Id != assignment.Id && a.AccountId == account.Id && a.Date == request.Date);
         if (alreadyAssigned)
         {
-            return Conflict("This employee is already assigned to this shift on this date.");
+            return Conflict("This employee is already assigned a shift on this date.");
         }
 
         assignment.AccountId = account.Id;
