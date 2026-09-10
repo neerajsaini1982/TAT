@@ -2,12 +2,34 @@
 // The dialog surface itself (backdrop, elevation, corner radius) comes from
 // MatDialog + the app-wide .mat-mdc-dialog-container theme; this component
 // only owns the header/section/footer chrome inside it.
+//
+// The surface is forced into a column flexbox with its own overflow hidden
+// so the panel can never scroll as a whole — only .form-body (below) does.
+// Without this, the surface's default overflow plus form-body's own
+// overflow-y:auto produce two independent scrollbars.
 :host {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   width: min(920px, calc(100vw - 48px));
 }
 
+:host ::ng-deep .mdc-dialog__surface {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
 .form-head {
+  flex: none;
   display: flex;
   align-items: flex-start;
   gap: 16px;
@@ -43,8 +65,19 @@
 }
 
 .form-body {
-  max-height: min(700px, calc(100vh - 220px));
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   padding: 0 !important;
+
+  // Scrolls when content is taller than the dialog (small screens, lots of
+  // sections), but never shows a visible scrollbar — the modernist design
+  // has no room for one, and there's always visual room to scroll (bottom
+  // edge cut by .form-actions) as a hint.
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .form-section {
@@ -88,8 +121,7 @@
 }
 
 .form-actions {
-  position: sticky;
-  bottom: 0;
+  flex: none;
   display: flex;
   align-items: center;
   gap: 12px;
