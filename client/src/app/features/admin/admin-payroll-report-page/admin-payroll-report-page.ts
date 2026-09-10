@@ -8,11 +8,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatTable, MatTableModule } from '@angular/material/table';
+import { MatDialog } from '@angular/material/dialog';
 
 import { DailyHoursDto, EmployeeHoursReportDto, ReportsApi } from '../../../core/reports-api';
 import { ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
 import { formatDurationOrDash } from '../../../core/duration-format';
 import { addDays, dayOfWeekLabel, formatDate, toMmDdYyyy } from '../../../core/week-utils';
+import { Auth } from '../../../core/auth';
+import { SickHoursDialog } from '../sick-hours-dialog/sick-hours-dialog';
 
 @Component({
   selector: 'app-admin-payroll-report-page',
@@ -33,7 +36,15 @@ export class AdminPayrollReportPage implements OnInit {
   private readonly reportsApi = inject(ReportsApi);
   private readonly shiftAssignmentsApi = inject(ShiftAssignmentsApi);
   private readonly route = inject(ActivatedRoute);
+  private readonly dialog = inject(MatDialog);
+  private readonly auth = inject(Auth);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
+
+  // This page is reachable by Lead as well as Admin (see adminGuard), but
+  // POST /api/sick-time-entries is Admin/Sa-only server-side (same policy as
+  // the inline sick-hours edit's SetSickMinutes) — hide the button rather
+  // than let a Lead open a dialog that can only 403 on save.
+  protected readonly canAddSickHours = this.auth.role() === 'Admin' || this.auth.role() === 'Sa';
 
   // CdkTable only re-evaluates matRowDef's `when` predicate when it
   // re-renders rows, which a plain signal update elsewhere doesn't trigger
@@ -147,6 +158,17 @@ export class AdminPayrollReportPage implements OnInit {
     });
   }
 
+  openAddSickHours(): void {
+    this.dialog
+      .open(SickHoursDialog, { data: { locationCode: this.locationCode }, autoFocus: 'dialog' })
+      .afterClosed()
+      .subscribe((saved) => {
+        if (saved) {
+          this.run();
+        }
+      });
+  }
+
   toggle(employeeId: number): void {
     this.expandedIds.update((current) => {
       const next = new Set(current);
@@ -180,7 +202,7 @@ export class AdminPayrollReportPage implements OnInit {
   }
 
   isSavingSickHours(day: DailyHoursDto): boolean {
-    return this.savingSickHoursFor().has(day.shiftAssignmentId);
+    return day.shiftAssignmentId !== null && this.savingSickHoursFor().has(day.shiftAssignmentId);
   }
 
   // Admin types the decimal-hours figure directly (same convention as the
@@ -189,8 +211,15 @@ export class AdminPayrollReportPage implements OnInit {
   // place: a day can fold in more than one ShiftAssignment (split shifts),
   // and this write only targets one of them, so the day's true total can
   // only come from the server. Deliberately doesn't reset expandedIds like
-  // run() does, so the row the admin is editing stays open.
+  // run() does, so the row the admin is editing stays open. Only called for
+  // a day that has a ShiftAssignment — see the template's shiftAssignmentId
+  // !== null guard, which is what makes the input editable at all.
   updateSickHours(day: DailyHoursDto, rawValue: string): void {
+    const shiftAssignmentId = day.shiftAssignmentId;
+    if (shiftAssignmentId === null) {
+      return;
+    }
+
     const hours = parseFloat(rawValue);
     if (rawValue.trim() === '' || isNaN(hours) || hours < 0) {
       this.sickHoursError.set('Sick hours must be a number 0 or greater.');
@@ -198,13 +227,13 @@ export class AdminPayrollReportPage implements OnInit {
     }
 
     this.sickHoursError.set(null);
-    this.savingSickHoursFor.update((current) => new Set(current).add(day.shiftAssignmentId));
+    this.savingSickHoursFor.update((current) => new Set(current).add(shiftAssignmentId));
 
-    this.shiftAssignmentsApi.setSickMinutes(day.shiftAssignmentId, { sickMinutes: Math.round(hours * 60) }).subscribe({
+    this.shiftAssignmentsApi.setSickMinutes(shiftAssignmentId, { sickMinutes: Math.round(hours * 60) }).subscribe({
       next: () => {
         this.savingSickHoursFor.update((current) => {
           const next = new Set(current);
-          next.delete(day.shiftAssignmentId);
+          next.delete(shiftAssignmentId);
           return next;
         });
         this.reportsApi.getHoursReport(this.locationCode, this.startDate, this.endDate).subscribe({
@@ -216,7 +245,7 @@ export class AdminPayrollReportPage implements OnInit {
         this.sickHoursError.set(err?.error ?? 'Failed to save sick hours.');
         this.savingSickHoursFor.update((current) => {
           const next = new Set(current);
-          next.delete(day.shiftAssignmentId);
+          next.delete(shiftAssignmentId);
           return next;
         });
       },
