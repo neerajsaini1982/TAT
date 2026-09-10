@@ -27,129 +27,6 @@
 
 <p class="result-count">{{ filteredAccounts().length }} of {{ accounts().length }} shown</p>
 
-@if (showForm()) {
-  <mat-card class="form-card">
-    <mat-card-content>
-      <form (ngSubmit)="save()" class="form" autocomplete="off">
-        <div class="photo-field">
-          <div class="photo-box">
-            <video #cameraVideo class="camera-video" [class.hidden]="!cameraActive()" playsinline autoplay muted></video>
-            @if (!cameraActive()) {
-              @if (photoPreviewUrl()) {
-                <img [src]="photoPreviewUrl()" alt="Employee photo" />
-              } @else {
-                <mat-icon>person</mat-icon>
-              }
-            }
-          </div>
-          <div class="photo-actions">
-            @if (cameraActive()) {
-              <button mat-flat-button color="primary" type="button" (click)="capturePhoto()">Capture</button>
-              <button mat-button type="button" (click)="closeCamera()">Cancel</button>
-            } @else {
-              <button mat-stroked-button type="button" (click)="photoInput.click()">
-                {{ photoPreviewUrl() ? 'Change Photo' : 'Add Photo' }}
-              </button>
-              <button mat-stroked-button type="button" (click)="openCamera()">Take Photo</button>
-              @if (photoPreviewUrl()) {
-                <button mat-button type="button" (click)="removePhoto()">Remove</button>
-              }
-              <input #photoInput type="file" accept="image/jpeg,image/png" hidden (change)="onPhotoSelected($event)" />
-            }
-            @if (cameraError()) {
-              <p class="error photo-error">{{ cameraError() }}</p>
-            }
-          </div>
-        </div>
-        @if (form.role !== 'Employee' && (editingId() === null || promotingFromEmployee())) {
-          <mat-form-field appearance="outline">
-            <mat-label>Username</mat-label>
-            <input matInput name="username" [(ngModel)]="form.username" required />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Password</mat-label>
-            <input matInput type="password" name="password" [(ngModel)]="form.password" required />
-          </mat-form-field>
-        } @else if (form.role !== 'Employee') {
-          <mat-form-field appearance="outline">
-            <mat-label>Username</mat-label>
-            <input matInput name="username" [(ngModel)]="form.username" disabled />
-          </mat-form-field>
-        } @else if (editingId() !== null) {
-          <mat-form-field appearance="outline">
-            <mat-label>Username</mat-label>
-            <input matInput name="username" [(ngModel)]="form.username" required />
-          </mat-form-field>
-        }
-        <mat-form-field appearance="outline">
-          <mat-label>First Name</mat-label>
-          <input matInput name="firstName" [(ngModel)]="form.firstName" required />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Last Name</mat-label>
-          <input matInput name="lastName" [(ngModel)]="form.lastName" required />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Email</mat-label>
-          <input matInput type="email" name="email" [(ngModel)]="form.email" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Phone</mat-label>
-          <input matInput name="phone" [(ngModel)]="form.phone" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Role</mat-label>
-          <mat-select name="role" [(ngModel)]="form.role">
-            @for (r of roles; track r) {
-              <mat-option [value]="r">{{ r }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Hourly Rate</mat-label>
-          <input matInput type="number" step="0.01" min="0" name="hourlyRate" [(ngModel)]="form.hourlyRate" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>{{ form.ssnMasked ? 'New SSN (leave blank to keep on file)' : 'SSN' }}</mat-label>
-          <input matInput name="ssn" [(ngModel)]="form.ssn" maxlength="9" placeholder="9 digits, no dashes" />
-          @if (form.ssnMasked) {
-            <mat-hint>On file: {{ form.ssnMasked }}</mat-hint>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Date of Birth</mat-label>
-          <input matInput type="date" name="dateOfBirth" [(ngModel)]="form.dateOfBirth" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Hire Date</mat-label>
-          <input matInput type="date" name="hireDate" [(ngModel)]="form.hireDate" />
-        </mat-form-field>
-        <mat-form-field appearance="outline">
-          <mat-label>Employment Type</mat-label>
-          <mat-select name="employmentType" [(ngModel)]="form.employmentType">
-            <mat-option [value]="null">—</mat-option>
-            @for (t of employmentTypes; track t) {
-              <mat-option [value]="t">{{ t === 'FullTime' ? 'Full Time' : 'Part Time' }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        @if (editingId() !== null) {
-          <mat-slide-toggle name="isActive" [(ngModel)]="form.isActive">Active</mat-slide-toggle>
-          <mat-slide-toggle name="isOnShiftSchedule" [(ngModel)]="form.isOnShiftSchedule">On Shift Schedule</mat-slide-toggle>
-          <mat-slide-toggle name="canSeeAllSchedules" [(ngModel)]="form.canSeeAllSchedules">Can See Others' Schedules</mat-slide-toggle>
-        }
-        @if (error()) {
-          <p class="error">{{ error() }}</p>
-        }
-        <div class="form-actions">
-          <button mat-flat-button color="primary" type="submit">Save</button>
-          <button mat-button type="button" (click)="cancel()">Cancel</button>
-        </div>
-      </form>
-    </mat-card-content>
-  </mat-card>
-}
-
 <div class="table-scroll">
 <table mat-table [dataSource]="filteredAccounts()" class="mat-elevation-z1">
   <ng-container matColumnDef="serial">
@@ -177,11 +54,6 @@
     <td mat-cell *matCellDef="let a">{{ a.lastName }}</td>
   </ng-container>
 
-  <ng-container matColumnDef="role">
-    <th mat-header-cell *matHeaderCellDef>Role</th>
-    <td mat-cell *matCellDef="let a">{{ a.role }}</td>
-  </ng-container>
-
   <ng-container matColumnDef="userCode">
     <th mat-header-cell *matHeaderCellDef>User Code</th>
     <td mat-cell *matCellDef="let a">
@@ -197,21 +69,6 @@
         </button>
       }
     </td>
-  </ng-container>
-
-  <ng-container matColumnDef="isActive">
-    <th mat-header-cell *matHeaderCellDef>Active</th>
-    <td mat-cell *matCellDef="let a">{{ a.isActive ? 'Yes' : 'No' }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="isOnShiftSchedule">
-    <th mat-header-cell *matHeaderCellDef>On Shift Schedule</th>
-    <td mat-cell *matCellDef="let a">{{ a.isOnShiftSchedule ? 'Yes' : 'No' }}</td>
-  </ng-container>
-
-  <ng-container matColumnDef="canSeeAllSchedules">
-    <th mat-header-cell *matHeaderCellDef>Sees Others' Schedules</th>
-    <td mat-cell *matCellDef="let a">{{ a.canSeeAllSchedules ? 'Yes' : 'No' }}</td>
   </ng-container>
 
   <ng-container matColumnDef="actions">

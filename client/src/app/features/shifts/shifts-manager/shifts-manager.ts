@@ -7,7 +7,6 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatCardModule } from '@angular/material/card';
 
 import { BreakKind, ScheduledBreakDto, ShiftsApi, ShiftDto } from '../../../core/shifts-api';
 import { LocationsApi, LocationDto } from '../../../core/locations-api';
@@ -50,6 +49,21 @@ const rowsToApi = (rows: ScheduledBreakRow[]): ScheduledBreakDto[] =>
 const rowsFromApi = (breaks: ScheduledBreakDto[]): ScheduledBreakRow[] =>
   breaks.map((b) => ({ kind: b.kind, start: toInputTime(b.startTime), end: toInputTime(b.endTime) }));
 
+// "09:00"–"17:00" -> "8h", "8h 30m". Wraps past midnight for overnight shifts.
+const durationLabel = (startTime: string, endTime: string): string => {
+  const mins = (t: string): number => {
+    const [h, m] = t.split(':');
+    return Number(h) * 60 + Number(m);
+  };
+  let total = mins(endTime) - mins(startTime);
+  if (total <= 0) {
+    total += 24 * 60;
+  }
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return m === 0 ? `${h}h` : `${h}h ${m}m`;
+};
+
 const scheduledBreaksLabel = (breaks: ScheduledBreakDto[]): string =>
   breaks.length === 0
     ? 'None'
@@ -69,7 +83,6 @@ const scheduledBreaksLabel = (breaks: ScheduledBreakDto[]): string =>
     MatInputModule,
     MatSelectModule,
     MatSlideToggleModule,
-    MatCardModule,
   ],
   templateUrl: './shifts-manager.html',
   styleUrl: './shifts-manager.scss',
@@ -91,8 +104,12 @@ export class ShiftsManager implements OnInit {
   protected readonly toInputTime = toInputTime;
   protected readonly scheduledBreaksLabel = scheduledBreaksLabel;
 
+  protected durationLabel(shift: ShiftDto): string {
+    return durationLabel(shift.startTime, shift.endTime);
+  }
+
   get columns(): string[] {
-    const base = ['name', 'startTime', 'endTime', 'scheduledBreaks', 'isActive', 'actions'];
+    const base = ['name', 'span', 'scheduledBreaks', 'isActive', 'actions'];
     return this.lockedLocationCode ? base : ['locationCode', ...base];
   }
 

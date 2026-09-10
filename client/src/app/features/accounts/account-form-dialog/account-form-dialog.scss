@@ -1,0 +1,246 @@
+// Modernist: square edges, ruled sections, flush-left labels, one red accent.
+// The dialog surface itself (backdrop, elevation, corner radius) comes from
+// MatDialog + the app-wide .mat-mdc-dialog-container theme; this component
+// only owns the header/section/footer chrome inside it.
+//
+// The surface is forced into a column flexbox with its own overflow hidden
+// so the panel can never scroll as a whole — only .form-body (below) does.
+// Without this, the surface's default overflow plus form-body's own
+// overflow-y:auto produce two independent scrollbars.
+:host {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(920px, calc(100vw - 48px));
+}
+
+:host ::ng-deep .mdc-dialog__surface {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.form-head {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  margin: 0;
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+}
+
+.form-head-text {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.form-kicker {
+  display: block;
+  font: var(--mat-sys-label-small);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mat-sys-primary);
+  margin-bottom: 4px;
+}
+
+.form-head h3 {
+  font: var(--mat-sys-headline-small);
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+.form-close {
+  flex: none;
+  margin: -4px -8px 0 0;
+}
+
+.form-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 !important;
+
+  // Scrolls when content is taller than the dialog (small screens, lots of
+  // sections), but never shows a visible scrollbar — the modernist design
+  // has no room for one, and there's always visual room to scroll (bottom
+  // edge cut by .form-actions) as a hint.
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.form-section {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.form-legend {
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+  margin: 0 0 12px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 16px;
+  row-gap: 4px;
+
+  mat-form-field {
+    width: 100%;
+  }
+
+  .span-2 {
+    grid-column: 1 / -1;
+  }
+}
+
+.toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px 24px;
+}
+
+.rate-prefix {
+  color: var(--mat-sys-on-surface-variant);
+  padding-left: 2px;
+}
+
+.form-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background: var(--mat-sys-surface-container-lowest);
+  border-top: 2px solid var(--mat-sys-on-surface);
+
+  button {
+    min-width: 112px;
+  }
+}
+
+.required-note {
+  margin-left: auto;
+  font: var(--mat-sys-label-small);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 0;
+}
+
+.form-error {
+  margin: 16px 24px 0;
+  padding: 10px 12px;
+  font-weight: 600;
+  background: var(--mat-sys-error-container);
+  border-left: 4px solid var(--mat-sys-error);
+}
+
+.photo-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+// Standard passport photo proportions (35mm x 45mm).
+.photo-box {
+  width: 116px;
+  height: 149px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--mat-sys-on-surface);
+  overflow: hidden;
+  background: var(--mat-sys-surface-variant);
+  color: var(--mat-sys-on-surface-variant);
+
+  img,
+  .camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .camera-video.hidden {
+    display: none;
+  }
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+.photo-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+
+  button {
+    min-width: 148px;
+  }
+}
+
+.photo-hint {
+  margin: 0;
+  max-width: 260px;
+  font: var(--mat-sys-body-small);
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.photo-error {
+  max-width: 260px;
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  :host {
+    width: 100vw;
+  }
+
+  .form-head,
+  .form-section,
+  .form-actions {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-error {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+
+  .photo-field {
+    gap: 16px;
+  }
+
+  .photo-actions button {
+    min-width: 132px;
+  }
+}
