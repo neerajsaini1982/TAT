@@ -1,10 +1,55 @@
-.header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
+// Break out of the shell's 960px .content column — the shift roster is a
+// wide table and the page furniture should line up with it.
+:host {
+  display: block;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 24px 24px 64px;
+}
 
-  h2 {
-    margin: 0;
+// Title band: kicker over title, closed by a 2px rule — same page furniture
+// as the payroll report.
+.page-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+}
+
+.back-link {
+  margin-left: -12px;
+  margin-top: 6px;
+  flex: 0 0 auto;
+}
+
+.page-head-text {
+  min-width: 0;
+}
+
+.kicker {
+  margin: 0 0 4px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mat-sys-primary);
+}
+
+.page-head h2 {
+  margin: 0;
+  font: var(--mat-sys-headline-medium);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 860px) {
+  :host {
+    padding: 16px 16px 48px;
   }
 }

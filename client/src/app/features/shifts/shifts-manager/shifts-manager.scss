@@ -1,21 +1,64 @@
-.header {
+// Filters and the primary action sit directly on the ground, flush left —
+// the title band's rule above already frames them, so no card.
+.toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
 }
 
 .location-filter {
-  min-width: 220px;
+  min-width: 240px;
+}
+
+.result-count {
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .spacer {
   flex: 1 1 auto;
 }
 
-.form-card {
-  max-width: 640px;
+.add-btn {
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 0;
+}
+
+.kicker {
+  margin: 0 0 4px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mat-sys-primary);
+}
+
+// The editor is a squared panel closed by a 2px top rule rather than a
+// floating card — it belongs to the page, not above it.
+.form-panel {
+  max-width: 720px;
+  margin-bottom: 32px;
+  padding: 20px 24px 24px;
+  background: var(--mat-sys-surface);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-top: 2px solid var(--mat-sys-on-surface);
+}
+
+.form-panel-head {
   margin-bottom: 16px;
+
+  h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
 }
 
 .form {
@@ -24,31 +67,52 @@
   gap: 4px;
 }
 
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 16px;
+}
+
+.field-name {
+  grid-column: 1 / -1;
+}
+
 .form-actions {
   display: flex;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  .mat-mdc-unelevated-button {
+    height: 44px;
+    padding: 0 24px;
+    border-radius: 0;
+  }
 }
 
 .breaks-section {
-  margin: 8px 0;
-  padding: 12px;
+  margin: 8px 0 4px;
+  padding: 16px;
   border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 8px;
+  border-left: 3px solid var(--mat-sys-on-surface);
+  border-radius: 0;
+  background: var(--mat-sys-surface-container-low);
 }
 
 .breaks-label {
   display: block;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--mat-sys-on-surface-variant);
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .breaks-empty {
   font-size: 13px;
   color: var(--mat-sys-on-surface-variant);
-  font-style: italic;
   margin: 0 0 8px;
 }
 
@@ -56,9 +120,10 @@
   display: flex;
   align-items: baseline;
   gap: 8px;
+  flex-wrap: wrap;
 
   .break-kind {
-    min-width: 110px;
+    min-width: 120px;
   }
 }
 
@@ -70,9 +135,285 @@
 
 .error {
   color: var(--mat-sys-error);
-  margin: 0;
+  font-weight: 600;
+  margin: 8px 0 0;
 }
 
-table {
+// ---------------------------------------------------------------------------
+// Roster table
+// ---------------------------------------------------------------------------
+.table-container {
+  border-top: 2px solid var(--mat-sys-on-surface);
+  background: var(--mat-sys-surface);
+  overflow-x: auto;
+}
+
+.shifts-table {
   width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+
+  th,
+  td {
+    padding: 14px 16px;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  th {
+    background: transparent;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+    white-space: nowrap;
+    border-bottom: 1px solid var(--mat-sys-on-surface);
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .shift-row:hover {
+    background: var(--mat-sys-surface-container-low);
+  }
+
+  // An inactive shift stays legible but visibly steps back.
+  .shift-row.is-inactive td:not(.actions-cell) {
+    opacity: 0.55;
+  }
+}
+
+.mat-column-locationCode {
+  width: 110px;
+}
+
+.loc-code {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.mat-column-name {
+  width: 240px;
+}
+
+.name-cell {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+.mat-column-span {
+  width: 190px;
+}
+
+// Start and end read as one span, with the shift's length underneath as the
+// figure an admin actually compares between shifts.
+.span-time {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.span-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
+
+.mat-column-scheduledBreaks {
+  width: auto;
+  min-width: 220px;
+}
+
+.breaks-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+// Breaks read as small squared labels instead of one comma-run sentence, so
+// a shift with three windows still scans as a single column.
+.tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tag-lunch {
+  border-color: var(--mat-sys-on-surface);
+  color: var(--mat-sys-on-surface);
+}
+
+.none {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.mat-column-isActive {
+  width: 128px;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  background: var(--mat-sys-primary);
+  vertical-align: 1px;
+
+  &.is-off {
+    background: var(--mat-sys-outline);
+  }
+}
+
+.status-text {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  &.is-off {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.mat-column-actions {
+  width: 152px;
+  text-align: right;
+}
+
+.actions-cell {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.empty {
+  margin: 0;
+  padding: 56px 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 15px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+// ---------------------------------------------------------------------------
+// Mobile: each shift becomes a stacked block — name on top, then labelled
+// pairs from each cell's data-label. Same markup, one table.
+// ---------------------------------------------------------------------------
+@media (max-width: 860px) {
+  .toolbar {
+    gap: 12px;
+
+    .mat-mdc-form-field {
+      flex: 1 1 100%;
+    }
+  }
+
+  .add-btn {
+    width: 100%;
+  }
+
+  .form-panel {
+    padding: 16px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .break-row .mat-mdc-form-field {
+    flex: 1 1 140px;
+  }
+
+  .table-container {
+    border-top: none;
+    overflow-x: visible;
+  }
+
+  .shifts-table {
+    display: block;
+
+    thead {
+      display: none;
+    }
+
+    tbody {
+      display: block;
+    }
+
+    th,
+    td {
+      padding: 0;
+      border-bottom: none;
+    }
+  }
+
+  .shift-row {
+    position: relative;
+    display: block;
+    padding: 16px 16px 12px;
+    margin-bottom: 12px;
+    background: var(--mat-sys-surface);
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-top: 2px solid var(--mat-sys-on-surface);
+  }
+
+  .shifts-table td {
+    display: block;
+    width: auto !important;
+
+    &[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      margin: 12px 0 2px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .name-cell {
+    padding-right: 120px !important;
+    font-size: 18px;
+  }
+
+  .breaks-cell {
+    display: block;
+
+    .tag {
+      margin: 0 6px 6px 0;
+    }
+  }
+
+  .actions-cell {
+    position: absolute;
+    top: 8px;
+    right: 6px;
+    text-align: right;
+  }
 }

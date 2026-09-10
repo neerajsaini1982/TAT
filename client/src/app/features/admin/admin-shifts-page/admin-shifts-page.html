@@ -1,8 +1,11 @@
-<div class="header">
-  <a mat-icon-button [routerLink]="['/', locationCode, 'admin']" aria-label="Back">
+<div class="page-head">
+  <a class="back-link" mat-icon-button [routerLink]="['/', locationCode, 'admin']" aria-label="Back">
     <mat-icon>arrow_back</mat-icon>
   </a>
-  <h2>Shifts — {{ locationCode }}</h2>
+  <div class="page-head-text">
+    <p class="kicker">{{ locationCode }} · Administration</p>
+    <h2>Shifts</h2>
+  </div>
 </div>
 
 <app-shifts-manager [lockedLocationCode]="locationCode" />
