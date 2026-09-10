@@ -135,7 +135,7 @@ export class AccountsManager implements OnInit, OnDestroy {
   });
 
   get columns(): string[] {
-    const base = ['serial', 'username', 'firstName', 'lastName', 'role', 'userCode', 'isActive', 'isOnShiftSchedule', 'canSeeAllSchedules', 'actions'];
+    const base = ['serial', 'username', 'firstName', 'lastName', 'role', 'userCode', 'actions'];
     return this.lockedLocationCode ? base : ['serial', 'locationCode', ...base.slice(1)];
   }
 
