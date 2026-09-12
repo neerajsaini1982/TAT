@@ -31,6 +31,19 @@
 @use '@fontsource/archivo/800.css' as archivo-800;
 @use '@fontsource/material-icons/index.css' as material-icons;
 
+// Self-hosted for the same offline-LAN reason as Archivo above, but only
+// ever used by the public Home/marketing page (home.scss) — every other
+// screen stays on Archivo/the Modernist theme untouched.
+@use '@fontsource/big-shoulders-display/600.css' as bsd-600;
+@use '@fontsource/big-shoulders-display/700.css' as bsd-700;
+@use '@fontsource/big-shoulders-display/800.css' as bsd-800;
+@use '@fontsource/ibm-plex-sans/400.css' as plex-sans-400;
+@use '@fontsource/ibm-plex-sans/500.css' as plex-sans-500;
+@use '@fontsource/ibm-plex-sans/600.css' as plex-sans-600;
+@use '@fontsource/ibm-plex-sans/700.css' as plex-sans-700;
+@use '@fontsource/ibm-plex-mono/500.css' as plex-mono-500;
+@use '@fontsource/ibm-plex-mono/600.css' as plex-mono-600;
+
 // @fontsource/material-icons only ships the @font-face — Google's old
 // stylesheet also supplied this `.material-icons` rule, without which
 // mat-icon renders its raw ligature text ("edit", "dark_mode").

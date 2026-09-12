@@ -1,43 +1,182 @@
-<div class="cards">
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Super Admin</mat-card-title>
-      <mat-card-subtitle>Manage locations and accounts across the whole system</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-actions>
-      <a mat-flat-button color="primary" routerLink="/sa">Continue</a>
-    </mat-card-actions>
-  </mat-card>
+<header class="site-header">
+  <div class="wrap header-row">
+    <div class="wordmark">
+      <span class="mark">TAT</span>
+      <span class="tagline">Time &amp; Attendance System</span>
+    </div>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#why">Why TAT</a>
+    </nav>
+    <a class="btn cta-btn" href="#contact">Request a Demo</a>
+  </div>
+</header>
 
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Admin</mat-card-title>
-      <mat-card-subtitle>Manage accounts and settings for your location</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content>
-      <form (ngSubmit)="goToAdmin()" class="form" autocomplete="off">
-        <mat-form-field appearance="outline">
-          <mat-label>Location Code</mat-label>
-          <input matInput name="adminLocationCode" [(ngModel)]="adminLocationCode" required />
-        </mat-form-field>
-        <button mat-flat-button color="primary" type="submit">Continue</button>
-      </form>
-    </mat-card-content>
-  </mat-card>
+<main>
+  <section class="hero wrap">
+    <div>
+      <div class="eyebrow">For hourly &amp; multi-location teams</div>
+      <h1>Scheduling and time clocks, built for teams that <span class="accent-text">punch in</span>.</h1>
+      <p class="sub">TAT is a straightforward time &amp; attendance system: shift scheduling, break-accurate time clocks, availability, and payroll-ready hour reports — in one simple tool, priced for small businesses instead of enterprise budgets.</p>
+      <div class="hero-actions">
+        <a class="btn cta-btn" href="#contact">Request a Demo</a>
+        <a class="btn cta-btn ghost" href="#features">See What's Inside</a>
+      </div>
+      <p class="hero-microcopy">No sales pressure — just a walkthrough with your own schedule.</p>
+    </div>
+    <div class="card-mock" aria-hidden="true">
+      <span class="stamp">ON TIME</span>
+      <div class="card-mock-head">
+        <span class="who">J. Alvarez — Front Counter</span>
+        <span class="week mono">WK OF OCT 12</span>
+      </div>
+      <div class="punch-row"><span class="label">Clock In</span><span class="time mono tab-nums">7:58 AM</span></div>
+      <div class="punch-row"><span class="label">Lunch Out</span><span class="time mono tab-nums">12:01 PM</span></div>
+      <div class="punch-row"><span class="label">Lunch In</span><span class="time mono tab-nums">12:31 PM</span></div>
+      <div class="punch-row"><span class="label">Clock Out</span><span class="time mono tab-nums">4:02 PM</span></div>
+    </div>
+  </section>
 
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Employee</mat-card-title>
-      <mat-card-subtitle>Clock in and out for your shift</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-content>
-      <form (ngSubmit)="goToEmployee()" class="form" autocomplete="off">
-        <mat-form-field appearance="outline">
-          <mat-label>Location Code</mat-label>
-          <input matInput name="employeeLocationCode" [(ngModel)]="employeeLocationCode" required />
-        </mat-form-field>
-        <button mat-flat-button color="primary" type="submit">Continue</button>
+  <section id="features" class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">What's inside</div>
+      <h2>Everything a shift-based team actually needs</h2>
+      <p>No modules to bolt on later — scheduling, the clock, and reporting already talk to each other.</p>
+    </div>
+    <div class="ticket-grid">
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="1.5"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2.5" x2="8" y2="5.5"/><line x1="16" y1="2.5" x2="16" y2="5.5"/><rect x="6.5" y="12" width="3.5" height="3" /><rect x="14" y="12" width="3.5" height="3"/></svg>
+        <h3>Shift Scheduling</h3>
+        <p>Build the week's roster once, publish it, and every employee sees their shifts instantly.</p>
+      </div>
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+        <h3>Time Clock &amp; Breaks</h3>
+        <p>Employees punch in, out, and for breaks and lunches — timestamped to the minute, not the guess.</p>
+      </div>
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18"/><path d="M8 14h2M14 14h2M8 17h2M14 17h2"/></svg>
+        <h3>Availability</h3>
+        <p>Employees submit their availability every week — admins schedule around it, not against it.</p>
+      </div>
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+        <h3>Payroll-Ready Reports</h3>
+        <p>Worked hours, breaks, lunches, sick time, and overtime — totaled per employee and ready to hand to payroll.</p>
+      </div>
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-6.1 7-11.6A7 7 0 0 0 5 9.4C5 14.9 12 21 12 21z"/><circle cx="12" cy="9.3" r="2.4"/></svg>
+        <h3>Multi-Location</h3>
+        <p>Run every location from one account — each with its own roster, settings, and reports.</p>
+      </div>
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1-4 4-6 7.5-6s6.5 2 7.5 6"/></svg>
+        <h3>Employee Self-Service</h3>
+        <p>Employees check their schedule, update contact info, and pull their own hours — no calls to the office.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="why">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Why teams pick TAT</div>
+        <h2>Built for the floor, not the boardroom</h2>
+      </div>
+      <div class="why-grid">
+        <div class="why-item">
+          <span class="num mono">01</span>
+          <h3>Built for hourly crews</h3>
+          <p>Not a project-management tool bent into a timesheet — every screen is built around shifts, punches, and payroll.</p>
+        </div>
+        <div class="why-item">
+          <span class="num mono">02</span>
+          <h3>Priced for small teams</h3>
+          <p>Straightforward, affordable pricing — the kind a five-location shop can justify without a procurement meeting.</p>
+        </div>
+        <div class="why-item">
+          <span class="num mono">03</span>
+          <h3>Live in days, not months</h3>
+          <p>Set up your locations, roles, and schedules and start clocking in — no months-long rollout.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Getting started</div>
+      <h2>From request to running live in three steps</h2>
+    </div>
+    <div class="steps-grid">
+      <div class="step">
+        <span class="step-num mono">1</span>
+        <h3>Tell us about your team</h3>
+        <p>Locations, roles, and how shifts run today — a short conversation, not a form to guess your way through.</p>
+      </div>
+      <div class="step">
+        <span class="step-num mono">2</span>
+        <h3>We set it up with you</h3>
+        <p>A live walkthrough using your real locations and schedules — not a canned demo account.</p>
+      </div>
+      <div class="step">
+        <span class="step-num mono">3</span>
+        <h3>Go live</h3>
+        <p>Start scheduling, clocking in, and pulling hours — usually within days.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact" class="wrap">
+    <div class="contact-grid">
+      <div>
+        <div class="eyebrow">Get in touch</div>
+        <h2>See TAT running in your business</h2>
+        <p class="contact-note">Tell us a bit about your team and we'll set up a walkthrough with your own locations and shifts, not a generic demo account.</p>
+        <ul class="reassure-list">
+          <li>Your own locations &amp; shifts, not a canned demo</li>
+          <li>No obligation to continue</li>
+          <li>Opens your email client — nothing sent automatically</li>
+        </ul>
+      </div>
+      <form class="card-mock" (submit)="onSubmitDemoRequest($event)">
+        <div class="row-2">
+          <div class="field">
+            <label for="biz">Business name</label>
+            <input id="biz" name="biz" type="text" required autocomplete="organization" />
+          </div>
+          <div class="field">
+            <label for="name">Your name</label>
+            <input id="name" name="name" type="text" required autocomplete="name" />
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" required autocomplete="email" />
+          </div>
+          <div class="field">
+            <label for="phone">Phone (optional)</label>
+            <input id="phone" name="phone" type="tel" autocomplete="tel" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="msg">What are you hoping to solve?</label>
+          <textarea id="msg" name="msg" placeholder="E.g. we run 3 locations and still schedule by text message"></textarea>
+        </div>
+        <div class="submit-row">
+          <button type="submit" class="btn cta-btn">Request a Demo</button>
+          <span class="form-note">Opens your email app</span>
+        </div>
       </form>
-    </mat-card-content>
-  </mat-card>
-</div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-row">
+    <span>TAT — Time &amp; Attendance System</span>
+    <span>Questions? <a href="mailto:neerajsaini1982@gmail.com">neerajsaini1982@gmail.com</a></span>
+    <span>&copy; 2026 TAT</span>
+  </div>
+</footer>
