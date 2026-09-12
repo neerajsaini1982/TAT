@@ -64,11 +64,31 @@ public class ReportsController(AppDbContext db) : ControllerBase
 
         var assignments = assignmentsQuery.ToList();
 
+        // Sick time recorded for a day with no ShiftAssignment at all (see
+        // SickTimeEntriesController) — folded into the same report so an
+        // employee out sick on an unscheduled day still shows up.
+        var sickEntriesQuery = db.SickTimeEntries
+            .Include(s => s.Account)
+            .Where(s => s.Account!.LocationId == location.Id && s.Date >= startDate && s.Date <= endDate);
+        if (!canSeeEveryone)
+        {
+            sickEntriesQuery = sickEntriesQuery.Where(s => s.AccountId == callerAccountId);
+        }
+
+        var sickEntries = sickEntriesQuery.ToList();
+
         var assignmentIds = assignments.Select(a => a.Id).ToList();
         var entriesByAssignmentId = db.TimeEntries
             .Include(t => t.Segments)
             .Where(t => assignmentIds.Contains(t.ShiftAssignmentId))
             .ToDictionary(t => t.ShiftAssignmentId);
+
+        var accountsById = assignments.Select(a => a.Account!)
+            .Concat(sickEntries.Select(s => s.Account!))
+            .GroupBy(a => a.Id)
+            .ToDictionary(g => g.Key, g => g.First());
+        var assignmentsByAccountId = assignments.ToLookup(a => a.AccountId);
+        var sickEntriesByAccountId = sickEntries.ToLookup(s => s.AccountId);
 
         // Drop employees with nothing to show for the range (no net worked
         // time, e.g. scheduled but never clocked in, or absent) — but keep
@@ -76,9 +96,15 @@ public class ReportsController(AppDbContext db) : ControllerBase
         // not any time has accrued yet, or clocked in and not yet clocked
         // out), or have sick hours recorded, since those are still worth an
         // admin's attention/payroll entry even at 0 worked minutes.
-        var report = assignments
-            .GroupBy(a => a.AccountId)
-            .Select(g => BuildEmployeeReport(g.First().Account!, g.ToList(), entriesByAssignmentId, breakLimitMinutes, lunchLimitMinutes, overtimeThresholdMinutes))
+        var report = accountsById.Keys
+            .Select(accountId => BuildEmployeeReport(
+                accountsById[accountId],
+                assignmentsByAccountId[accountId].ToList(),
+                sickEntriesByAccountId[accountId].ToList(),
+                entriesByAssignmentId,
+                breakLimitMinutes,
+                lunchLimitMinutes,
+                overtimeThresholdMinutes))
             .Where(e => e.TotalNetWorkedMinutes > 0 || e.OpenEntryDays > 0 || e.TotalSickMinutes > 0)
             .OrderBy(e => e.FullName)
             .ToList();
@@ -89,15 +115,31 @@ public class ReportsController(AppDbContext db) : ControllerBase
     private static EmployeeHoursReportDto BuildEmployeeReport(
         Account account,
         List<ShiftAssignment> assignments,
+        List<SickTimeEntry> sickEntries,
         Dictionary<int, TimeEntry> entriesByAssignmentId,
         int breakLimitMinutes,
         int lunchLimitMinutes,
         int overtimeThresholdMinutes)
     {
-        var days = assignments
-            .GroupBy(a => a.Date)
-            .OrderBy(g => g.Key)
-            .Select(g => BuildDay(g.Key, g.ToList(), entriesByAssignmentId, breakLimitMinutes, lunchLimitMinutes, overtimeThresholdMinutes))
+        // Union of every date with either a shift assignment or a manually
+        // recorded sick entry — a date can have one, the other, or both.
+        var dates = assignments.Select(a => a.Date)
+            .Concat(sickEntries.Select(s => s.Date))
+            .Distinct()
+            .OrderBy(d => d);
+
+        var assignmentsByDate = assignments.ToLookup(a => a.Date);
+        var sickEntriesByDate = sickEntries.ToLookup(s => s.Date);
+
+        var days = dates
+            .Select(date => BuildDay(
+                date,
+                assignmentsByDate[date].ToList(),
+                sickEntriesByDate[date].ToList(),
+                entriesByAssignmentId,
+                breakLimitMinutes,
+                lunchLimitMinutes,
+                overtimeThresholdMinutes))
             .ToList();
 
         return new EmployeeHoursReportDto(
@@ -116,9 +158,12 @@ public class ReportsController(AppDbContext db) : ControllerBase
 
     // Usually one assignment per employee per date, but folds in more than
     // one just in case (e.g. a split shift) by summing their entries.
+    // dayAssignments can be empty — a date with only a manually recorded
+    // SickTimeEntry and no assignment at all.
     private static DailyHoursDto BuildDay(
         DateOnly date,
         List<ShiftAssignment> dayAssignments,
+        List<SickTimeEntry> daySickEntries,
         Dictionary<int, TimeEntry> entriesByAssignmentId,
         int breakLimitMinutes,
         int lunchLimitMinutes,
@@ -193,14 +238,20 @@ public class ReportsController(AppDbContext db) : ControllerBase
         // Split shifts (rare) fold multiple assignments into one day row;
         // sick minutes are summed across them, but an admin edit needs one
         // concrete assignment to target — the first, same tiebreak as
-        // AbsenceNote above.
-        var sickMinutes = dayAssignments.Sum(a => a.SickMinutes);
-        var shiftAssignmentId = dayAssignments[0].Id;
+        // AbsenceNote above. No assignment at all (sick entered manually on
+        // an unscheduled day) leaves shiftAssignmentId null — nothing for
+        // the editable sick-hours field to target.
+        var sickMinutes = dayAssignments.Sum(a => a.SickMinutes) + daySickEntries.Sum(s => s.Minutes);
+        var shiftAssignmentId = dayAssignments.Count > 0 ? dayAssignments[0].Id : (int?)null;
+        var manualSickNotes = daySickEntries
+            .Where(s => !string.IsNullOrWhiteSpace(s.Note))
+            .Select(s => s.Note!)
+            .ToList();
 
         return new DailyHoursDto(
             date, workedMinutes, breakMinutes, lunchMinutes, netWorkedMinutes, overtimeMinutes,
             isAbsent, absenceNote, leftEarly, leftEarlyNote, stillClockedIn, hasLongBreak, hasLongLunch, notes,
-            sickMinutes, shiftAssignmentId);
+            sickMinutes, shiftAssignmentId, manualSickNotes);
     }
 
     private Location? ResolveLocation(string? locationCode)

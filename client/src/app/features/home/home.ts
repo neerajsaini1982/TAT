@@ -1,36 +1,39 @@
-import { Component, inject, isDevMode } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-
-import { DEV_DEFAULTS } from '../../core/dev-defaults';
+import { Component } from '@angular/core';
 
 @Component({
   selector: 'app-home',
-  imports: [FormsModule, RouterLink, MatCardModule, MatButtonModule, MatFormFieldModule, MatInputModule],
+  imports: [],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })
 export class Home {
-  private readonly router = inject(Router);
+  // Every real entry point is a location code typed directly into the URL
+  // (see app.routes.ts) — this page is public marketing only, so the only
+  // interactive thing on it is a demo-request form that hands off to email
+  // rather than posting anywhere.
+  protected onSubmitDemoRequest(event: SubmitEvent): void {
+    event.preventDefault();
+    const data = new FormData(event.target as HTMLFormElement);
+    const biz = ((data.get('biz') as string) ?? '').trim();
+    const contactName = ((data.get('name') as string) ?? '').trim();
+    const email = ((data.get('email') as string) ?? '').trim();
+    const phone = ((data.get('phone') as string) ?? '').trim();
+    const msg = ((data.get('msg') as string) ?? '').trim();
 
-  protected adminLocationCode = isDevMode() ? DEV_DEFAULTS.locationCode : '';
-  protected employeeLocationCode = isDevMode() ? DEV_DEFAULTS.locationCode : '';
-
-  goToAdmin(): void {
-    const code = this.adminLocationCode.trim().toLowerCase();
-    if (code) {
-      this.router.navigate(['/', code, 'admin']);
-    }
-  }
-
-  goToEmployee(): void {
-    const code = this.employeeLocationCode.trim().toLowerCase();
-    if (code) {
-      this.router.navigate(['/', code, 'employee']);
-    }
+    const subject = `Demo request — ${biz || 'New business'}`;
+    const bodyLines = [
+      `Business: ${biz}`,
+      `Contact: ${contactName}`,
+      `Email: ${email}`,
+      `Phone: ${phone || '(not provided)'}`,
+      '',
+      'What they want to solve:',
+      msg || '(not provided)',
+    ];
+    const mailto =
+      'mailto:neerajsaini1982@gmail.com' +
+      `?subject=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(bodyLines.join('\n'))}`;
+    window.location.href = mailto;
   }
 }

@@ -23,12 +23,19 @@ public record DailyHoursDto(
     bool HasLongBreak,
     bool HasLongLunch,
     List<string> Notes,
-    // Manually entered by an admin (ShiftAssignmentsController.SetSickMinutes),
-    // not derived from a clock. ShiftAssignmentId is the target for that
-    // write — usually the day's only assignment; see BuildDay for the rare
-    // multiple-assignment case.
+    // Manually entered by an admin, not derived from a clock — the sum of
+    // ShiftAssignment.SickMinutes (via SetSickMinutes, for a day the
+    // employee was scheduled) and any SickTimeEntry rows (via
+    // SickTimeEntriesController, for a day they weren't). ShiftAssignmentId
+    // is the target for the former write — usually the day's only
+    // assignment (see BuildDay for the rare multiple-assignment case) — and
+    // is null on a day with no assignment at all, i.e. sick time entered
+    // entirely through SickTimeEntriesController. ManualSickNotes carries
+    // the notes from any SickTimeEntry rows on this date, shown alongside
+    // the editable sick-hours field since those rows aren't editable there.
     int SickMinutes,
-    int ShiftAssignmentId);
+    int? ShiftAssignmentId,
+    List<string> ManualSickNotes);
 
 // Consolidated totals for one employee across the requested date range — the
 // top level of the drill-down report (see ReportsController). Days is the

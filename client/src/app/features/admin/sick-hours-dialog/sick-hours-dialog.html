@@ -1,0 +1,47 @@
+<div mat-dialog-title class="form-head">
+  <div class="form-head-text">
+    <span class="form-kicker">Payroll</span>
+    <h3>Add Sick Hours</h3>
+  </div>
+  <button mat-icon-button type="button" class="form-close" (click)="cancel()" aria-label="Close">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+<form (ngSubmit)="save()" autocomplete="off">
+  <mat-dialog-content class="form-body">
+    <section class="form-section">
+      <div class="form-grid">
+        <mat-form-field appearance="outline" class="span-2">
+          <mat-label>Employee</mat-label>
+          <mat-select name="accountId" [(ngModel)]="form.accountId" required>
+            @for (employee of employees(); track employee.id) {
+              <mat-option [value]="employee.id">{{ employee.firstName }} {{ employee.lastName }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Date</mat-label>
+          <input matInput type="date" name="date" [(ngModel)]="form.date" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Hours</mat-label>
+          <input matInput type="number" min="0.25" step="0.25" name="hours" [(ngModel)]="form.hours" required />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="span-2">
+          <mat-label>Comment / notes</mat-label>
+          <textarea matInput name="note" rows="3" [(ngModel)]="form.note" placeholder="e.g. called in sick"></textarea>
+        </mat-form-field>
+      </div>
+    </section>
+
+    @if (error()) {
+      <p class="error form-error">{{ error() }}</p>
+    }
+  </mat-dialog-content>
+
+  <div class="form-actions">
+    <button mat-flat-button color="primary" type="submit" [disabled]="saving()">Save</button>
+    <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
+    <span class="required-note">* Required fields</span>
+  </div>
+</form>

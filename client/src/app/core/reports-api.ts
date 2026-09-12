@@ -19,7 +19,8 @@ export interface DailyHoursDto {
   hasLongLunch: boolean;
   notes: string[];
   sickMinutes: number;
-  shiftAssignmentId: number;
+  shiftAssignmentId: number | null;
+  manualSickNotes: string[];
 }
 
 export interface EmployeeHoursReportDto {

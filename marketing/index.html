@@ -1,0 +1,758 @@
+<title>TAT</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+  :root {
+    --paper: #FFFFFF;
+    --paper-2: #FFF4E8;
+    --paper-3: #FFE4C2;
+    --ink: #211C16;
+    --ink-soft: #6E6255;
+    --steel: #EBDCC8;
+    --accent: #E8720C;
+    --accent-ink: #FFF8F0;
+    --shadow: 0 1px 0 rgba(33,28,22,0.06);
+    --shadow-lg: 0 14px 30px -12px rgba(33,28,22,0.22);
+    color-scheme: light;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #1A1512;
+      --paper-2: #241C15;
+      --paper-3: #33281C;
+      --ink: #F7EEE2;
+      --ink-soft: #BBAB98;
+      --steel: #44372A;
+      --accent: #FF8A3D;
+      --accent-ink: #271003;
+      --shadow: 0 1px 0 rgba(0,0,0,0.4);
+      --shadow-lg: 0 16px 34px -12px rgba(0,0,0,0.55);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #1A1512;
+    --paper-2: #241C15;
+    --paper-3: #33281C;
+    --ink: #F7EEE2;
+    --ink-soft: #BBAB98;
+    --steel: #44372A;
+    --accent: #FF8A3D;
+    --accent-ink: #271003;
+    --shadow: 0 1px 0 rgba(0,0,0,0.4);
+    --shadow-lg: 0 16px 34px -12px rgba(0,0,0,0.55);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { text-size-adjust: 100%; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    overflow-x: hidden;
+  }
+
+  .accent-text { color: var(--accent); }
+
+  .wrap {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 28px;
+  }
+
+  h1, h2, h3, .display {
+    font-family: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.01em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .mono, .tab-nums {
+    font-family: 'IBM Plex Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  a { color: inherit; }
+
+  button, .btn {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    border-bottom: 1px solid var(--steel);
+  }
+  .header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 20px 0;
+  }
+  .wordmark {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .wordmark .mark {
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    letter-spacing: 0.03em;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .wordmark .mark::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: inline-block;
+    animation: tick 2.4s steps(1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wordmark .mark::before { animation: none; }
+  }
+  @keyframes tick {
+    0%, 45% { opacity: 1; }
+    50%, 95% { opacity: 0.35; }
+    100% { opacity: 1; }
+  }
+  .wordmark .tagline {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    padding-left: 10px;
+    border-left: 1px solid var(--steel);
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+  nav a {
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 500;
+    color: var(--ink-soft);
+    position: relative;
+    padding-bottom: 2px;
+    transition: color 0.15s ease;
+  }
+  nav a::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 100%;
+    bottom: 0;
+    height: 1px;
+    background: var(--accent);
+    transition: right 0.18s ease;
+  }
+  nav a:hover { color: var(--ink); }
+  nav a:hover::after { right: 0; }
+  .cta-btn {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    padding: 11px 20px;
+    border-radius: 3px;
+    text-decoration: none;
+    display: inline-block;
+    box-shadow: var(--shadow);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+  }
+  .cta-btn:hover {
+    filter: brightness(1.06);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+  }
+  .cta-btn.ghost {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--steel);
+    box-shadow: none;
+  }
+  .cta-btn.ghost:hover { box-shadow: none; border-color: var(--ink-soft); }
+
+  /* ---------- hero ---------- */
+  .hero {
+    padding: 64px 0 56px;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 56px;
+    align-items: center;
+    position: relative;
+  }
+  .hero::before {
+    content: "";
+    position: absolute;
+    top: -120px;
+    right: -60px;
+    width: 480px;
+    height: 480px;
+    background: radial-gradient(circle at center, color-mix(in srgb, var(--accent) 14%, transparent) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .hero > * { position: relative; z-index: 1; }
+  .hero-microcopy {
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    margin: 14px 0 0;
+  }
+  .eyebrow {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  .hero h1 {
+    font-size: clamp(2.4rem, 4.6vw, 3.6rem);
+    line-height: 1.03;
+  }
+  .hero p.sub {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 400;
+    font-size: 1.08rem;
+    color: var(--ink-soft);
+    max-width: 46ch;
+    margin: 22px 0 30px;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+
+  /* punch-card mock */
+  .card-mock {
+    background: var(--paper-2);
+    border: 1px solid var(--steel);
+    border-radius: 4px;
+    padding: 26px 26px 22px;
+    position: relative;
+    box-shadow: var(--shadow-lg);
+  }
+  .card-mock::before, .card-mock::after {
+    content: "";
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    background: var(--paper);
+    border-radius: 50%;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  .card-mock::before { left: -11px; }
+  .card-mock::after { right: -11px; }
+  .card-mock-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px dashed var(--steel);
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+  }
+  .card-mock-head .who { font-weight: 600; font-size: 1rem; }
+  .card-mock-head .week {
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+  .punch-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--paper-3);
+    font-size: 0.92rem;
+  }
+  .punch-row:last-child { border-bottom: none; }
+  .punch-row .label {
+    color: var(--ink-soft);
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .punch-row .time {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  .stamp {
+    position: absolute;
+    top: 18px;
+    right: 30px;
+    border: 2px solid var(--accent);
+    color: var(--accent);
+    font-family: 'Big Shoulders Display', sans-serif;
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    padding: 3px 9px;
+    border-radius: 3px;
+    transform: rotate(6deg);
+  }
+
+  /* ---------- sections ---------- */
+  section { padding: 64px 0; }
+  .section-head {
+    max-width: 60ch;
+    margin-bottom: 40px;
+  }
+  .section-head .eyebrow { margin-bottom: 10px; }
+  .section-head h2 {
+    font-size: clamp(1.7rem, 3vw, 2.2rem);
+  }
+  .section-head p {
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+    margin-top: 12px;
+  }
+
+  #features { border-top: 1px solid var(--steel); }
+
+  .ticket-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 22px;
+  }
+  .ticket {
+    background: var(--paper-2);
+    border: 1px solid var(--steel);
+    border-radius: 4px;
+    padding: 26px 24px;
+    position: relative;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  }
+  .ticket:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--steel));
+  }
+  .ticket::before {
+    content: "";
+    position: absolute;
+    inset: 8px;
+    border: 1px dashed var(--paper-3);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .ticket .glyph {
+    width: 22px;
+    height: 22px;
+    padding: 14px;
+    box-sizing: content-box;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--accent) 11%, var(--paper));
+    margin-bottom: 18px;
+    color: var(--accent);
+    display: inline-flex;
+  }
+  .ticket h3 {
+    font-size: 1.15rem;
+    letter-spacing: 0.01em;
+    margin-bottom: 8px;
+  }
+  .ticket p {
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  /* why band */
+  #why {
+    background: var(--paper-2);
+    border-top: 1px solid var(--steel);
+    border-bottom: 1px solid var(--steel);
+  }
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 34px;
+  }
+  .why-item .num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    margin-bottom: 10px;
+    display: block;
+  }
+  .why-item h3 {
+    font-size: 1.05rem;
+    margin-bottom: 8px;
+    letter-spacing: 0.01em;
+  }
+  .why-item p {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    margin: 0;
+  }
+
+  /* how it works */
+  .steps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 32px;
+  }
+  .step {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .step .step-num {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+  .step h3 {
+    font-size: 1.05rem;
+    letter-spacing: 0.01em;
+  }
+  .step p {
+    color: var(--ink-soft);
+    font-size: 0.92rem;
+    margin: 0;
+  }
+
+  /* contact */
+  #contact { padding-bottom: 76px; }
+  .reassure-list {
+    list-style: none;
+    padding: 0;
+    margin: 22px 0 0;
+    display: grid;
+    gap: 11px;
+  }
+  .reassure-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+  .reassure-list li::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: 0 0 auto;
+  }
+  .contact-grid {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    gap: 48px;
+    align-items: start;
+  }
+  .contact-note {
+    font-size: 0.92rem;
+    color: var(--ink-soft);
+    margin-top: 14px;
+    max-width: 40ch;
+  }
+  form.card-mock {
+    display: grid;
+    gap: 16px;
+    padding: 30px;
+  }
+  form.card-mock::before, form.card-mock::after { display: none; }
+  .field {
+    display: grid;
+    gap: 6px;
+  }
+  .field label {
+    font-size: 0.74rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .field input, .field textarea {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 0.95rem;
+    padding: 11px 12px;
+    border: 1px solid var(--steel);
+    border-radius: 3px;
+    background: var(--paper);
+    color: var(--ink);
+    resize: vertical;
+  }
+  .field textarea { min-height: 84px; }
+  .row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .submit-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 4px;
+  }
+  .form-note {
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+  }
+
+  footer {
+    border-top: 1px solid var(--steel);
+    padding: 26px 0;
+  }
+  .footer-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+  }
+  footer a { text-decoration: underline; text-underline-offset: 2px; }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: 1fr; }
+    .contact-grid { grid-template-columns: 1fr; }
+    .row-2 { grid-template-columns: 1fr; }
+    nav { display: none; }
+  }
+</style>
+
+<header>
+  <div class="wrap header-row">
+    <div class="wordmark">
+      <span class="mark">TAT</span>
+      <span class="tagline">Time &amp; Attendance System</span>
+    </div>
+    <nav>
+      <a href="#features">Features</a>
+      <a href="#why">Why TAT</a>
+    </nav>
+    <a class="btn cta-btn" href="#contact">Request a Demo</a>
+  </div>
+</header>
+
+<main>
+  <section class="hero wrap">
+    <div>
+      <div class="eyebrow">For hourly &amp; multi-location teams</div>
+      <h1>Scheduling and time clocks, built for teams that <span class="accent-text">punch in</span>.</h1>
+      <p class="sub">TAT is a straightforward time &amp; attendance system: shift scheduling, break-accurate time clocks, availability, and payroll-ready hour reports — in one simple tool, priced for small businesses instead of enterprise budgets.</p>
+      <div class="hero-actions">
+        <a class="btn cta-btn" href="#contact">Request a Demo</a>
+        <a class="btn cta-btn ghost" href="#features">See What's Inside</a>
+      </div>
+      <p class="hero-microcopy">No sales pressure — just a walkthrough with your own schedule.</p>
+    </div>
+    <div class="card-mock" aria-hidden="true">
+      <span class="stamp">ON TIME</span>
+      <div class="card-mock-head">
+        <span class="who">J. Alvarez — Front Counter</span>
+        <span class="week mono">WK OF OCT 12</span>
+      </div>
+      <div class="punch-row"><span class="label">Clock In</span><span class="time mono tab-nums">7:58 AM</span></div>
+      <div class="punch-row"><span class="label">Lunch Out</span><span class="time mono tab-nums">12:01 PM</span></div>
+      <div class="punch-row"><span class="label">Lunch In</span><span class="time mono tab-nums">12:31 PM</span></div>
+      <div class="punch-row"><span class="label">Clock Out</span><span class="time mono tab-nums">4:02 PM</span></div>
+    </div>
+  </section>
+
+  <section id="features" class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">What's inside</div>
+      <h2>Everything a shift-based team actually needs</h2>
+      <p>No modules to bolt on later — scheduling, the clock, and reporting already talk to each other.</p>
+    </div>
+    <div class="ticket-grid">
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="17" rx="1.5"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2.5" x2="8" y2="5.5"/><line x1="16" y1="2.5" x2="16" y2="5.5"/><rect x="6.5" y="12" width="3.5" height="3" /><rect x="14" y="12" width="3.5" height="3"/></svg>
+        <h3>Shift Scheduling</h3>
+        <p>Build the week's roster once, publish it, and every employee sees their shifts instantly.</p>
+      </div>
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+        <h3>Time Clock &amp; Breaks</h3>
+        <p>Employees punch in, out, and for breaks and lunches — timestamped to the minute, not the guess.</p>
+      </div>
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18"/><path d="M8 14h2M14 14h2M8 17h2M14 17h2"/></svg>
+        <h3>Availability</h3>
+        <p>Employees submit their availability every week — admins schedule around it, not against it.</p>
+      </div>
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+        <h3>Payroll-Ready Reports</h3>
+        <p>Worked hours, breaks, lunches, sick time, and overtime — totaled per employee and ready to hand to payroll.</p>
+      </div>
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21s7-6.1 7-11.6A7 7 0 0 0 5 9.4C5 14.9 12 21 12 21z"/><circle cx="12" cy="9.3" r="2.4"/></svg>
+        <h3>Multi-Location</h3>
+        <p>Run every location from one account — each with its own roster, settings, and reports.</p>
+      </div>
+      <div class="ticket">
+        <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20c1-4 4-6 7.5-6s6.5 2 7.5 6"/></svg>
+        <h3>Employee Self-Service</h3>
+        <p>Employees check their schedule, update contact info, and pull their own hours — no calls to the office.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="why">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="eyebrow">Why teams pick TAT</div>
+        <h2>Built for the floor, not the boardroom</h2>
+      </div>
+      <div class="why-grid">
+        <div class="why-item">
+          <span class="num mono">01</span>
+          <h3>Built for hourly crews</h3>
+          <p>Not a project-management tool bent into a timesheet — every screen is built around shifts, punches, and payroll.</p>
+        </div>
+        <div class="why-item">
+          <span class="num mono">02</span>
+          <h3>Priced for small teams</h3>
+          <p>Straightforward, affordable pricing — the kind a five-location shop can justify without a procurement meeting.</p>
+        </div>
+        <div class="why-item">
+          <span class="num mono">03</span>
+          <h3>Live in days, not months</h3>
+          <p>Set up your locations, roles, and schedules and start clocking in — no months-long rollout.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">Getting started</div>
+      <h2>From request to running live in three steps</h2>
+    </div>
+    <div class="steps-grid">
+      <div class="step">
+        <span class="step-num mono">1</span>
+        <h3>Tell us about your team</h3>
+        <p>Locations, roles, and how shifts run today — a short conversation, not a form to guess your way through.</p>
+      </div>
+      <div class="step">
+        <span class="step-num mono">2</span>
+        <h3>We set it up with you</h3>
+        <p>A live walkthrough using your real locations and schedules — not a canned demo account.</p>
+      </div>
+      <div class="step">
+        <span class="step-num mono">3</span>
+        <h3>Go live</h3>
+        <p>Start scheduling, clocking in, and pulling hours — usually within days.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact" class="wrap">
+    <div class="contact-grid">
+      <div>
+        <div class="eyebrow">Get in touch</div>
+        <h2>See TAT running in your business</h2>
+        <p class="contact-note">Tell us a bit about your team and we'll set up a walkthrough with your own locations and shifts, not a generic demo account.</p>
+        <ul class="reassure-list">
+          <li>Your own locations &amp; shifts, not a canned demo</li>
+          <li>No obligation to continue</li>
+          <li>Opens your email client — nothing sent automatically</li>
+        </ul>
+      </div>
+      <form class="card-mock" id="demo-form">
+        <div class="row-2">
+          <div class="field">
+            <label for="biz">Business name</label>
+            <input id="biz" name="biz" type="text" required autocomplete="organization" />
+          </div>
+          <div class="field">
+            <label for="name">Your name</label>
+            <input id="name" name="name" type="text" required autocomplete="name" />
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" required autocomplete="email" />
+          </div>
+          <div class="field">
+            <label for="phone">Phone (optional)</label>
+            <input id="phone" name="phone" type="tel" autocomplete="tel" />
+          </div>
+        </div>
+        <div class="field">
+          <label for="msg">What are you hoping to solve?</label>
+          <textarea id="msg" name="msg" placeholder="E.g. we run 3 locations and still schedule by text message"></textarea>
+        </div>
+        <div class="submit-row">
+          <button type="submit" class="btn cta-btn">Request a Demo</button>
+          <span class="form-note">Opens your email app</span>
+        </div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-row">
+    <span>TAT — Time &amp; Attendance System</span>
+    <span>Questions? <a href="mailto:neerajsaini1982@gmail.com">neerajsaini1982@gmail.com</a></span>
+    <span>&copy; 2026 TAT</span>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('demo-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var biz = document.getElementById('biz').value.trim();
+    var name = document.getElementById('name').value.trim();
+    var email = document.getElementById('email').value.trim();
+    var phone = document.getElementById('phone').value.trim();
+    var msg = document.getElementById('msg').value.trim();
+
+    var subject = 'Demo request — ' + (biz || 'New business');
+    var bodyLines = [
+      'Business: ' + biz,
+      'Contact: ' + name,
+      'Email: ' + email,
+      'Phone: ' + (phone || '(not provided)'),
+      '',
+      'What they want to solve:',
+      msg || '(not provided)',
+    ];
+    var mailto = 'mailto:neerajsaini1982@gmail.com'
+      + '?subject=' + encodeURIComponent(subject)
+      + '&body=' + encodeURIComponent(bodyLines.join('\n'));
+    window.location.href = mailto;
+  });
+</script>

@@ -20,6 +20,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<TimeEntrySegment> TimeEntrySegments => Set<TimeEntrySegment>();
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
     public DbSet<EmploymentPeriod> EmploymentPeriods => Set<EmploymentPeriod>();
+    public DbSet<SickTimeEntry> SickTimeEntries => Set<SickTimeEntry>();
 
     // SQLite has no native "datetime with offset" column type, so EF Core
     // round-trips every DateTime as Kind=Unspecified after a read — even
@@ -221,6 +222,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(p => p.AccountId);
+        });
+
+        modelBuilder.Entity<SickTimeEntry>(entity =>
+        {
+            entity.HasOne(e => e.Account)
+                .WithMany()
+                .HasForeignKey(e => e.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.RecordedByAccount)
+                .WithMany()
+                .HasForeignKey(e => e.RecordedByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.AccountId, e.Date });
         });
     }
 
