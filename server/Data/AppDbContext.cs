@@ -129,6 +129,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             entity.Property(s => s.TimeFormat).HasConversion<string>();
             entity.Property(s => s.DateFormat).HasConversion<string>();
+            entity.Property(s => s.OvertimePreset).HasConversion<string>();
+            entity.Property(s => s.WorkweekStartDay).HasConversion<string>();
 
             entity.HasOne(s => s.Location)
                 .WithMany()

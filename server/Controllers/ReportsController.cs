@@ -45,7 +45,9 @@ public class ReportsController(AppDbContext db) : ControllerBase
         var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == location.Id);
         var breakLimitMinutes = settings?.BreakLimitMinutes ?? 15;
         var lunchLimitMinutes = settings?.LunchLimitMinutes ?? 30;
-        var overtimeThresholdMinutes = settings?.OvertimeDailyThresholdMinutes ?? 480;
+        // No settings row yet means the original 8-hour default; a row with a
+        // null threshold means the location turned daily overtime off.
+        var overtimeThresholdMinutes = settings is null ? 480 : settings.OvertimeDailyThresholdMinutes ?? int.MaxValue;
 
         // Sa/Admin see the whole location; anyone else (Lead, Employee) only
         // ever gets their own row back, regardless of what locationCode was
