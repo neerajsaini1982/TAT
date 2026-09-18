@@ -1,0 +1,113 @@
+<div class="legend" aria-hidden="true">
+  <span class="legend-item"><span class="swatch swatch-scheduled"></span>Scheduled</span>
+  <span class="legend-item"><span class="swatch swatch-worked"></span>Worked</span>
+  <span class="legend-item"><span class="swatch swatch-over"></span>Overtime</span>
+  <span class="legend-item"><span class="swatch swatch-sick"></span>Sick</span>
+  <span class="legend-item"><span class="swatch swatch-absent"></span>Absent</span>
+</div>
+
+<p class="chart-title">
+  {{ isDaily() ? 'Scheduled vs. worked, by day' : 'Scheduled vs. worked, by employee (most over schedule first)' }}
+</p>
+
+@if (rows().length === 0) {
+  <p class="empty">Nothing scheduled in this range.</p>
+} @else {
+  <ul class="rows">
+    @for (row of rows(); track row.key) {
+      <li class="row" tabindex="0" [attr.aria-label]="summary(row)">
+        <span class="row-label">{{ row.label }}</span>
+
+        <div class="bars">
+          <div class="bar-line">
+            <div class="track">
+              @if (row.scheduled !== null) {
+                <span class="seg seg-scheduled" [style.width.%]="pct(row.scheduled)"></span>
+              }
+            </div>
+            <span class="bar-value">{{ duration(row.scheduled) }}</span>
+          </div>
+          <div class="bar-line">
+            <div class="track">
+              @if (regular(row) > 0) {
+                <span class="seg seg-worked" [style.width.%]="pct(regular(row))"></span>
+              }
+              @if (row.overtime > 0) {
+                <span class="seg seg-over" [style.width.%]="pct(row.overtime)"></span>
+              }
+              @if (row.sick > 0) {
+                <span class="seg seg-sick" [style.width.%]="pct(row.sick)"></span>
+              }
+              @if (row.absentMinutes > 0) {
+                <span class="seg seg-absent" [style.width.%]="pct(row.absentMinutes)"></span>
+              }
+            </div>
+            <span class="bar-value">{{ row.status === 'open' ? '–' : row.status === 'absent' ? 'Absent' : duration(row.actual) }}</span>
+          </div>
+        </div>
+
+        <span class="variance">
+          {{ varianceLabel(row) }}
+          @if (row.overtime > 0) {
+            <span class="variance-sub flag">{{ duration(row.overtime) }} overtime</span>
+          }
+          @if (!isDaily() && row.sick > 0) {
+            <span class="variance-sub"><span class="dot dot-sick"></span>{{ duration(row.sick) }} sick</span>
+          }
+          @if (!isDaily() && row.absences.length > 0) {
+            <span class="variance-sub">
+              <span class="dot dot-absent"></span>{{ row.absences.length }} absent day{{ row.absences.length > 1 ? 's' : '' }}
+            </span>
+          }
+        </span>
+
+        <!-- Hover / keyboard-focus card for the whole row. -->
+        <div class="tip" role="tooltip">
+          <p class="tip-title">{{ row.label }}</p>
+          <dl class="tip-stats">
+            <div class="tip-stat">
+              <dt><span class="swatch swatch-scheduled"></span>Scheduled</dt>
+              <dd>{{ duration(row.scheduled) }}</dd>
+            </div>
+            <div class="tip-stat">
+              <dt><span class="swatch swatch-worked"></span>Worked</dt>
+              <dd>{{ row.status === 'open' ? 'Still clocked in' : duration(row.actual) }}</dd>
+            </div>
+            @if (row.overtime > 0) {
+              <div class="tip-stat">
+                <dt><span class="swatch swatch-over"></span>Overtime (past daily limit)</dt>
+                <dd>{{ duration(row.overtime) }}</dd>
+              </div>
+            }
+            @if (row.sick > 0) {
+              <div class="tip-stat">
+                <dt><span class="swatch swatch-sick"></span>Sick</dt>
+                <dd>{{ duration(row.sick) }}</dd>
+              </div>
+            }
+          </dl>
+          @if (row.absences.length > 0) {
+            <div class="tip-absences">
+              <p class="tip-subtitle">
+                <span class="swatch swatch-absent"></span>Absent · {{ row.absences.length }} day{{ row.absences.length > 1 ? 's' : '' }}
+                @if (row.absentMinutes > 0) {
+                  <span class="tip-muted">({{ duration(row.absentMinutes) }} missed)</span>
+                }
+              </p>
+              <ul class="tip-absence-list">
+                @for (a of row.absences; track a.label) {
+                  <li>
+                    <span class="tip-absence-date">{{ a.label }}</span>
+                    @if (a.note) {
+                      <span class="tip-absence-note">{{ a.note }}</span>
+                    }
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      </li>
+    }
+  </ul>
+}

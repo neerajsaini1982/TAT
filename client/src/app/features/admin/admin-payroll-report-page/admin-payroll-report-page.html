@@ -21,6 +21,15 @@
       }
     </mat-select>
   </mat-form-field>
+  <mat-button-toggle-group
+    class="view-toggle"
+    aria-label="Report view"
+    [value]="viewMode()"
+    (change)="viewMode.set($event.value)"
+  >
+    <mat-button-toggle value="table">Table</mat-button-toggle>
+    <mat-button-toggle value="chart">Chart</mat-button-toggle>
+  </mat-button-toggle-group>
   <button mat-flat-button color="primary" class="run-btn" (click)="run()" [disabled]="loading()">Run Report</button>
   @if (canAddSickHours) {
     <button mat-stroked-button type="button" class="add-sick-hours-btn" (click)="openAddSickHours()">
@@ -86,6 +95,9 @@
     }
   </div>
 
+  @if (viewMode() === 'chart') {
+    <app-payroll-hours-chart [report]="filteredReport()" [selectedEmployeeId]="selectedEmployeeId()" />
+  } @else {
   <div class="table-container">
     <table mat-table [dataSource]="filteredReport()" multiTemplateDataRows class="hours-report-table">
       <ng-container matColumnDef="expand">
@@ -277,4 +289,5 @@
       <tr mat-footer-row *matFooterRowDef="columns" class="totals-row"></tr>
     </table>
   </div>
+  }
 }
