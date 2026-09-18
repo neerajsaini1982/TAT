@@ -11,7 +11,12 @@ public record LocationSettingsDto(
     int LateClockInGraceMinutes,
     int BreakLimitMinutes,
     int LunchLimitMinutes,
+    OvertimePreset OvertimePreset,
     int? OvertimeDailyThresholdMinutes,
+    int? DailyDoubleTimeAfterMinutes,
+    int? WeeklyOvertimeAfterMinutes,
+    int? SeventhDayDoubleTimeAfterMinutes,
+    DayOfWeek WorkweekStartDay,
     bool DevelopmentMode,
     bool ScheduleVisibilityEnabled,
     bool AdminSeesAllSchedules,
@@ -43,7 +48,12 @@ public record UpdateLocationSettingsRequest(
     int LateClockInGraceMinutes,
     int BreakLimitMinutes,
     int LunchLimitMinutes,
+    OvertimePreset OvertimePreset,
     int? OvertimeDailyThresholdMinutes,
+    int? DailyDoubleTimeAfterMinutes,
+    int? WeeklyOvertimeAfterMinutes,
+    int? SeventhDayDoubleTimeAfterMinutes,
+    DayOfWeek WorkweekStartDay,
     bool DevelopmentMode,
     bool ScheduleVisibilityEnabled,
     bool AdminSeesAllSchedules,
@@ -91,3 +101,13 @@ public record EmployeeLocationSettingsDto(
     int LunchLimitMinutes,
     // Computed from LocationSettings.GetNextPayDate; null when pay day tracking isn't configured.
     DateOnly? NextPayDate);
+
+// One selectable overtime preset with the rule values it fills in (see
+// OvertimePolicy.ForPreset). The workweek start day isn't part of a preset —
+// it's a property of the location, so choosing a preset leaves it alone.
+public record OvertimePresetDto(
+    OvertimePreset Preset,
+    int? OvertimeDailyThresholdMinutes,
+    int? DailyDoubleTimeAfterMinutes,
+    int? WeeklyOvertimeAfterMinutes,
+    int? SeventhDayDoubleTimeAfterMinutes);

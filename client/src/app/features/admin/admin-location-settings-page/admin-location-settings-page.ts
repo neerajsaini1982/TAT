@@ -12,7 +12,15 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog } from '@angular/material/dialog';
 import { forkJoin } from 'rxjs';
 
-import { DateFormat, LocationSettingsApi, LocationSettingsDto, TimeFormat } from '../../../core/location-settings-api';
+import {
+  DateFormat,
+  LocationSettingsApi,
+  LocationSettingsDto,
+  OvertimePreset,
+  OvertimePresetDto,
+  TimeFormat,
+  WorkweekDay,
+} from '../../../core/location-settings-api';
 import { EmailTemplateDto, EmailTemplatesApi } from '../../../core/email-templates-api';
 import { AllowedPunchDeviceDto, AllowedPunchDevicesApi } from '../../../core/allowed-punch-devices-api';
 import { AccountsApi } from '../../../core/accounts-api';
@@ -63,6 +71,15 @@ const DATE_FORMATS: DateFormatOption[] = [
   { value: 'MmmDdYyyy', label: `MMM DD, YYYY (${dateFormatExample('MmmDdYyyy')})` },
 ];
 
+const OVERTIME_PRESETS: { value: OvertimePreset; label: string }[] = [
+  { value: 'None', label: 'No overtime' },
+  { value: 'Federal', label: 'Federal — overtime after 40 hours/week' },
+  { value: 'California', label: 'California — daily 8/12, weekly 40, 7th day' },
+  { value: 'Custom', label: 'Custom' },
+];
+
+const WORKWEEK_DAYS: WorkweekDay[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 const TIME_ZONES: TimeZoneOption[] = [
   { value: 'America/Los_Angeles', label: 'Pacific Time (US)' },
   { value: 'America/Denver', label: 'Mountain Time (US)' },
@@ -85,7 +102,12 @@ interface FormModel {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
+  overtimePreset: OvertimePreset;
   overtimeDailyThresholdMinutes: number | null;
+  dailyDoubleTimeAfterMinutes: number | null;
+  weeklyOvertimeAfterMinutes: number | null;
+  seventhDayDoubleTimeAfterMinutes: number | null;
+  workweekStartDay: WorkweekDay;
   developmentMode: boolean;
   scheduleVisibilityEnabled: boolean;
   adminSeesAllSchedules: boolean;
@@ -112,7 +134,12 @@ const emptyForm = (): FormModel => ({
   lateClockInGraceMinutes: 5,
   breakLimitMinutes: 15,
   lunchLimitMinutes: 30,
+  overtimePreset: 'Custom',
   overtimeDailyThresholdMinutes: 480,
+  dailyDoubleTimeAfterMinutes: null,
+  weeklyOvertimeAfterMinutes: null,
+  seventhDayDoubleTimeAfterMinutes: null,
+  workweekStartDay: 'Monday',
   developmentMode: false,
   scheduleVisibilityEnabled: true,
   adminSeesAllSchedules: true,
@@ -178,6 +205,11 @@ export class AdminLocationSettingsPage implements OnInit {
 
   protected readonly timeZones = TIME_ZONES;
   protected readonly dateFormats = DATE_FORMATS;
+  protected readonly overtimePresetOptions = OVERTIME_PRESETS;
+  protected readonly workweekDays = WORKWEEK_DAYS;
+  // Rule values per preset, loaded from the server so this page carries no
+  // copy of them. Empty until load() finishes.
+  private overtimePresets: OvertimePresetDto[] = [];
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -208,8 +240,10 @@ export class AdminLocationSettingsPage implements OnInit {
       templates: this.templatesApi.getAll(this.locationCode),
       devices: this.devicesApi.getAll(this.locationCode),
       me: this.accountsApi.getMine(),
+      overtimePresets: this.settingsApi.getOvertimePresets(),
     }).subscribe({
-      next: ({ settings, templates, devices, me }) => {
+      next: ({ settings, templates, devices, me, overtimePresets }) => {
+        this.overtimePresets = overtimePresets;
         this.applySettings(settings);
         this.templates.set(templates);
         this.allowedDevices.set(devices);
@@ -234,7 +268,12 @@ export class AdminLocationSettingsPage implements OnInit {
       lateClockInGraceMinutes: settings.lateClockInGraceMinutes,
       breakLimitMinutes: settings.breakLimitMinutes,
       lunchLimitMinutes: settings.lunchLimitMinutes,
+      overtimePreset: settings.overtimePreset,
       overtimeDailyThresholdMinutes: settings.overtimeDailyThresholdMinutes,
+      dailyDoubleTimeAfterMinutes: settings.dailyDoubleTimeAfterMinutes,
+      weeklyOvertimeAfterMinutes: settings.weeklyOvertimeAfterMinutes,
+      seventhDayDoubleTimeAfterMinutes: settings.seventhDayDoubleTimeAfterMinutes,
+      workweekStartDay: settings.workweekStartDay,
       developmentMode: settings.developmentMode,
       scheduleVisibilityEnabled: settings.scheduleVisibilityEnabled,
       adminSeesAllSchedules: settings.adminSeesAllSchedules,
@@ -253,6 +292,26 @@ export class AdminLocationSettingsPage implements OnInit {
     };
   }
 
+  // Copies a preset's rule values into the form. Custom has no values of its
+  // own, so choosing it just keeps whatever is there; the workweek start day
+  // is never touched, since it belongs to the location rather than a preset.
+  applyOvertimePreset(preset: OvertimePreset): void {
+    const values = this.overtimePresets.find((p) => p.preset === preset);
+    if (!values) {
+      return;
+    }
+    this.form.overtimeDailyThresholdMinutes = values.overtimeDailyThresholdMinutes;
+    this.form.dailyDoubleTimeAfterMinutes = values.dailyDoubleTimeAfterMinutes;
+    this.form.weeklyOvertimeAfterMinutes = values.weeklyOvertimeAfterMinutes;
+    this.form.seventhDayDoubleTimeAfterMinutes = values.seventhDayDoubleTimeAfterMinutes;
+  }
+
+  // Hand-editing any rule means the values are no longer a preset's. (The
+  // server re-checks on save and would also record Custom.)
+  markOvertimeCustom(): void {
+    this.form.overtimePreset = 'Custom';
+  }
+
   save(): void {
     this.saving.set(true);
     this.error.set(null);
@@ -268,7 +327,12 @@ export class AdminLocationSettingsPage implements OnInit {
           lateClockInGraceMinutes: this.form.lateClockInGraceMinutes,
           breakLimitMinutes: this.form.breakLimitMinutes,
           lunchLimitMinutes: this.form.lunchLimitMinutes,
+          overtimePreset: this.form.overtimePreset,
           overtimeDailyThresholdMinutes: this.form.overtimeDailyThresholdMinutes,
+          dailyDoubleTimeAfterMinutes: this.form.dailyDoubleTimeAfterMinutes,
+          weeklyOvertimeAfterMinutes: this.form.weeklyOvertimeAfterMinutes,
+          seventhDayDoubleTimeAfterMinutes: this.form.seventhDayDoubleTimeAfterMinutes,
+          workweekStartDay: this.form.workweekStartDay,
           developmentMode: this.form.developmentMode,
           scheduleVisibilityEnabled: this.form.scheduleVisibilityEnabled,
           adminSeesAllSchedules: this.form.adminSeesAllSchedules,

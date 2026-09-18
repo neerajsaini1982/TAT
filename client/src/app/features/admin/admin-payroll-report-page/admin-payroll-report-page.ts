@@ -62,6 +62,7 @@ export class AdminPayrollReportPage implements OnInit {
     'fullName',
     'netWorkedTime',
     'overtimeTime',
+    'doubleTimeTime',
     'sickTime',
     'totalTime',
     'notes',
@@ -116,8 +117,9 @@ export class AdminPayrollReportPage implements OnInit {
   protected readonly totals = computed(() => {
     const rows = this.filteredReport();
     return {
-      regularMinutes: rows.reduce((sum, r) => sum + this.regularMinutes(r), 0),
+      regularMinutes: rows.reduce((sum, r) => sum + r.totalRegularMinutes, 0),
       overtimeMinutes: rows.reduce((sum, r) => sum + r.totalOvertimeMinutes, 0),
+      doubleTimeMinutes: rows.reduce((sum, r) => sum + r.totalDoubleTimeMinutes, 0),
       sickMinutes: rows.reduce((sum, r) => sum + r.totalSickMinutes, 0),
       totalMinutes: rows.reduce((sum, r) => sum + this.totalMinutes(r), 0),
       absentDays: rows.reduce((sum, r) => sum + r.absentDays, 0),
@@ -125,18 +127,12 @@ export class AdminPayrollReportPage implements OnInit {
     };
   });
 
-  // totalNetWorkedMinutes includes overtime, but ADP takes regular and
-  // overtime hours as two separate entries — this is the "Net Worked Time"
-  // column's regular-hours-only figure (excludes whatever's already
-  // counted in the Overtime column) so the two columns add back up to the
-  // actual time worked without double-counting overtime into regular.
-  regularMinutes(emp: EmployeeHoursReportDto): number {
-    return emp.totalNetWorkedMinutes - emp.totalOvertimeMinutes;
-  }
-
-  // Total Hours = regular + overtime + sick, i.e. every paid minute in the
-  // range regardless of column. Equivalent to totalNetWorkedMinutes (which
-  // already includes overtime) + totalSickMinutes.
+  // Total Hours = regular + overtime + double time + sick, i.e. every paid
+  // minute in the range regardless of column. Equivalent to
+  // totalNetWorkedMinutes (which already includes the overtime and
+  // double-time) + totalSickMinutes. ADP takes each rate as its own entry, so
+  // the server splits them (totalRegular/Overtime/DoubleTimeMinutes) under
+  // the location's overtime rules.
   totalMinutes(emp: EmployeeHoursReportDto): number {
     return emp.totalNetWorkedMinutes + emp.totalSickMinutes;
   }

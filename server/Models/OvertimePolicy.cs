@@ -48,4 +48,11 @@ public sealed record OvertimePolicy(
         // them — so it falls back to no premium pay like None.
         _ => None,
     };
+
+    // Whether these rules are exactly the given preset's. The workweek start
+    // day is ignored: it belongs to the location, not to a preset, so a
+    // Sunday-start location can still be "California".
+    public bool MatchesPreset(OvertimePreset preset) =>
+        preset != OvertimePreset.Custom
+        && this with { WorkweekStartDay = DayOfWeek.Monday } == ForPreset(preset) with { WorkweekStartDay = DayOfWeek.Monday };
 }

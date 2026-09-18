@@ -93,9 +93,15 @@ public static class OvertimeCalculator
     }
 
     // The most recent `startDay` on or before `date`.
-    private static DateOnly WorkweekStart(DateOnly date, DayOfWeek startDay)
+    public static DateOnly WorkweekStart(DateOnly date, DayOfWeek startDay)
     {
         var daysSinceStart = ((int)date.DayOfWeek - (int)startDay + DaysPerWeek) % DaysPerWeek;
         return date.AddDays(-daysSinceStart);
     }
+
+    // The smallest run of whole workweeks covering start..end — the range a
+    // caller has to load hours for so the weekly and seventh-day rules see
+    // complete weeks (see the class comment).
+    public static (DateOnly Start, DateOnly End) WorkweekSpan(DateOnly start, DateOnly end, DayOfWeek startDay) =>
+        (WorkweekStart(start, startDay), WorkweekStart(end, startDay).AddDays(DaysPerWeek - 1));
 }

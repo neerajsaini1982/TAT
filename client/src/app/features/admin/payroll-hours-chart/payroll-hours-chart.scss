@@ -224,6 +224,13 @@
   background: var(--mat-sys-error);
 }
 
+// A deeper shade of the overtime color, so the two premium rates read as one
+// family but stay distinguishable side by side.
+.seg-double,
+.swatch-double {
+  background: color-mix(in srgb, var(--mat-sys-error) 55%, var(--mat-sys-on-surface));
+}
+
 // Amber has weak contrast on the light surface, so the mark gets a faint
 // darker edge to stay visible; the text beside it stays in normal ink.
 .seg-absent,

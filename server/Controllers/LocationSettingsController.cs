@@ -25,6 +25,23 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         return Ok(ToDto(GetOrCreateSettings(location.Id)));
     }
 
+    // The rule values each preset fills in, so the settings page doesn't
+    // carry its own copy of them. Custom has no fixed values and isn't listed.
+    [HttpGet("overtime-presets")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public ActionResult<IEnumerable<OvertimePresetDto>> GetOvertimePresets() =>
+        Ok(new[] { OvertimePreset.None, OvertimePreset.Federal, OvertimePreset.California }
+            .Select(preset =>
+            {
+                var policy = OvertimePolicy.ForPreset(preset);
+                return new OvertimePresetDto(
+                    preset,
+                    policy.DailyOvertimeAfterMinutes,
+                    policy.DailyDoubleTimeAfterMinutes,
+                    policy.WeeklyOvertimeAfterMinutes,
+                    policy.SeventhDayDoubleTimeAfterMinutes);
+            }));
+
     // Self-service: lets any signed-in account (e.g. an Employee) read just
     // the Clock In window, without exposing SMTP credentials etc.
     [HttpGet("mine")]
@@ -58,6 +75,12 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
             return BadRequest("A valid locationCode is required.");
         }
 
+        var overtimeError = ValidateOvertimeRules(request);
+        if (overtimeError is not null)
+        {
+            return BadRequest(overtimeError);
+        }
+
         var settings = GetOrCreateSettings(location.Id);
         settings.TimeFormat = request.TimeFormat;
         settings.DateFormat = request.DateFormat;
@@ -68,6 +91,15 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         settings.BreakLimitMinutes = request.BreakLimitMinutes;
         settings.LunchLimitMinutes = request.LunchLimitMinutes;
         settings.OvertimeDailyThresholdMinutes = request.OvertimeDailyThresholdMinutes;
+        settings.DailyDoubleTimeAfterMinutes = request.DailyDoubleTimeAfterMinutes;
+        settings.WeeklyOvertimeAfterMinutes = request.WeeklyOvertimeAfterMinutes;
+        settings.SeventhDayDoubleTimeAfterMinutes = request.SeventhDayDoubleTimeAfterMinutes;
+        settings.WorkweekStartDay = request.WorkweekStartDay;
+        // A preset only stands if the saved values are still exactly its
+        // values; anything hand-edited is recorded as Custom.
+        settings.OvertimePreset = settings.GetOvertimePolicy().MatchesPreset(request.OvertimePreset)
+            ? request.OvertimePreset
+            : OvertimePreset.Custom;
         settings.DevelopmentMode = request.DevelopmentMode;
         settings.ScheduleVisibilityEnabled = request.ScheduleVisibilityEnabled;
         settings.AdminSeesAllSchedules = request.AdminSeesAllSchedules;
@@ -148,6 +180,43 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         return NoContent();
     }
 
+    private const int MinutesPerDay = 24 * 60;
+    private const int MinutesPerWeek = 7 * MinutesPerDay;
+
+    // Null thresholds mean "rule off" and are always valid; a set threshold
+    // has to be a real span within its period, and double-time can't start
+    // at or before overtime does.
+    private static string? ValidateOvertimeRules(UpdateLocationSettingsRequest r)
+    {
+        if (!Enum.IsDefined(r.OvertimePreset) || !Enum.IsDefined(r.WorkweekStartDay))
+        {
+            return "Choose a valid overtime preset and workweek start day.";
+        }
+
+        static bool Invalid(int? minutes, int max) => minutes is { } m && (m < 1 || m > max);
+
+        if (Invalid(r.OvertimeDailyThresholdMinutes, MinutesPerDay)
+            || Invalid(r.DailyDoubleTimeAfterMinutes, MinutesPerDay)
+            || Invalid(r.SeventhDayDoubleTimeAfterMinutes, MinutesPerDay))
+        {
+            return "Daily overtime thresholds must be between 1 and 1440 minutes, or left blank.";
+        }
+
+        if (Invalid(r.WeeklyOvertimeAfterMinutes, MinutesPerWeek))
+        {
+            return "The weekly overtime threshold must be between 1 and 10080 minutes, or left blank.";
+        }
+
+        if (r.OvertimeDailyThresholdMinutes is { } overtime
+            && r.DailyDoubleTimeAfterMinutes is { } doubleTime
+            && doubleTime <= overtime)
+        {
+            return "Daily double-time has to start after daily overtime does.";
+        }
+
+        return null;
+    }
+
     private LocationSettings GetOrCreateSettings(int locationId)
     {
         var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == locationId);
@@ -186,7 +255,12 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         s.LateClockInGraceMinutes,
         s.BreakLimitMinutes,
         s.LunchLimitMinutes,
+        s.OvertimePreset,
         s.OvertimeDailyThresholdMinutes,
+        s.DailyDoubleTimeAfterMinutes,
+        s.WeeklyOvertimeAfterMinutes,
+        s.SeventhDayDoubleTimeAfterMinutes,
+        s.WorkweekStartDay,
         s.DevelopmentMode,
         s.ScheduleVisibilityEnabled,
         s.AdminSeesAllSchedules,

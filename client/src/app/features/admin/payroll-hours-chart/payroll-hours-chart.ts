@@ -10,6 +10,7 @@ interface ChartRow {
   scheduled: number | null;
   actual: number | null;
   overtime: number;
+  doubleTime: number;
   sick: number;
   absences: Absence[];
   // Scheduled time on the absent days not covered by sick hours, drawn as the
@@ -31,9 +32,10 @@ const missedMinutes = (d: DailyHoursDto) =>
 
 // Scheduled vs. actual worked time as paired horizontal bars. One employee
 // selected -> one pair per day; everyone -> one pair per employee for the
-// whole range, biggest overage first. The overtime part of the worked bar
-// (past the location's daily threshold) takes the error color; the +/- text
-// on the right still shows the difference from the scheduled time.
+// whole range, biggest overage first. The overtime and double-time parts of
+// the worked bar (per the location's overtime rules) take the error color and
+// a deeper shade of it; the +/- text on the right still shows the difference
+// from the scheduled time.
 @Component({
   selector: 'app-payroll-hours-chart',
   templateUrl: './payroll-hours-chart.html',
@@ -57,6 +59,7 @@ export class PayrollHoursChart {
           scheduled: d.scheduledMinutes,
           actual: d.isAbsent ? 0 : d.netWorkedMinutes,
           overtime: d.overtimeMinutes,
+          doubleTime: d.doubleTimeMinutes,
           sick: d.sickMinutes,
           absences: d.isAbsent ? [{ label: dayLabel(d.date), note: d.absenceNote }] : [],
           absentMinutes: missedMinutes(d),
@@ -71,6 +74,7 @@ export class PayrollHoursChart {
         scheduled: e.totalScheduledMinutes,
         actual: e.totalNetWorkedMinutes,
         overtime: e.totalOvertimeMinutes,
+        doubleTime: e.totalDoubleTimeMinutes,
         sick: e.totalSickMinutes,
         absences: e.days
           .filter((d) => d.isAbsent)
@@ -90,9 +94,10 @@ export class PayrollHoursChart {
     return (minutes / this.maxMinutes()) * 100;
   }
 
-  // Worked time already includes overtime, so the primary segment is the rest.
+  // Worked time already includes overtime and double-time, so the primary
+  // segment is the rest.
   protected regular(row: ChartRow): number {
-    return Math.max(0, (row.actual ?? 0) - row.overtime);
+    return Math.max(0, (row.actual ?? 0) - row.overtime - row.doubleTime);
   }
 
   protected variance(row: ChartRow): number {
@@ -121,6 +126,9 @@ export class PayrollHoursChart {
     const parts = [`Scheduled ${this.duration(row.scheduled)}`, `Worked ${this.duration(row.actual)}`];
     if (row.overtime > 0) {
       parts.push(`Overtime ${formatDurationMinutes(row.overtime)}`);
+    }
+    if (row.doubleTime > 0) {
+      parts.push(`Double time ${formatDurationMinutes(row.doubleTime)}`);
     }
     if (row.sick > 0) {
       parts.push(`Sick ${formatDurationMinutes(row.sick)}`);
