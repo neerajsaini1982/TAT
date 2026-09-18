@@ -85,7 +85,7 @@ interface FormModel {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
-  overtimeDailyThresholdMinutes: number;
+  overtimeDailyThresholdMinutes: number | null;
   developmentMode: boolean;
   scheduleVisibilityEnabled: boolean;
   adminSeesAllSchedules: boolean;
