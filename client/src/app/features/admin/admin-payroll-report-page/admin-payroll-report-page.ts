@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import { MatDialog } from '@angular/material/dialog';
 
@@ -16,6 +17,7 @@ import { formatDurationOrDash } from '../../../core/duration-format';
 import { addDays, dayOfWeekLabel, formatDate, toMmDdYyyy } from '../../../core/week-utils';
 import { Auth } from '../../../core/auth';
 import { SickHoursDialog } from '../sick-hours-dialog/sick-hours-dialog';
+import { PayrollHoursChart } from '../payroll-hours-chart/payroll-hours-chart';
 
 @Component({
   selector: 'app-admin-payroll-report-page',
@@ -28,6 +30,8 @@ import { SickHoursDialog } from '../sick-hours-dialog/sick-hours-dialog';
     MatIconModule,
     MatSelectModule,
     MatTableModule,
+    MatButtonToggleModule,
+    PayrollHoursChart,
   ],
   templateUrl: './admin-payroll-report-page.html',
   styleUrl: './admin-payroll-report-page.scss',
@@ -40,10 +44,12 @@ export class AdminPayrollReportPage implements OnInit {
   private readonly auth = inject(Auth);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
-  // This page is reachable by Lead as well as Admin (see adminGuard), but
-  // POST /api/sick-time-entries is Admin/Sa-only server-side (same policy as
-  // the inline sick-hours edit's SetSickMinutes) — hide the button rather
-  // than let a Lead open a dialog that can only 403 on save.
+  // This page is reachable by Lead and Employee as well as Admin/Sa (see
+  // adminGuard/employeeGuard), but both POST /api/sick-time-entries and
+  // ShiftAssignments' SetSickMinutes are Admin/Sa-only server-side — hide
+  // the "Add Sick Hours" button and the inline per-day sick-hours input
+  // rather than let a Lead/Employee open a dialog or edit that can only
+  // 403 on save.
   protected readonly canAddSickHours = this.auth.role() === 'Admin' || this.auth.role() === 'Sa';
 
   // CdkTable only re-evaluates matRowDef's `when` predicate when it
@@ -81,6 +87,8 @@ export class AdminPayrollReportPage implements OnInit {
   // always derived from the full (unfiltered) report so the dropdown itself
   // doesn't shrink to just the one currently selected.
   protected readonly selectedEmployeeId = signal<number | 'all'>('all');
+
+  protected readonly viewMode = signal<'table' | 'chart'>('table');
 
   protected readonly employeeOptions = computed(() => {
     const byId = new Map<number, string>();

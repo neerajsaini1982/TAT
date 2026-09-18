@@ -29,7 +29,6 @@
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'availability']">Availability</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'schedule']">Schedule</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'schedule-assign']">Schedule (Quick Assign)</a>
-      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'reports']">Reports</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'payroll-report']">Payroll Report</a>
       @if (auth.role() === 'Admin') {
         <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'settings']">Settings</a>
@@ -77,21 +76,8 @@
       }
     </mat-menu>
   } @else {
-    <button mat-icon-button (click)="themeService.toggleScheme()"
-            [attr.aria-label]="themeService.scheme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'">
-      <mat-icon>{{ themeService.scheme() === 'light' ? 'dark_mode' : 'light_mode' }}</mat-icon>
-    </button>
-
-    <button mat-icon-button [matMenuTriggerFor]="themeMenu" aria-label="Choose theme color">
-      <mat-icon>palette</mat-icon>
-    </button>
-    <mat-menu #themeMenu="matMenu">
-      @for (option of themes; track option.name) {
-        <button mat-menu-item (click)="themeService.setTheme(option.name)">
-          {{ option.label }}
-        </button>
-      }
-    </mat-menu>
+    <button mat-button (click)="openLocationLogin('employee')">Employee</button>
+    <button mat-button (click)="openLocationLogin('admin')">Admin</button>
   }
 </mat-toolbar>
 

@@ -14,8 +14,8 @@ namespace Server.Controllers;
 // a chosen date range, including absences. Any authenticated role can call
 // GetHoursReport, but only Sa/Admin get every employee's rows — a plain
 // Employee (or Lead) calling it is silently scoped down to just their own,
-// so the same admin reports page/endpoint doubles as an employee
-// self-service report with no separate route needed.
+// so the same endpoint backs both the admin-facing Payroll Report page and
+// an employee self-service report with no separate route needed.
 [ApiController]
 [Route("api/reports")]
 [Authorize]
@@ -56,6 +56,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
 
         var assignmentsQuery = db.ShiftAssignments
             .Include(a => a.Account)
+            .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
             .Where(a => a.Shift!.LocationId == location.Id && a.Date >= startDate && a.Date <= endDate && a.IsPublished);
         if (!canSeeEveryone)
         {
@@ -149,6 +150,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
             days.Sum(d => d.BreakMinutes),
             days.Sum(d => d.LunchMinutes),
             days.Sum(d => d.NetWorkedMinutes ?? 0),
+            days.Sum(d => d.ScheduledMinutes ?? 0),
             days.Sum(d => d.OvertimeMinutes),
             days.Count(d => d.IsAbsent),
             days.Count(d => d.StillClockedIn),
@@ -241,6 +243,10 @@ public class ReportsController(AppDbContext db) : ControllerBase
         // AbsenceNote above. No assignment at all (sick entered manually on
         // an unscheduled day) leaves shiftAssignmentId null — nothing for
         // the editable sick-hours field to target.
+        int? scheduledMinutes = dayAssignments.Count > 0
+            ? dayAssignments.Sum(a => ScheduledMinutesFor(a.Shift!))
+            : null;
+
         var sickMinutes = dayAssignments.Sum(a => a.SickMinutes) + daySickEntries.Sum(s => s.Minutes);
         var shiftAssignmentId = dayAssignments.Count > 0 ? dayAssignments[0].Id : (int?)null;
         var manualSickNotes = daySickEntries
@@ -249,9 +255,25 @@ public class ReportsController(AppDbContext db) : ControllerBase
             .ToList();
 
         return new DailyHoursDto(
-            date, workedMinutes, breakMinutes, lunchMinutes, netWorkedMinutes, overtimeMinutes,
+            date, workedMinutes, breakMinutes, lunchMinutes, netWorkedMinutes, scheduledMinutes, overtimeMinutes,
             isAbsent, absenceNote, leftEarly, leftEarlyNote, stillClockedIn, hasLongBreak, hasLongLunch, notes,
             sickMinutes, shiftAssignmentId, manualSickNotes);
+    }
+
+    // Shift span less its scheduled lunch. A window whose end isn't after its
+    // start runs past midnight, so a day is added.
+    private static int ScheduledMinutesFor(Shift shift)
+    {
+        var lunchMinutes = shift.ScheduledBreaks
+            .Where(b => b.Kind == BreakKind.Lunch)
+            .Sum(b => SpanMinutes(b.StartTime, b.EndTime));
+        return Math.Max(0, SpanMinutes(shift.StartTime, shift.EndTime) - lunchMinutes);
+    }
+
+    private static int SpanMinutes(TimeOnly start, TimeOnly end)
+    {
+        var minutes = (int)(end - start).TotalMinutes;
+        return minutes > 0 ? minutes : minutes + 24 * 60;
     }
 
     private Location? ResolveLocation(string? locationCode)

@@ -11,6 +11,11 @@ public record DailyHoursDto(
     int BreakMinutes,
     int LunchMinutes,
     int? NetWorkedMinutes,
+    // What the day's published shift(s) called for: shift span less scheduled
+    // lunch (breaks aren't subtracted, same as NetWorkedMinutes). Null on a
+    // day with no assignment at all (sick-only day). Still set on an absent
+    // day, so the missed time shows up as variance.
+    int? ScheduledMinutes,
     // Net worked time beyond the location's daily overtime threshold (see
     // LocationSettings.OvertimeDailyThresholdMinutes). 0 on days that aren't
     // over, and on days NetWorkedMinutes is null (not yet clocked out).
@@ -54,6 +59,7 @@ public record EmployeeHoursReportDto(
     int TotalBreakMinutes,
     int TotalLunchMinutes,
     int TotalNetWorkedMinutes,
+    int TotalScheduledMinutes,
     int TotalOvertimeMinutes,
     int AbsentDays,
     int OpenEntryDays,

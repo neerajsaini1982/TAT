@@ -11,6 +11,17 @@ namespace Server.Controllers;
 [Route("api/auth")]
 public class AuthController(AppDbContext db, TokenService tokens) : ControllerBase
 {
+    // Public and unauthenticated on purpose: lets the landing page's
+    // Employee/Admin buttons confirm a location code before routing there,
+    // without requiring a login first (see the Employee/Admin location
+    // prompt dialog on the client).
+    [HttpGet("location-exists/{code}")]
+    public ActionResult<bool> LocationExists(string code)
+    {
+        var normalized = code.Trim().ToLowerInvariant();
+        return Ok(db.Locations.Any(l => l.LocationCode == normalized && l.IsActive));
+    }
+
     [HttpPost("sa-login")]
     public ActionResult<AuthResponse> SaLogin(SaLoginRequest request)
     {

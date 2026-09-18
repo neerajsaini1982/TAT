@@ -21,6 +21,15 @@
       }
     </mat-select>
   </mat-form-field>
+  <mat-button-toggle-group
+    class="view-toggle"
+    aria-label="Report view"
+    [value]="viewMode()"
+    (change)="viewMode.set($event.value)"
+  >
+    <mat-button-toggle value="table">Table</mat-button-toggle>
+    <mat-button-toggle value="chart">Chart</mat-button-toggle>
+  </mat-button-toggle-group>
   <button mat-flat-button color="primary" class="run-btn" (click)="run()" [disabled]="loading()">Run Report</button>
   @if (canAddSickHours) {
     <button mat-stroked-button type="button" class="add-sick-hours-btn" (click)="openAddSickHours()">
@@ -86,6 +95,9 @@
     }
   </div>
 
+  @if (viewMode() === 'chart') {
+    <app-payroll-hours-chart [report]="filteredReport()" [selectedEmployeeId]="selectedEmployeeId()" />
+  } @else {
   <div class="table-container">
     <table mat-table [dataSource]="filteredReport()" multiTemplateDataRows class="hours-report-table">
       <ng-container matColumnDef="expand">
@@ -223,7 +235,7 @@
                     <td class="day-numeric-col" data-label="Overtime" [class.flag]="day.overtimeMinutes > 0">{{ formatDuration(day.overtimeMinutes) }}</td>
                   }
                   <td class="day-sick-col" data-label="Sick hrs">
-                    @if (day.shiftAssignmentId !== null) {
+                    @if (day.shiftAssignmentId !== null && canAddSickHours) {
                       <input
                         type="number"
                         min="0"
@@ -235,9 +247,11 @@
                         (change)="updateSickHours(day, $any($event.target).value)"
                       />
                     } @else {
-                      <!-- No ShiftAssignment this day (not scheduled) — sick
-                           hours were entered manually via "Add Sick Hours
-                           Manually" and aren't editable inline here. -->
+                      <!-- Either no ShiftAssignment this day (sick hours were
+                           entered manually via "Add Sick Hours Manually" and
+                           aren't editable inline here), or the viewer isn't
+                           Admin/Sa — SetSickMinutes is Admin/Sa-only
+                           server-side, so read-only avoids a 403 on save. -->
                       <span class="manual-sick-value">{{ (day.sickMinutes / 60).toFixed(2) }}</span>
                     }
                   </td>
@@ -275,4 +289,5 @@
       <tr mat-footer-row *matFooterRowDef="columns" class="totals-row"></tr>
     </table>
   </div>
+  }
 }
