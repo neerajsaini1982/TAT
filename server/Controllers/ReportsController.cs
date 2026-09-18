@@ -14,8 +14,8 @@ namespace Server.Controllers;
 // a chosen date range, including absences. Any authenticated role can call
 // GetHoursReport, but only Sa/Admin get every employee's rows — a plain
 // Employee (or Lead) calling it is silently scoped down to just their own,
-// so the same admin reports page/endpoint doubles as an employee
-// self-service report with no separate route needed.
+// so the same endpoint backs both the admin-facing Payroll Report page and
+// an employee self-service report with no separate route needed.
 [ApiController]
 [Route("api/reports")]
 [Authorize]

@@ -15,7 +15,6 @@ import { AdminAvailabilityPage } from './features/admin/admin-availability-page/
 import { AdminSchedulePage } from './features/admin/admin-schedule-page/admin-schedule-page';
 import { AdminScheduleAssignPage } from './features/admin/admin-schedule-assign-page/admin-schedule-assign-page';
 import { AdminLocationSettingsPage } from './features/admin/admin-location-settings-page/admin-location-settings-page';
-import { AdminReportsPage } from './features/admin/admin-reports-page/admin-reports-page';
 import { AdminPayrollReportPage } from './features/admin/admin-payroll-report-page/admin-payroll-report-page';
 import { EmployeeHome } from './features/employee/employee-home/employee-home';
 import { AvailabilityPage } from './features/employee/availability-page/availability-page';
@@ -45,7 +44,6 @@ export const routes: Routes = [
   { path: ':locationCode/admin/schedule', component: AdminSchedulePage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/schedule-assign', component: AdminScheduleAssignPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/settings', component: AdminLocationSettingsPage, canActivate: [adminOnlyGuard] },
-  { path: ':locationCode/admin/reports', component: AdminReportsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/payroll-report', component: AdminPayrollReportPage, canActivate: [adminGuard] },
 
   { path: ':locationCode/employee', component: EmployeeHome },
@@ -54,10 +52,11 @@ export const routes: Routes = [
   { path: ':locationCode/employee/schedule', component: EmployeeSchedulePage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/documents', component: MyDocumentsPage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/help', component: HelpPage, canActivate: [employeeGuard] },
-  // Reuses the admin reports page/component as-is — GetHoursReport scopes
-  // a non-Admin caller down to just their own row server-side (see
-  // ReportsController), so the same page doubles as a self-service report.
-  { path: ':locationCode/employee/reports', component: AdminReportsPage, canActivate: [employeeGuard] },
+  // Reuses AdminPayrollReportPage as-is — GetHoursReport scopes a non-Admin
+  // caller down to just their own row server-side (see ReportsController),
+  // so the one page doubles as a self-service report, with sick-hours
+  // editing hidden client-side for anyone but Admin/Sa.
+  { path: ':locationCode/employee/reports', component: AdminPayrollReportPage, canActivate: [employeeGuard] },
 
   { path: ':locationCode', component: LocationHome, pathMatch: 'full' },
 ];
