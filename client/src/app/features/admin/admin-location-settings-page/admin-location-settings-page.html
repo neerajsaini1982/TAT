@@ -114,12 +114,12 @@
       <mat-card-header>
         <mat-card-title>Overtime Rules</mat-card-title>
         <mat-card-subtitle>
-          How the payroll report splits worked time into regular, overtime (1.5x) and double time (2x). Pick a preset
-          to fill in the rules, then adjust any of them if this location differs. Leave a rule blank to turn it off.
+          How the payroll report splits worked time into regular, overtime (1.5x) and double time (2x). Pick a preset,
+          then adjust anything that differs at this location. Leave a rule blank to turn it off.
         </mat-card-subtitle>
       </mat-card-header>
-      <mat-card-content class="section-content">
-        <mat-form-field appearance="outline">
+      <mat-card-content class="section-content overtime-fields">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full-row">
           <mat-label>Preset</mat-label>
           <mat-select
             [(ngModel)]="form.overtimePreset"
@@ -133,17 +133,7 @@
           <mat-hint>Presets are starting points — check them against your local rules.</mat-hint>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
-          <mat-label>Workweek Starts On</mat-label>
-          <mat-select [(ngModel)]="form.workweekStartDay" name="workweekStartDay">
-            @for (day of workweekDays; track day) {
-              <mat-option [value]="day">{{ day }}</mat-option>
-            }
-          </mat-select>
-          <mat-hint>Weekly and 7th-day rules are measured within this 7-day week.</mat-hint>
-        </mat-form-field>
-
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Overtime After (minutes/day)</mat-label>
           <input
             matInput
@@ -154,10 +144,10 @@
             (ngModelChange)="markOvertimeCustom()"
             name="overtimeDailyThresholdMinutes"
           />
-          <mat-hint>480 = 8 hours. Blank: no daily overtime.</mat-hint>
+          <mat-hint>480 = 8 hours. Blank: none.</mat-hint>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Double Time After (minutes/day)</mat-label>
           <input
             matInput
@@ -168,10 +158,20 @@
             (ngModelChange)="markOvertimeCustom()"
             name="dailyDoubleTimeAfterMinutes"
           />
-          <mat-hint>720 = 12 hours. Blank: no daily double time.</mat-hint>
+          <mat-hint>720 = 12 hours. Blank: none.</mat-hint>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Workweek Starts On</mat-label>
+          <mat-select [(ngModel)]="form.workweekStartDay" name="workweekStartDay">
+            @for (day of workweekDays; track day) {
+              <mat-option [value]="day">{{ day }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Weekly and 7th-day rules use this 7-day week.</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
           <mat-label>Overtime After (minutes/week)</mat-label>
           <input
             matInput
@@ -182,10 +182,10 @@
             (ngModelChange)="markOvertimeCustom()"
             name="weeklyOvertimeAfterMinutes"
           />
-          <mat-hint>2400 = 40 hours. Blank: no weekly overtime.</mat-hint>
+          <mat-hint>2400 = 40 hours. Blank: none.</mat-hint>
         </mat-form-field>
 
-        <mat-form-field appearance="outline">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic" class="full-row">
           <mat-label>7th Consecutive Day: Double Time After (minutes)</mat-label>
           <input
             matInput
