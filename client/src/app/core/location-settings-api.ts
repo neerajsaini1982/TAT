@@ -5,6 +5,19 @@ import { API_BASE_URL } from './api-config';
 
 export type TimeFormat = 'TwelveHour' | 'TwentyFourHour';
 export type DateFormat = 'MmDdYyyy' | 'DdMmYyyy' | 'YyyyMmDd' | 'DdMmmYyyy' | 'MmmDdYyyy';
+export type OvertimePreset = 'None' | 'Federal' | 'California' | 'Custom';
+export type WorkweekDay = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+
+// The rule values one preset fills in (see LocationSettingsController.GetOvertimePresets).
+// Workweek start isn't part of a preset — selecting one leaves it alone. A null
+// threshold means that rule is off.
+export interface OvertimePresetDto {
+  preset: OvertimePreset;
+  overtimeDailyThresholdMinutes: number | null;
+  dailyDoubleTimeAfterMinutes: number | null;
+  weeklyOvertimeAfterMinutes: number | null;
+  seventhDayDoubleTimeAfterMinutes: number | null;
+}
 
 export interface LocationSettingsDto {
   timeFormat: TimeFormat;
@@ -15,7 +28,12 @@ export interface LocationSettingsDto {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
+  overtimePreset: OvertimePreset;
   overtimeDailyThresholdMinutes: number | null;
+  dailyDoubleTimeAfterMinutes: number | null;
+  weeklyOvertimeAfterMinutes: number | null;
+  seventhDayDoubleTimeAfterMinutes: number | null;
+  workweekStartDay: WorkweekDay;
   developmentMode: boolean;
   scheduleVisibilityEnabled: boolean;
   adminSeesAllSchedules: boolean;
@@ -43,7 +61,12 @@ export interface UpdateLocationSettingsRequest {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
+  overtimePreset: OvertimePreset;
   overtimeDailyThresholdMinutes: number | null;
+  dailyDoubleTimeAfterMinutes: number | null;
+  weeklyOvertimeAfterMinutes: number | null;
+  seventhDayDoubleTimeAfterMinutes: number | null;
+  workweekStartDay: WorkweekDay;
   developmentMode: boolean;
   scheduleVisibilityEnabled: boolean;
   adminSeesAllSchedules: boolean;
@@ -91,6 +114,10 @@ export class LocationSettingsApi {
   get(locationCode?: string) {
     const params = locationCode ? `?locationCode=${encodeURIComponent(locationCode)}` : '';
     return this.http.get<LocationSettingsDto>(`${this.base}${params}`);
+  }
+
+  getOvertimePresets() {
+    return this.http.get<OvertimePresetDto[]>(`${this.base}/overtime-presets`);
   }
 
   getMine() {

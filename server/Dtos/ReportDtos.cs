@@ -16,10 +16,14 @@ public record DailyHoursDto(
     // day with no assignment at all (sick-only day). Still set on an absent
     // day, so the missed time shows up as variance.
     int? ScheduledMinutes,
-    // Net worked time beyond the location's daily overtime threshold (see
-    // LocationSettings.OvertimeDailyThresholdMinutes). 0 on days that aren't
-    // over, and on days NetWorkedMinutes is null (not yet clocked out).
+    // NetWorkedMinutes split by pay rate under the location's overtime rules
+    // (see OvertimeCalculator): RegularMinutes + OvertimeMinutes (1.5x) +
+    // DoubleTimeMinutes (2x) = NetWorkedMinutes. All 0 on days
+    // NetWorkedMinutes is null (not yet clocked out). Weekly and seventh-day
+    // rules can make a day overtime even when it's short.
+    int RegularMinutes,
     int OvertimeMinutes,
+    int DoubleTimeMinutes,
     bool IsAbsent,
     string? AbsenceNote,
     bool LeftEarly,
@@ -60,7 +64,9 @@ public record EmployeeHoursReportDto(
     int TotalLunchMinutes,
     int TotalNetWorkedMinutes,
     int TotalScheduledMinutes,
+    int TotalRegularMinutes,
     int TotalOvertimeMinutes,
+    int TotalDoubleTimeMinutes,
     int AbsentDays,
     int OpenEntryDays,
     int TotalSickMinutes,

@@ -10,7 +10,11 @@ export interface DailyHoursDto {
   lunchMinutes: number;
   netWorkedMinutes: number | null;
   scheduledMinutes: number | null;
+  // netWorkedMinutes split by pay rate: regular + overtime (1.5x) + double
+  // time (2x). All 0 while the day is still clocked in.
+  regularMinutes: number;
   overtimeMinutes: number;
+  doubleTimeMinutes: number;
   isAbsent: boolean;
   absenceNote: string | null;
   leftEarly: boolean;
@@ -32,7 +36,9 @@ export interface EmployeeHoursReportDto {
   totalLunchMinutes: number;
   totalNetWorkedMinutes: number;
   totalScheduledMinutes: number;
+  totalRegularMinutes: number;
   totalOvertimeMinutes: number;
+  totalDoubleTimeMinutes: number;
   absentDays: number;
   openEntryDays: number;
   totalSickMinutes: number;

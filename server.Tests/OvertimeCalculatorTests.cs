@@ -275,4 +275,35 @@ public class OvertimeCalculatorTests
         Assert.Equal(OvertimePreset.Custom, settings.OvertimePreset);
         Assert.Equal(new OvertimePolicy(480, null, null, null, DayOfWeek.Monday), settings.GetOvertimePolicy());
     }
+
+    [Theory]
+    [InlineData(0, 0, 0, 6)] // Mon..Mon -> that Monday's week
+    [InlineData(2, 4, 0, 6)] // Wed..Fri -> Mon..Sun
+    [InlineData(6, 7, 0, 13)] // Sun..next Mon -> both weeks
+    public void Workweek_span_widens_a_range_to_whole_weeks(int startOffset, int endOffset, int expectedStart, int expectedEnd)
+    {
+        var (start, end) = OvertimeCalculator.WorkweekSpan(Monday.AddDays(startOffset), Monday.AddDays(endOffset), DayOfWeek.Monday);
+
+        Assert.Equal(Monday.AddDays(expectedStart), start);
+        Assert.Equal(Monday.AddDays(expectedEnd), end);
+    }
+
+    [Fact]
+    public void Workweek_span_honors_the_start_day()
+    {
+        // Wednesday 9/16 with a Sunday-start week is Sun 9/13..Sat 9/19.
+        var (start, end) = OvertimeCalculator.WorkweekSpan(Monday.AddDays(2), Monday.AddDays(2), DayOfWeek.Sunday);
+
+        Assert.Equal(Monday.AddDays(-1), start);
+        Assert.Equal(Monday.AddDays(5), end);
+    }
+
+    [Fact]
+    public void A_preset_match_ignores_the_workweek_start_day_but_not_the_thresholds()
+    {
+        Assert.True((California with { WorkweekStartDay = DayOfWeek.Sunday }).MatchesPreset(OvertimePreset.California));
+        Assert.False((California with { WeeklyOvertimeAfterMinutes = 2100 }).MatchesPreset(OvertimePreset.California));
+        Assert.False(California.MatchesPreset(OvertimePreset.Federal));
+        Assert.False(OvertimePolicy.None.MatchesPreset(OvertimePreset.Custom));
+    }
 }
