@@ -1,0 +1,15 @@
+<h2 mat-dialog-title>{{ portalLabel }} Login</h2>
+<mat-dialog-content class="content">
+  <p class="hint">Enter your location code to continue to the {{ portalLabel }} login.</p>
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>Location Code</mat-label>
+    <input matInput name="locationCode" [(ngModel)]="locationCode" (keydown.enter)="continue()" />
+  </mat-form-field>
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="continue()" [disabled]="checking()">Continue</button>
+</mat-dialog-actions>

@@ -1,0 +1,20 @@
+.content {
+  width: 320px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+}
+
+.hint {
+  margin: 0 0 8px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.field {
+  width: 100%;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 0;
+}

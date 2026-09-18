@@ -16,6 +16,7 @@ import { Auth } from './core/auth';
 import { AccountsApi } from './core/accounts-api';
 import { MyAccountDialog } from './features/employee/my-account-dialog/my-account-dialog';
 import { ChangePasswordDialog } from './features/admin/change-password-dialog/change-password-dialog';
+import { LocationCodeDialog } from './features/home/location-code-dialog/location-code-dialog';
 
 type Portal = 'admin' | 'employee' | null;
 
@@ -101,7 +102,7 @@ export class App {
   protected readonly title = computed(() => {
     const locationName = this.auth.locationName();
     if (!locationName) {
-      return 'TAT — Time & Attendance';
+      return 'TAT — Time Attendance & Tracking';
     }
     switch (this.portal()) {
       case 'admin':
@@ -127,9 +128,10 @@ export class App {
   // Admin/Lead get their per-location nav folded into one gear+name menu in
   // the toolbar (see admin-home, which used to render these as a row of
   // buttons on the page itself) instead of the standalone dark mode/palette
-  // icons — signed-out visitors keep those icons as-is, since there's no
-  // per-role nav to consolidate them with (Employee gets the same gear+name
-  // treatment below, via isEmployeeMenu).
+  // icons — signed-out visitors get Employee/Admin buttons instead (see
+  // openLocationLogin), since there's no per-role nav to consolidate them
+  // with (Employee gets the same gear+name treatment below, via
+  // isEmployeeMenu).
   protected readonly isAdminMenu = computed(() => {
     const role = this.auth.role();
     return role === 'Admin' || role === 'Lead';
@@ -160,6 +162,15 @@ export class App {
 
   openChangePasswordDialog(): void {
     this.dialog.open(ChangePasswordDialog);
+  }
+
+  async openLocationLogin(portal: 'admin' | 'employee'): Promise<void> {
+    const locationCode = await firstValueFrom(
+      this.dialog.open(LocationCodeDialog, { data: { portal } }).afterClosed(),
+    );
+    if (locationCode) {
+      this.router.navigateByUrl(`/${locationCode}/${portal}`);
+    }
   }
 
   async resetCode(): Promise<void> {

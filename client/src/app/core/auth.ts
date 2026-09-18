@@ -31,6 +31,12 @@ export class Auth {
   readonly locationName = computed(() => this.session()?.locationName ?? null);
   readonly token = computed(() => this.session()?.token ?? null);
 
+  async locationExists(locationCode: string): Promise<boolean> {
+    return firstValueFrom(
+      this.http.get<boolean>(`${API_BASE_URL}/auth/location-exists/${encodeURIComponent(locationCode.trim())}`)
+    );
+  }
+
   async saLogin(username: string, password: string): Promise<void> {
     const res = await firstValueFrom(
       this.http.post<AuthResponse>(`${API_BASE_URL}/auth/sa-login`, { username, password })
