@@ -36,6 +36,10 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
+      # A failing test stops the workflow here, before anything is deployed.
+      - name: Run server tests
+        run: dotnet test server.Tests -c Release
+
       - name: Publish server
         run: dotnet publish server -c Release -o publish
 
