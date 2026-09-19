@@ -1,15 +1,34 @@
-name: Deploy to Azure
+name: Test and deploy to Azure
 
+# Tests run on every pull request (whatever branch it targets, so stacked PRs
+# are covered) and on every push to main. Only main / a manual run deploys.
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 env:
   AZURE_WEBAPP_NAME: tat
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run server tests
+        run: dotnet test server.Tests -c Release
+
+  # Skipped on pull requests, and never starts unless the tests pass. Secrets
+  # are only used here, so a PR run (including one from a fork) never sees them.
   build-and-deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,10 +54,6 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
-
-      # A failing test stops the workflow here, before anything is deployed.
-      - name: Run server tests
-        run: dotnet test server.Tests -c Release
 
       - name: Publish server
         run: dotnet publish server -c Release -o publish
