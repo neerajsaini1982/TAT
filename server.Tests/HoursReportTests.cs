@@ -53,7 +53,7 @@ public sealed class HoursReportTests : IDisposable
         return (location, shift);
     }
 
-    private Account SeedEmployee(Location location, string username)
+    private Account SeedEmployee(Location location, string username, bool exempt = false)
     {
         var account = new Account
         {
@@ -62,6 +62,7 @@ public sealed class HoursReportTests : IDisposable
             LastName = "Tester",
             Role = AccountRole.Employee,
             LocationId = location.Id,
+            IsOvertimeExempt = exempt,
         };
         db.Accounts.Add(account);
         db.SaveChanges();
@@ -211,5 +212,59 @@ public sealed class HoursReportTests : IDisposable
         var row = Assert.Single(RunReport(sunday, Monday.AddDays(3)));
 
         Assert.Equal(5 * 60, row.TotalOvertimeMinutes);
+    }
+
+    [Fact]
+    public void An_exempt_employee_gets_all_regular_time_while_others_at_the_location_still_get_overtime()
+    {
+        var (location, shift) = SeedLocation(s =>
+        {
+            var policy = OvertimePolicy.ForPreset(OvertimePreset.California);
+            s.OvertimePreset = OvertimePreset.California;
+            s.OvertimeDailyThresholdMinutes = policy.DailyOvertimeAfterMinutes;
+            s.DailyDoubleTimeAfterMinutes = policy.DailyDoubleTimeAfterMinutes;
+            s.WeeklyOvertimeAfterMinutes = policy.WeeklyOvertimeAfterMinutes;
+            s.SeventhDayDoubleTimeAfterMinutes = policy.SeventhDayDoubleTimeAfterMinutes;
+        });
+        var salaried = SeedEmployee(location, "salaried", exempt: true);
+        var hourly = SeedEmployee(location, "hourly");
+        SeedWorkedDay(shift, salaried, Monday, 13);
+        SeedWorkedDay(shift, hourly, Monday, 13);
+
+        var rows = RunReport(Monday, Monday).ToDictionary(r => r.FullName);
+
+        var exempt = rows["salaried Tester"];
+        Assert.True(exempt.IsOvertimeExempt);
+        Assert.Equal(13 * 60, exempt.TotalRegularMinutes);
+        Assert.Equal(0, exempt.TotalOvertimeMinutes);
+        Assert.Equal(0, exempt.TotalDoubleTimeMinutes);
+        Assert.Equal(13 * 60, exempt.TotalNetWorkedMinutes);
+
+        var nonExempt = rows["hourly Tester"];
+        Assert.False(nonExempt.IsOvertimeExempt);
+        Assert.Equal(8 * 60, nonExempt.TotalRegularMinutes);
+        Assert.Equal(4 * 60, nonExempt.TotalOvertimeMinutes);
+        Assert.Equal(1 * 60, nonExempt.TotalDoubleTimeMinutes);
+    }
+
+    [Fact]
+    public void An_exempt_employee_is_exempt_from_the_weekly_rule_too()
+    {
+        var (location, shift) = SeedLocation(s =>
+        {
+            s.OvertimePreset = OvertimePreset.Federal;
+            s.OvertimeDailyThresholdMinutes = null;
+            s.WeeklyOvertimeAfterMinutes = 40 * 60;
+        });
+        var salaried = SeedEmployee(location, "salaried", exempt: true);
+        for (var offset = 0; offset < 5; offset++)
+        {
+            SeedWorkedDay(shift, salaried, Monday.AddDays(offset), 10);
+        }
+
+        var row = Assert.Single(RunReport(Monday, Monday.AddDays(4)));
+
+        Assert.Equal(50 * 60, row.TotalRegularMinutes);
+        Assert.Equal(0, row.TotalOvertimeMinutes);
     }
 }

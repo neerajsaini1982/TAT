@@ -129,6 +129,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
             DateOfBirth = request.DateOfBirth,
             HireDate = request.HireDate,
             EmploymentType = request.EmploymentType,
+            IsOvertimeExempt = request.IsOvertimeExempt,
             SsnEncrypted = ssnDigits is null ? null : ssnProtector.Protect(ssnDigits),
             SsnLast4 = ssnDigits is null ? null : ssnDigits[^4..],
         };
@@ -448,6 +449,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         account.DateOfBirth = request.DateOfBirth;
         account.HireDate = request.HireDate;
         account.EmploymentType = request.EmploymentType;
+        account.IsOvertimeExempt = request.IsOvertimeExempt;
         if (ssnDigits is not null)
         {
             account.SsnEncrypted = ssnProtector.Protect(ssnDigits);
@@ -646,5 +648,6 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         a.DateOfBirth?.ToString("yyyy-MM-dd"),
         a.HireDate?.ToString("yyyy-MM-dd"),
         a.EmploymentType?.ToString(),
+        a.IsOvertimeExempt,
         a.PhotoFileName is not null);
 }

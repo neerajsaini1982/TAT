@@ -68,6 +68,15 @@ public class Account
 
     public EmploymentType? EmploymentType { get; set; }
 
+    // Salaried employees who meet the duties and salary tests (executive,
+    // administrative, professional...) aren't owed overtime, so the payroll
+    // report treats all of their worked time as regular (see
+    // ReportsController). It's a payroll judgment an admin records — not
+    // something to infer from EmploymentType (a full-time hourly employee is
+    // not exempt) or HourlyRate. Defaults to false so overtime applies unless
+    // someone says otherwise.
+    public bool IsOvertimeExempt { get; set; } = false;
+
     // Ciphertext (ASP.NET Core Data Protection) and the plaintext last 4
     // digits used to render a mask ("***-**-1234") without decrypting. There
     // is no code path that decrypts SsnEncrypted back to plaintext.

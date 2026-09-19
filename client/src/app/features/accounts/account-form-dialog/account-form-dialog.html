@@ -133,6 +133,13 @@
           <input matInput type="date" name="hireDate" [(ngModel)]="form.hireDate" />
         </mat-form-field>
       </div>
+      <mat-slide-toggle name="isOvertimeExempt" [(ngModel)]="form.isOvertimeExempt">
+        Exempt from overtime (salaried)
+      </mat-slide-toggle>
+      <p class="toggle-hint">
+        Exempt employees are paid every hour as regular time — the location's overtime rules don't apply to them. Leave
+        off for hourly staff, including full-time.
+      </p>
     </section>
 
     @if (editingId !== null) {

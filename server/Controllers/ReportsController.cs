@@ -155,9 +155,10 @@ public class ReportsController(AppDbContext db) : ControllerBase
             .ToList();
 
         // Rules run over every loaded day (whole workweeks), then only the
-        // requested range is kept — see GetHoursReport.
+        // requested range is kept — see GetHoursReport. An exempt employee is
+        // owed no premium pay, so no rules apply to them.
         var payByDate = OvertimeCalculator
-            .Calculate(overtimePolicy, days
+            .Calculate(account.IsOvertimeExempt ? OvertimePolicy.None : overtimePolicy, days
                 .Where(d => d.NetWorkedMinutes is not null)
                 .Select(d => new DayHours(d.Date, d.NetWorkedMinutes!.Value)))
             .ToDictionary(p => p.Date);
@@ -177,6 +178,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
         return new EmployeeHoursReportDto(
             account.Id,
             $"{account.FirstName} {account.LastName}",
+            account.IsOvertimeExempt,
             days.Sum(d => d.WorkedMinutes ?? 0),
             days.Sum(d => d.BreakMinutes),
             days.Sum(d => d.LunchMinutes),
