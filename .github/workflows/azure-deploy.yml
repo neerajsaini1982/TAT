@@ -1,15 +1,57 @@
-name: Deploy to Azure
+name: Test and deploy to Azure
 
+# Server tests run on every pull request (whatever branch it targets, so
+# stacked PRs are covered) and on every push to main; pull requests also
+# build the client. Only main / a manual run deploys.
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 env:
   AZURE_WEBAPP_NAME: tat
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Run server tests
+        run: dotnet test server.Tests -c Release
+
+  # Compiles the Angular client with the same production build the deploy uses,
+  # so a type or template error fails the PR instead of the deploy. Pull
+  # requests only: on main, build-and-deploy runs this same build as its first
+  # real step, so a second copy would just cost time.
+  client:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: client/package-lock.json
+
+      - name: Build Angular client
+        run: |
+          npm ci
+          npx ng build
+        working-directory: client
+
+  # Skipped on pull requests, and never starts unless the tests pass. Secrets
+  # are only used here, so a PR run (including one from a fork) never sees them.
   build-and-deploy:
+    needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
