@@ -31,6 +31,7 @@ interface FormModel {
   dateOfBirth: string | null;
   hireDate: string | null;
   employmentType: EmploymentType | null;
+  isOvertimeExempt: boolean;
 }
 
 const emptyForm = (): FormModel => ({
@@ -50,6 +51,7 @@ const emptyForm = (): FormModel => ({
   dateOfBirth: null,
   hireDate: null,
   employmentType: null,
+  isOvertimeExempt: false,
 });
 
 // data.account set means "edit that account"; data.duplicateFrom set means
@@ -263,6 +265,7 @@ export class AccountFormDialog implements OnDestroy {
           dateOfBirth: this.form.dateOfBirth,
           hireDate: this.form.hireDate,
           employmentType: this.form.employmentType,
+          isOvertimeExempt: this.form.isOvertimeExempt,
         })
         .subscribe({
           next: (account) => this.syncPhotoThenClose(account.id),
@@ -297,6 +300,7 @@ export class AccountFormDialog implements OnDestroy {
         dateOfBirth: this.form.dateOfBirth,
         hireDate: this.form.hireDate,
         employmentType: this.form.employmentType,
+        isOvertimeExempt: this.form.isOvertimeExempt,
       })
       .subscribe({
         next: () => this.syncPhotoThenClose(id),

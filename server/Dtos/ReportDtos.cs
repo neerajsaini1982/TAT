@@ -59,6 +59,9 @@ public record DailyHoursDto(
 public record EmployeeHoursReportDto(
     int EmployeeId,
     string FullName,
+    // Account.IsOvertimeExempt — all of this employee's worked time is
+    // regular, whatever the location's overtime rules say.
+    bool IsOvertimeExempt,
     int TotalWorkedMinutes,
     int TotalBreakMinutes,
     int TotalLunchMinutes,

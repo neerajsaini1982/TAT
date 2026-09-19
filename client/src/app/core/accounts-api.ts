@@ -41,6 +41,10 @@ export interface AccountDto {
   dateOfBirth: string | null;
   hireDate: string | null;
   employmentType: EmploymentType | null;
+  // Salaried and exempt from overtime: the payroll report counts all of this
+  // employee's worked time as regular. Recorded by an admin — not implied by
+  // employmentType (a full-time hourly employee is not exempt).
+  isOvertimeExempt: boolean;
   hasPhoto: boolean;
 }
 
@@ -61,6 +65,7 @@ export interface CreateAccountRequest {
   dateOfBirth: string | null;
   hireDate: string | null;
   employmentType: EmploymentType | null;
+  isOvertimeExempt: boolean;
 }
 
 export interface UpdateMineRequest {
@@ -91,6 +96,7 @@ export interface UpdateAccountRequest {
   dateOfBirth: string | null;
   hireDate: string | null;
   employmentType: EmploymentType | null;
+  isOvertimeExempt: boolean;
 }
 
 @Service()

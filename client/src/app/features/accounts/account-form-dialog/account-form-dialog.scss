@@ -115,6 +115,12 @@ form {
   gap: 12px 24px;
 }
 
+.toggle-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 .rate-prefix {
   color: var(--mat-sys-on-surface-variant);
   padding-left: 2px;

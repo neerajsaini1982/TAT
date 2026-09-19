@@ -34,6 +34,7 @@ public record AccountDto(
     string? DateOfBirth,
     string? HireDate,
     string? EmploymentType,
+    bool IsOvertimeExempt,
     bool HasPhoto);
 
 public record CreateAccountRequest(
@@ -54,7 +55,9 @@ public record CreateAccountRequest(
     string? Ssn,
     DateOnly? DateOfBirth,
     DateOnly? HireDate,
-    EmploymentType? EmploymentType);
+    EmploymentType? EmploymentType,
+    // See Account.IsOvertimeExempt.
+    bool IsOvertimeExempt = false);
 
 public record UpdateAccountRequest(
     string FirstName,
@@ -75,7 +78,8 @@ public record UpdateAccountRequest(
     string? Ssn,
     DateOnly? DateOfBirth,
     DateOnly? HireDate,
-    EmploymentType? EmploymentType);
+    EmploymentType? EmploymentType,
+    bool IsOvertimeExempt = false);
 
 // LoginLink is built client-side (it already knows its own origin) and
 // passed through rather than the server guessing its hostname.

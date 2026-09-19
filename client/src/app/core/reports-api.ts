@@ -31,6 +31,9 @@ export interface DailyHoursDto {
 export interface EmployeeHoursReportDto {
   employeeId: number;
   fullName: string;
+  // All of this employee's worked time is regular, whatever the location's
+  // overtime rules say (see AccountDto.isOvertimeExempt).
+  isOvertimeExempt: boolean;
   totalWorkedMinutes: number;
   totalBreakMinutes: number;
   totalLunchMinutes: number;
