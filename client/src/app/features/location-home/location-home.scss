@@ -1,27 +1,179 @@
+// Values come from the `--mat-sys-*` tokens in styles.scss, so the accent
+// follows whichever theme the location has picked.
+
+.picker {
+  max-width: 860px;
+  margin: 0 auto;
+  padding-top: 24px;
+}
+
+// Notice, not a card: squared, with an accent edge, sitting above the title.
 .session-expired-banner {
-  max-width: 620px;
-  margin: 0 auto 16px;
-
-  mat-card-content {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 16px !important;
-    font-size: 15px;
-  }
-
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 860px;
+  margin: 0 auto 8px;
+  padding: 12px 16px;
+  border-left: 4px solid var(--mat-sys-primary);
   background: var(--mat-sys-secondary-container);
   color: var(--mat-sys-on-secondary-container);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+// Title band: kicker over title, closed by a 2px rule — same furniture as
+// the report and login pages.
+.picker-head {
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+  padding-bottom: 16px;
+  margin-bottom: 32px;
+
+  h1 {
+    margin: 0;
+    font: var(--mat-sys-headline-large);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+}
+
+.kicker {
+  margin: 0 0 6px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mat-sys-primary);
+}
+
+.lede {
+  margin: 8px 0 0;
+  font-size: 16px;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
-  max-width: 620px;
-  margin: 0 auto;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
 }
 
-mat-card-actions {
-  padding: 0 16px 16px;
+// The whole card is the link, so the target is large and there is one tab
+// stop per portal.
+.portal-card {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-top: 4px solid var(--mat-sys-on-surface);
+  background: var(--mat-sys-surface-container-lowest);
+  color: var(--mat-sys-on-surface);
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease,
+    border-color 0.15s ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: var(--mat-sys-primary);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+
+    .portal-cta mat-icon {
+      transform: translateX(4px);
+    }
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--mat-sys-primary);
+    outline-offset: 3px;
+  }
+}
+
+.portal-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+
+  mat-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 30px;
+  }
+}
+
+.portal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+
+.portal-title {
+  font-size: 34px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.portal-desc {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.portal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+
+  span {
+    padding: 4px 10px;
+    border: 1px solid var(--mat-sys-outline-variant);
+    font: var(--mat-sys-label-medium);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.portal-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  font: var(--mat-sys-label-large);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+
+  mat-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 24px;
+    color: var(--mat-sys-primary);
+    transition: transform 0.15s ease;
+  }
+}
+
+@media (max-width: 599.98px) {
+  .picker {
+    padding-top: 8px;
+  }
+
+  .portal-card {
+    padding: 22px;
+  }
+
+  .portal-title {
+    font-size: 28px;
+  }
 }
