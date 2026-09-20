@@ -9,19 +9,31 @@ using Server.Security;
 
 namespace Server.Controllers;
 
-// Write-ups / warnings recorded against one employee. Any authenticated
-// caller can read their OWN list (that's how an employee sees their own
-// write-ups); only Admin/Sa — for an employee in their own location — can
-// read anyone else's, or create, edit, or delete. Leads get no special
-// access: a write-up is HR-sensitive, so it isn't something to hand out by
-// default. Lookups that fail the access check return 404 rather than 403, so
-// the API doesn't confirm that another employee's account exists.
+// Write-ups / warnings recorded against one employee.
+//
+// Who can do what:
+//  - Any signed-in employee can list their OWN write-ups and acknowledge
+//    them ("I received this" — not "I agree").
+//  - An Admin/Sa, for an employee in their own location, can list, create,
+//    edit, void, and record that the employee declined to acknowledge.
+//    They can NOT do any of that for their own account — a write-up about
+//    yourself has to come from someone else (a different Admin, or Sa).
+//  - Leads get no special access: a write-up is HR-sensitive, so it isn't
+//    something to hand out by default.
+// Lookups that fail the access check return 404 rather than 403, so the API
+// doesn't confirm that another employee's account exists.
+//
+// Write-ups are never deleted — a mistaken or rescinded one is voided with a
+// reason, and every change is appended to the write-up's audit trail
+// (WriteUpEvent). Editing a write-up the employee had already responded to
+// puts it back to Pending, because what they acknowledged has changed.
 [ApiController]
 [Route("api/accounts/{accountId:int}/write-ups")]
 [Authorize]
 public class WriteUpsController(AppDbContext db) : ControllerBase
 {
     public const int MaxDescriptionLength = 2000;
+    public const int MaxVoidReasonLength = 500;
 
     [HttpGet]
     public ActionResult<IEnumerable<WriteUpDto>> GetAll(int accountId)
@@ -32,14 +44,19 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
             return NotFound();
         }
 
-        var writeUps = db.WriteUps
-            .Include(w => w.CreatedByAccount)
-            .Where(w => w.AccountId == accountId)
+        var forManager = CanManage(account);
+        var query = db.WriteUps.Include(w => w.CreatedByAccount).Where(w => w.AccountId == accountId);
+        if (forManager)
+        {
+            query = query.Include(w => w.Events).ThenInclude(e => e.ByAccount);
+        }
+
+        var writeUps = query
             .OrderByDescending(w => w.Date)
             .ThenByDescending(w => w.Id)
             .ToList();
 
-        return Ok(writeUps.Select(ToDto));
+        return Ok(writeUps.Select(w => ToDto(w, forManager)));
     }
 
     [HttpPost]
@@ -47,34 +64,37 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
     public ActionResult<WriteUpDto> Create(int accountId, CreateWriteUpRequest request)
     {
         var account = FindAccount(accountId);
-        if (account is null || !IsAdmin(account))
+        if (account is null || !CanManage(account))
         {
             return NotFound();
         }
 
         var severity = request.Severity ?? WriteUpSeverity.Normal;
-        var validationError = Validate(request.Date, request.Description, severity);
+        var type = request.Type ?? WriteUpType.Written;
+        var validationError = Validate(request.Date, request.Description, severity, type);
         if (validationError is not null)
         {
             return BadRequest(validationError);
         }
 
-        var callerId = CallerAccountId();
+        var caller = Caller();
         var writeUp = new WriteUp
         {
             AccountId = accountId,
             Date = request.Date,
             Description = request.Description.Trim(),
             Severity = severity,
-            CreatedByAccountId = callerId,
+            Type = type,
+            CreatedByAccountId = caller.Id,
+            CreatedByAccount = caller,
             CreatedAt = DateTime.UtcNow,
         };
+        AddEvent(writeUp, WriteUpEventAction.Created, null);
 
         db.WriteUps.Add(writeUp);
         db.SaveChanges();
 
-        writeUp.CreatedByAccount = db.Accounts.Find(callerId);
-        return CreatedAtAction(nameof(GetAll), new { accountId }, ToDto(writeUp));
+        return CreatedAtAction(nameof(GetAll), new { accountId }, ToDto(writeUp, forManager: true));
     }
 
     [HttpPut("{writeUpId:int}")]
@@ -82,55 +102,194 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
     public ActionResult<WriteUpDto> Update(int accountId, int writeUpId, UpdateWriteUpRequest request)
     {
         var account = FindAccount(accountId);
-        if (account is null || !IsAdmin(account))
+        if (account is null || !CanManage(account))
         {
             return NotFound();
         }
 
-        var writeUp = db.WriteUps
-            .Include(w => w.CreatedByAccount)
-            .SingleOrDefault(w => w.Id == writeUpId && w.AccountId == accountId);
+        var writeUp = FindWriteUp(accountId, writeUpId);
         if (writeUp is null)
         {
             return NotFound();
         }
 
-        var validationError = Validate(request.Date, request.Description, request.Severity);
+        if (writeUp.IsVoided)
+        {
+            return Conflict("A voided write-up can't be edited.");
+        }
+
+        var validationError = Validate(request.Date, request.Description, request.Severity, request.Type);
         if (validationError is not null)
         {
             return BadRequest(validationError);
         }
 
+        var description = request.Description.Trim();
+        var changes = new List<string>();
+        if (request.Date != writeUp.Date)
+        {
+            changes.Add($"Date: {writeUp.Date:yyyy-MM-dd} → {request.Date:yyyy-MM-dd}");
+        }
+
+        if (request.Type != writeUp.Type)
+        {
+            changes.Add($"Type: {writeUp.Type} → {request.Type}");
+        }
+
+        if (request.Severity != writeUp.Severity)
+        {
+            changes.Add($"Severity: {writeUp.Severity} → {request.Severity}");
+        }
+
+        if (description != writeUp.Description)
+        {
+            changes.Add($"Description: \"{writeUp.Description}\" → \"{description}\"");
+        }
+
+        // Nothing actually changed: no audit entry, and no reason to make the
+        // employee acknowledge it again.
+        if (changes.Count == 0)
+        {
+            return Ok(ToDto(writeUp, forManager: true));
+        }
+
+        if (writeUp.AcknowledgmentStatus != WriteUpAcknowledgment.Pending)
+        {
+            changes.Add($"Acknowledgment reset to Pending (was {writeUp.AcknowledgmentStatus}).");
+            writeUp.AcknowledgmentStatus = WriteUpAcknowledgment.Pending;
+            writeUp.AcknowledgmentAt = null;
+        }
+
         writeUp.Date = request.Date;
-        writeUp.Description = request.Description.Trim();
+        writeUp.Description = description;
         writeUp.Severity = request.Severity;
+        writeUp.Type = request.Type;
+        AddEvent(writeUp, WriteUpEventAction.Edited, string.Join("\n", changes));
         db.SaveChanges();
 
-        return Ok(ToDto(writeUp));
+        return Ok(ToDto(writeUp, forManager: true));
     }
 
-    [HttpDelete("{writeUpId:int}")]
+    [HttpPost("{writeUpId:int}/void")]
     [Authorize(Policy = "AdminOrAbove")]
-    public IActionResult Delete(int accountId, int writeUpId)
+    public ActionResult<WriteUpDto> Void(int accountId, int writeUpId, VoidWriteUpRequest request)
     {
         var account = FindAccount(accountId);
-        if (account is null || !IsAdmin(account))
+        if (account is null || !CanManage(account))
         {
             return NotFound();
         }
 
-        var writeUp = db.WriteUps.SingleOrDefault(w => w.Id == writeUpId && w.AccountId == accountId);
+        var writeUp = FindWriteUp(accountId, writeUpId);
         if (writeUp is null)
         {
             return NotFound();
         }
 
-        db.WriteUps.Remove(writeUp);
+        if (writeUp.IsVoided)
+        {
+            return Conflict("This write-up is already voided.");
+        }
+
+        var reason = request.Reason?.Trim();
+        if (string.IsNullOrEmpty(reason))
+        {
+            return BadRequest("A reason is required to void a write-up.");
+        }
+
+        if (reason.Length > MaxVoidReasonLength)
+        {
+            return BadRequest($"Reason is too long ({MaxVoidReasonLength} characters max).");
+        }
+
+        writeUp.VoidedAt = DateTime.UtcNow;
+        writeUp.VoidReason = reason;
+        AddEvent(writeUp, WriteUpEventAction.Voided, reason);
         db.SaveChanges();
-        return NoContent();
+
+        return Ok(ToDto(writeUp, forManager: true));
     }
 
-    private static string? Validate(DateOnly date, string? description, WriteUpSeverity severity)
+    // Only the employee the write-up is about can acknowledge it — an admin
+    // acknowledging on their behalf would defeat the point (an admin who
+    // hand-delivered it and the employee refused uses Decline instead).
+    [HttpPost("{writeUpId:int}/acknowledge")]
+    public ActionResult<WriteUpDto> Acknowledge(int accountId, int writeUpId)
+    {
+        var account = FindAccount(accountId);
+        if (account is null || CallerAccountId() != account.Id)
+        {
+            return NotFound();
+        }
+
+        var writeUp = FindWriteUp(accountId, writeUpId);
+        if (writeUp is null)
+        {
+            return NotFound();
+        }
+
+        if (writeUp.IsVoided)
+        {
+            return Conflict("A voided write-up can't be acknowledged.");
+        }
+
+        // Idempotent: a double-click or a retry shouldn't add a second entry
+        // or move the original timestamp.
+        if (writeUp.AcknowledgmentStatus == WriteUpAcknowledgment.Acknowledged)
+        {
+            return Ok(ToDto(writeUp, forManager: false));
+        }
+
+        writeUp.AcknowledgmentStatus = WriteUpAcknowledgment.Acknowledged;
+        writeUp.AcknowledgmentAt = DateTime.UtcNow;
+        AddEvent(writeUp, WriteUpEventAction.Acknowledged, null);
+        db.SaveChanges();
+
+        return Ok(ToDto(writeUp, forManager: false));
+    }
+
+    // Records that the employee refused to acknowledge. They can still
+    // acknowledge later (that just replaces Declined).
+    [HttpPost("{writeUpId:int}/decline")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public ActionResult<WriteUpDto> DeclineAcknowledgment(int accountId, int writeUpId)
+    {
+        var account = FindAccount(accountId);
+        if (account is null || !CanManage(account))
+        {
+            return NotFound();
+        }
+
+        var writeUp = FindWriteUp(accountId, writeUpId);
+        if (writeUp is null)
+        {
+            return NotFound();
+        }
+
+        if (writeUp.IsVoided)
+        {
+            return Conflict("A voided write-up can't be changed.");
+        }
+
+        if (writeUp.AcknowledgmentStatus == WriteUpAcknowledgment.Acknowledged)
+        {
+            return Conflict("The employee has already acknowledged this write-up.");
+        }
+
+        if (writeUp.AcknowledgmentStatus == WriteUpAcknowledgment.Declined)
+        {
+            return Ok(ToDto(writeUp, forManager: true));
+        }
+
+        writeUp.AcknowledgmentStatus = WriteUpAcknowledgment.Declined;
+        writeUp.AcknowledgmentAt = DateTime.UtcNow;
+        AddEvent(writeUp, WriteUpEventAction.AcknowledgmentDeclined, null);
+        db.SaveChanges();
+
+        return Ok(ToDto(writeUp, forManager: true));
+    }
+
+    private static string? Validate(DateOnly date, string? description, WriteUpSeverity severity, WriteUpType type)
     {
         if (date == default)
         {
@@ -154,18 +313,50 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
             return "Severity is not valid.";
         }
 
+        if (!Enum.IsDefined(type))
+        {
+            return "Type is not valid.";
+        }
+
         return null;
+    }
+
+    private void AddEvent(WriteUp writeUp, WriteUpEventAction action, string? detail)
+    {
+        var caller = Caller();
+        writeUp.Events.Add(new WriteUpEvent
+        {
+            Action = action,
+            ByAccountId = caller.Id,
+            ByAccount = caller,
+            At = DateTime.UtcNow,
+            Detail = detail,
+        });
     }
 
     private Account? FindAccount(int accountId) =>
         db.Accounts.Include(a => a.Location).SingleOrDefault(a => a.Id == accountId);
 
+    private WriteUp? FindWriteUp(int accountId, int writeUpId) =>
+        db.WriteUps
+            .Include(w => w.CreatedByAccount)
+            .Include(w => w.Events).ThenInclude(e => e.ByAccount)
+            .SingleOrDefault(w => w.Id == writeUpId && w.AccountId == accountId);
+
+    private Account? cachedCaller;
+
+    private Account Caller() => cachedCaller ??= db.Accounts.Find(CallerAccountId())!;
+
     private int CallerAccountId() => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
-    private bool IsAdmin(Account account) =>
-        (User.IsInRole(nameof(AccountRole.Sa)) || User.IsInRole(nameof(AccountRole.Admin))) && CanAccess(account);
+    // Admin/Sa over an employee in their location — but never over their own
+    // account.
+    private bool CanManage(Account account) =>
+        (User.IsInRole(nameof(AccountRole.Sa)) || User.IsInRole(nameof(AccountRole.Admin))) &&
+        CanAccess(account) &&
+        CallerAccountId() != account.Id;
 
-    private bool CanView(Account account) => CallerAccountId() == account.Id || IsAdmin(account);
+    private bool CanView(Account account) => CallerAccountId() == account.Id || CanManage(account);
 
     private bool CanAccess(Account account) =>
         User.IsInRole(nameof(AccountRole.Sa)) ||
@@ -174,13 +365,29 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
     private string? CallerLocationCode() =>
         User.FindFirst(TokenService.LocationCodeClaimType)?.Value;
 
-    private static WriteUpDto ToDto(WriteUp w) => new(
+    private static string NameOf(Account? account) =>
+        account is null ? string.Empty : $"{account.FirstName} {account.LastName}";
+
+    private static WriteUpDto ToDto(WriteUp w, bool forManager) => new(
         w.Id,
         w.AccountId,
         w.Date,
         w.Description,
         w.Severity,
+        w.Type,
         w.CreatedByAccountId,
-        w.CreatedByAccount is null ? string.Empty : $"{w.CreatedByAccount.FirstName} {w.CreatedByAccount.LastName}",
-        w.CreatedAt);
+        NameOf(w.CreatedByAccount),
+        w.CreatedAt,
+        w.AcknowledgmentStatus,
+        w.AcknowledgmentAt,
+        w.IsVoided,
+        w.VoidedAt,
+        forManager ? w.VoidReason : null,
+        forManager
+            ? w.Events
+                .OrderBy(e => e.At)
+                .ThenBy(e => e.Id)
+                .Select(e => new WriteUpEventDto(e.Id, e.Action, e.ByAccountId, NameOf(e.ByAccount), e.At, e.Detail))
+                .ToList()
+            : null);
 }

@@ -22,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<EmploymentPeriod> EmploymentPeriods => Set<EmploymentPeriod>();
     public DbSet<SickTimeEntry> SickTimeEntries => Set<SickTimeEntry>();
     public DbSet<WriteUp> WriteUps => Set<WriteUp>();
+    public DbSet<WriteUpEvent> WriteUpEvents => Set<WriteUpEvent>();
 
     // SQLite has no native "datetime with offset" column type, so EF Core
     // round-trips every DateTime as Kind=Unspecified after a read — even
@@ -245,11 +246,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<WriteUp>(entity =>
         {
             entity.Property(w => w.Severity).HasConversion<string>();
+            entity.Property(w => w.Type).HasConversion<string>();
+            entity.Property(w => w.AcknowledgmentStatus).HasConversion<string>();
 
+            // Restrict, not Cascade: write-ups are a permanent record, so
+            // deleting an account must not quietly take them along —
+            // AccountsController.Delete refuses instead.
             entity.HasOne(w => w.Account)
                 .WithMany()
                 .HasForeignKey(w => w.AccountId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasOne(w => w.CreatedByAccount)
                 .WithMany()
@@ -257,6 +263,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(w => new { w.AccountId, w.Date });
+        });
+
+        modelBuilder.Entity<WriteUpEvent>(entity =>
+        {
+            entity.Property(e => e.Action).HasConversion<string>();
+
+            entity.HasOne(e => e.WriteUp)
+                .WithMany(w => w.Events)
+                .HasForeignKey(e => e.WriteUpId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ByAccount)
+                .WithMany()
+                .HasForeignKey(e => e.ByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.WriteUpId);
         });
     }
 
