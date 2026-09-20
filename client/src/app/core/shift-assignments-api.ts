@@ -42,10 +42,6 @@ export interface MarkAbsentRequest {
   note: string | null;
 }
 
-export interface SetSickMinutesRequest {
-  sickMinutes: number;
-}
-
 @Service()
 export class ShiftAssignmentsApi {
   private readonly http = inject(HttpClient);
@@ -77,10 +73,6 @@ export class ShiftAssignmentsApi {
 
   markAbsent(id: number, request: MarkAbsentRequest) {
     return this.http.put<ShiftAssignmentDto>(`${this.base}/${id}/absent`, request);
-  }
-
-  setSickMinutes(id: number, request: SetSickMinutesRequest) {
-    return this.http.put<ShiftAssignmentDto>(`${this.base}/${id}/sick-hours`, request);
   }
 
   publish(weekStartDate: string, locationCode?: string, sendEmail = false) {

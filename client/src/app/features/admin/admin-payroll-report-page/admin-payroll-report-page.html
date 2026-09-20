@@ -42,9 +42,6 @@
 @if (error()) {
   <p class="error">{{ error() }}</p>
 }
-@if (sickHoursError()) {
-  <p class="error">{{ sickHoursError() }}</p>
-}
 
 @if (loading()) {
   <p class="status">Loading…</p>
@@ -239,7 +236,7 @@
             <span class="day-head-num">Regular</span>
             <span class="day-head-num">Overtime</span>
             <span class="day-head-num">Double Time</span>
-            <span class="day-head-num">Sick (editable)</span>
+            <span class="day-head-num">Sick</span>
             <span class="day-head-num">Total</span>
             <span class="day-head-notes">Notes</span>
           </div>
@@ -261,25 +258,7 @@
                     <td class="day-numeric-col" data-label="Double Time" [class.flag]="day.doubleTimeMinutes > 0">{{ formatDuration(day.doubleTimeMinutes) }}</td>
                   }
                   <td class="day-sick-col" data-label="Sick hrs">
-                    @if (day.shiftAssignmentId !== null && canAddSickHours) {
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.25"
-                        class="sick-input"
-                        [attr.aria-label]="'Sick hours for ' + dayLabel(day.date)"
-                        [value]="(day.sickMinutes / 60).toFixed(2)"
-                        [disabled]="isSavingSickHours(day)"
-                        (change)="updateSickHours(day, $any($event.target).value)"
-                      />
-                    } @else {
-                      <!-- Either no ShiftAssignment this day (sick hours were
-                           entered manually via "Add Sick Hours Manually" and
-                           aren't editable inline here), or the viewer isn't
-                           Admin/Sa — SetSickMinutes is Admin/Sa-only
-                           server-side, so read-only avoids a 403 on save. -->
-                      <span class="manual-sick-value">{{ (day.sickMinutes / 60).toFixed(2) }}</span>
-                    }
+                    <span class="manual-sick-value">{{ (day.sickMinutes / 60).toFixed(2) }}</span>
                   </td>
                   <td class="day-numeric-col day-total-col" data-label="Total">{{ formatDuration((day.netWorkedMinutes ?? 0) + day.sickMinutes) }}</td>
                   <td class="notes-cell">
