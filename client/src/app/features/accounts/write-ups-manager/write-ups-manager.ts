@@ -122,7 +122,7 @@ export class WriteUpsManager implements OnChanges {
       },
       error: (err) => {
         this.saving.set(false);
-        this.error.set(err?.error ?? 'Failed to save write-up.');
+        this.error.set(errorMessage(err, 'Failed to save write-up.'));
       },
     });
   }
@@ -139,12 +139,35 @@ export class WriteUpsManager implements OnChanges {
       },
       error: (err) => {
         this.deletingId.set(null);
-        alert(err?.error ?? 'Failed to delete write-up.');
+        alert(errorMessage(err, 'Failed to delete write-up.'));
       },
     });
   }
 
   private blankForm(): { date: string; description: string; severity: WriteUpSeverity } {
     return { date: formatDate(new Date()), description: '', severity: DEFAULT_WRITE_UP_SEVERITY };
+  }
+}
+
+// The API returns a plain string for its own validation errors, but a
+// ProblemDetails object (framework 400/404s) or an empty body (401/403,
+// or a server that predates the endpoint) otherwise — so only a string is
+// shown as-is, and the status explains the rest.
+function errorMessage(err: { status?: number; error?: unknown }, fallback: string): string {
+  if (typeof err?.error === 'string' && err.error) {
+    return err.error;
+  }
+  switch (err?.status) {
+    case 0:
+      return `${fallback} Could not reach the server.`;
+    case 401:
+      return `${fallback} Your session has expired — sign in again.`;
+    case 403:
+      return `${fallback} Only an admin can add, edit or delete write-ups.`;
+    case 404:
+    case 405:
+      return `${fallback} The server doesn't have this feature yet — restart it so it picks up the latest version.`;
+    default:
+      return fallback;
   }
 }
