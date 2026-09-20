@@ -75,4 +75,23 @@ public class AuthController(AppDbContext db, TokenService tokens) : ControllerBa
         var token = tokens.CreateToken(account, account.Location.LocationCode);
         return Ok(new AuthResponse(token, account.Id, account.Username, account.FirstName, account.LastName, account.Role.ToString(), account.Location.LocationCode, account.Location.Name));
     }
+
+    // Logs in the shared kiosk device itself, not any one employee — see
+    // TokenService.CreateKioskToken. Individual employees still identify
+    // themselves per-punch with their own PIN (KioskController).
+    [HttpPost("kiosk-login")]
+    public ActionResult<AuthResponse> KioskLogin(KioskLoginRequest request)
+    {
+        var location = db.Locations.SingleOrDefault(l => l.LocationCode == request.LocationCode);
+        var settings = location is null ? null : db.LocationSettings.SingleOrDefault(s => s.LocationId == location.Id);
+
+        if (location is null || settings?.KioskPasscodeHash is null ||
+            !PasswordHasher.Verify(request.Passcode, settings.KioskPasscodeHash))
+        {
+            return Unauthorized();
+        }
+
+        var token = tokens.CreateKioskToken(location.LocationCode);
+        return Ok(new AuthResponse(token, 0, "kiosk", location.Name, string.Empty, nameof(AccountRole.Kiosk), location.LocationCode, location.Name));
+    }
 }

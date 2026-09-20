@@ -38,7 +38,8 @@ public sealed class AccountsOvertimeExemptTests : IDisposable
 
     // The email sender is only used by the send-credentials endpoint.
     private AccountsController CreateController() => new(
-        db, null!, new SsnProtector(new EphemeralDataProtectionProvider()), new ConfigurationBuilder().Build())
+        db, null!, new SsnProtector(new EphemeralDataProtectionProvider()),
+        new PinProtector(new EphemeralDataProtectionProvider()), new ConfigurationBuilder().Build())
     {
         ControllerContext = new ControllerContext
         {

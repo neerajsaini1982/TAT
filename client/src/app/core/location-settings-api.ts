@@ -50,6 +50,9 @@ export interface LocationSettingsDto {
   payDayStartDate: string | null;
   payPeriodDays: number | null;
   nextPayDate: string | null;
+  // Never round-trips the stored passcode; true only tells the UI a kiosk
+  // device can log in for this location.
+  hasKioskPasscode: boolean;
 }
 
 export interface UpdateLocationSettingsRequest {
@@ -82,6 +85,11 @@ export interface UpdateLocationSettingsRequest {
   smtpFromName: string | null;
   payDayStartDate: string | null;
   payPeriodDays: number | null;
+  // Blank leaves the existing stored passcode untouched, same "blank means
+  // unchanged" rule smtpPassword uses.
+  kioskPasscode: string | null;
+  // Explicitly clears the stored passcode (disables kiosk login).
+  clearKioskPasscode: boolean;
 }
 
 export interface SendTestEmailRequest {

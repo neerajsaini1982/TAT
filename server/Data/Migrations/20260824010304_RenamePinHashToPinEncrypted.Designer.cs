@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Server.Data;
 
@@ -10,9 +11,11 @@ using Server.Data;
 namespace Server.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260824010304_RenamePinHashToPinEncrypted")]
+    partial class RenamePinHashToPinEncrypted
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -34,9 +37,6 @@ namespace Server.Data.Migrations
 
                     b.Property<string>("BirthDate")
                         .HasColumnType("TEXT");
-
-                    b.Property<bool>("CanSeeAllSchedules")
-                        .HasColumnType("INTEGER");
 
                     b.Property<string>("City")
                         .HasColumnType("TEXT");
@@ -68,9 +68,6 @@ namespace Server.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("IsOnShiftSchedule")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsOvertimeExempt")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("JobTitle")
@@ -394,9 +391,6 @@ namespace Server.Data.Migrations
                     b.Property<int>("ClockInWindowMinutes")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("DailyDoubleTimeAfterMinutes")
-                        .HasColumnType("INTEGER");
-
                     b.Property<string>("DateFormat")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -422,12 +416,8 @@ namespace Server.Data.Migrations
                     b.Property<int>("LunchLimitMinutes")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int?>("OvertimeDailyThresholdMinutes")
+                    b.Property<int>("OvertimeDailyThresholdMinutes")
                         .HasColumnType("INTEGER");
-
-                    b.Property<string>("OvertimePreset")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
 
                     b.Property<DateOnly?>("PayDayStartDate")
                         .HasColumnType("TEXT");
@@ -436,9 +426,6 @@ namespace Server.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("ScheduleVisibilityEnabled")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("SeventhDayDoubleTimeAfterMinutes")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("SmtpFromAddress")
@@ -467,13 +454,6 @@ namespace Server.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("TimeZone")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("WeeklyOvertimeAfterMinutes")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("WorkweekStartDay")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -579,60 +559,16 @@ namespace Server.Data.Migrations
                     b.Property<int>("ShiftId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("SickHoursRecordedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int?>("SickHoursRecordedByAccountId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("SickMinutes")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AbsentMarkedByAccountId");
 
                     b.HasIndex("AccountId");
 
-                    b.HasIndex("SickHoursRecordedByAccountId");
-
                     b.HasIndex("ShiftId", "AccountId", "Date")
                         .IsUnique();
 
                     b.ToTable("ShiftAssignments");
-                });
-
-            modelBuilder.Entity("Server.Models.SickTimeEntry", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("AccountId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("Minutes")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("RecordedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("RecordedByAccountId")
-                        .HasColumnType("INTEGER");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("RecordedByAccountId");
-
-                    b.HasIndex("AccountId", "Date");
-
-                    b.ToTable("SickTimeEntries");
                 });
 
             modelBuilder.Entity("Server.Models.TimeEntry", b =>
@@ -855,37 +791,11 @@ namespace Server.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Server.Models.Account", "SickHoursRecordedByAccount")
-                        .WithMany()
-                        .HasForeignKey("SickHoursRecordedByAccountId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("AbsentMarkedByAccount");
 
                     b.Navigation("Account");
 
                     b.Navigation("Shift");
-
-                    b.Navigation("SickHoursRecordedByAccount");
-                });
-
-            modelBuilder.Entity("Server.Models.SickTimeEntry", b =>
-                {
-                    b.HasOne("Server.Models.Account", "Account")
-                        .WithMany()
-                        .HasForeignKey("AccountId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Server.Models.Account", "RecordedByAccount")
-                        .WithMany()
-                        .HasForeignKey("RecordedByAccountId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Account");
-
-                    b.Navigation("RecordedByAccount");
                 });
 
             modelBuilder.Entity("Server.Models.TimeEntry", b =>

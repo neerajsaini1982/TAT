@@ -8,7 +8,7 @@ import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 
 import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
 import { TimeEntriesApi, TimeEntryDto, TimeEntrySegmentDto } from '../../../core/time-entries-api';
-import { BreakKind } from '../../../core/shifts-api';
+import { BreakKind, ScheduledBreakDto } from '../../../core/shifts-api';
 import { LocationSettingsApi, TimeFormat } from '../../../core/location-settings-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { Auth } from '../../../core/auth';
@@ -318,6 +318,14 @@ export class CurrentWeekSchedule implements OnInit {
 
   scheduledTime(shift: ShiftAssignmentDto): string {
     return `${formatTimeOnly(shift.shiftStartTime, this.timeFormat)}–${formatTimeOnly(shift.shiftEndTime, this.timeFormat)}`;
+  }
+
+  scheduledBreaksOfKind(shift: ShiftAssignmentDto, kind: BreakKind): ScheduledBreakDto[] {
+    return shift.scheduledBreaks.filter((b) => b.kind === kind);
+  }
+
+  scheduledBreakTime(b: ScheduledBreakDto): string {
+    return `${formatTimeOnly(b.startTime, this.timeFormat)}–${formatTimeOnly(b.endTime, this.timeFormat)}`;
   }
 
   // "-" is the universal empty state for a punch cell: it just hasn't

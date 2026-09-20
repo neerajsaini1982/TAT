@@ -57,7 +57,8 @@ public sealed class LocationSettingsOvertimeTests : IDisposable
         DevelopmentMode: false, ScheduleVisibilityEnabled: true, AdminSeesAllSchedules: true, LeadSeesAllSchedules: false,
         EmployeeSeesAllSchedules: false, ClockInAnywhere: true,
         SmtpHost: null, SmtpPort: null, SmtpUsername: null, SmtpPassword: null, SmtpUseSsl: true,
-        SmtpFromAddress: null, SmtpFromName: null, PayDayStartDate: null, PayPeriodDays: null);
+        SmtpFromAddress: null, SmtpFromName: null, PayDayStartDate: null, PayPeriodDays: null,
+        KioskPasscode: null, ClearKioskPasscode: false);
 
     private static UpdateLocationSettingsRequest CaliforniaRequest(DayOfWeek workweekStart = DayOfWeek.Monday, int? weekly = 2400) =>
         Request(OvertimePreset.California, daily: 480, dailyDoubleTime: 720, weekly: weekly, seventhDay: 480, workweekStart: workweekStart);

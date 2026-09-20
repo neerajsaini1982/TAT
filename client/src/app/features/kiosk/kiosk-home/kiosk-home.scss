@@ -1,0 +1,29 @@
+.login-card {
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 0 0 8px;
+}
+
+.kiosk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.welcome-title {
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+}

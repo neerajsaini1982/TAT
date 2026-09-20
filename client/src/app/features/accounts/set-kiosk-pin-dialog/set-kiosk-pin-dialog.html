@@ -1,0 +1,37 @@
+<h2 mat-dialog-title>Set Kiosk PIN — {{ data.employeeName }}</h2>
+<mat-dialog-content class="content">
+  <mat-form-field appearance="outline">
+    <mat-label>New PIN</mat-label>
+    <input
+      matInput
+      type="password"
+      inputmode="numeric"
+      maxlength="4"
+      [(ngModel)]="pin"
+      name="pin"
+      autocomplete="off"
+    />
+  </mat-form-field>
+
+  <mat-form-field appearance="outline">
+    <mat-label>Confirm PIN</mat-label>
+    <input
+      matInput
+      type="password"
+      inputmode="numeric"
+      maxlength="4"
+      [(ngModel)]="confirmPin"
+      (ngModelChange)="onConfirmChange()"
+      name="confirmPin"
+      autocomplete="off"
+    />
+  </mat-form-field>
+
+  @if (mismatch()) {
+    <p class="error">PINs don't match.</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="!canSave()">Save</button>
+</mat-dialog-actions>

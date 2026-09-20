@@ -35,7 +35,11 @@ public record AccountDto(
     string? HireDate,
     string? EmploymentType,
     bool IsOvertimeExempt,
-    bool HasPhoto);
+    bool HasPhoto,
+    // Whether this account can punch at a kiosk device (see
+    // KioskController) — the PIN itself never round-trips.
+    bool HasKioskPin,
+    DateTime? KioskPinLockedUntil);
 
 public record CreateAccountRequest(
     // Required unless Role is Employee — employees log in with a UserCode
@@ -102,3 +106,9 @@ public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 // An admin (or Sa) setting a new password on an account they manage, e.g.
 // after the holder forgot it (see AccountsController.ResetPassword).
 public record ResetPasswordRequest(string NewPassword);
+
+// Exactly 4 digits — validated in AccountsController.SetKioskPin.
+public record SetKioskPinRequest(string Pin);
+
+// Null when the account has no kiosk PIN set yet — see AccountsController.GetKioskPin.
+public record KioskPinDto(string? Pin);
