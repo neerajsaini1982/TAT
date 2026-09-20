@@ -16,6 +16,7 @@ Admin Responsiabilities
 5. As an admin I can do everything that a Team Lead and Employee can do
 5. As an admin, I have accesss to settings page.
 6. The report has to show correct time for the number of hours an employee worked.
+7. As an admin I can record write-ups/warnings against an employee (date, description, and severity — Normal by default) and edit or delete them. Only admins can see every employee's write-ups.
 
 
 Team Lead Responsiabilities
@@ -29,6 +30,7 @@ Team Lead Responsiabilities
 Employee Responsiabilities
 1. As an employee, I clock in and out of the system everytime I am on the shift
 2. Date and time entry is default from settings
+3. As an employee, I can view my own write-ups (read-only) from the account menu. I can never see anyone else's.
 
 
 Settings
