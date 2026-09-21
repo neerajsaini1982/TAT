@@ -10,8 +10,41 @@ export const WRITE_UP_SEVERITIES: WriteUpSeverity[] = ['Low', 'Normal', 'High', 
 
 export const DEFAULT_WRITE_UP_SEVERITY: WriteUpSeverity = 'Normal';
 
-// Server-side cap (WriteUpsController.MaxDescriptionLength).
+// The step of progressive discipline (matches the server's WriteUpType).
+// Separate from severity: severity is how serious the incident was, type is
+// which step of discipline this write-up is.
+export type WriteUpType = 'Note' | 'Verbal' | 'Written' | 'Final';
+
+export const WRITE_UP_TYPES: { value: WriteUpType; label: string }[] = [
+  { value: 'Note', label: 'Note (not disciplinary)' },
+  { value: 'Verbal', label: 'Verbal warning' },
+  { value: 'Written', label: 'Written warning' },
+  { value: 'Final', label: 'Final warning' },
+];
+
+export const DEFAULT_WRITE_UP_TYPE: WriteUpType = 'Written';
+
+export function writeUpTypeLabel(type: WriteUpType): string {
+  return WRITE_UP_TYPES.find((t) => t.value === type)?.label.replace(' (not disciplinary)', '') ?? type;
+}
+
+// Whether the employee has confirmed receiving it ("received", not "agree").
+export type WriteUpAcknowledgment = 'Pending' | 'Acknowledged' | 'Declined';
+
+export type WriteUpEventAction = 'Created' | 'Edited' | 'Voided' | 'Acknowledged' | 'AcknowledgmentDeclined';
+
+// Server-side caps (WriteUpsController.MaxDescriptionLength / MaxVoidReasonLength).
 export const WRITE_UP_MAX_DESCRIPTION_LENGTH = 2000;
+export const WRITE_UP_MAX_VOID_REASON_LENGTH = 500;
+
+export interface WriteUpEventDto {
+  id: number;
+  action: WriteUpEventAction;
+  byAccountId: number;
+  byName: string;
+  at: string;
+  detail: string | null;
+}
 
 export interface WriteUpDto {
   id: number;
@@ -19,20 +52,32 @@ export interface WriteUpDto {
   date: string;
   description: string;
   severity: WriteUpSeverity;
+  type: WriteUpType;
   createdByAccountId: number;
   createdByName: string;
   createdAt: string;
+  acknowledgmentStatus: WriteUpAcknowledgment;
+  acknowledgmentAt: string | null;
+  isVoided: boolean;
+  voidedAt: string | null;
+  // Only sent to whoever manages the write-up (an admin), never to the
+  // employee it's about.
+  voidReason: string | null;
+  history: WriteUpEventDto[] | null;
 }
 
 export interface WriteUpRequest {
   date: string;
   description: string;
   severity: WriteUpSeverity;
+  type: WriteUpType;
 }
 
-// Any signed-in employee can list their own write-ups; everything else
-// (another employee's list, create, edit, delete) is Admin/Sa only and
-// 404s for anyone else.
+// Any signed-in employee can list and acknowledge their own write-ups;
+// everything else (another employee's list, create, edit, void, recording a
+// declined acknowledgment) is Admin/Sa only — and never for their own
+// account — and 404s for anyone else. There's deliberately no delete: a
+// mistaken or rescinded write-up is voided, with a reason.
 @Service()
 export class WriteUpsApi {
   private readonly http = inject(HttpClient);
@@ -50,7 +95,15 @@ export class WriteUpsApi {
     return this.http.put<WriteUpDto>(`${this.base}/${accountId}/write-ups/${writeUpId}`, request);
   }
 
-  remove(accountId: number, writeUpId: number) {
-    return this.http.delete<void>(`${this.base}/${accountId}/write-ups/${writeUpId}`);
+  void(accountId: number, writeUpId: number, reason: string) {
+    return this.http.post<WriteUpDto>(`${this.base}/${accountId}/write-ups/${writeUpId}/void`, { reason });
+  }
+
+  acknowledge(accountId: number, writeUpId: number) {
+    return this.http.post<WriteUpDto>(`${this.base}/${accountId}/write-ups/${writeUpId}/acknowledge`, {});
+  }
+
+  recordDeclined(accountId: number, writeUpId: number) {
+    return this.http.post<WriteUpDto>(`${this.base}/${accountId}/write-ups/${writeUpId}/decline`, {});
   }
 }

@@ -82,3 +82,100 @@ table {
   color: var(--mat-sys-on-surface-variant);
   font-size: 13px;
 }
+
+.ack-hint,
+.form-note {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.form-note {
+  margin: 0;
+}
+
+.status {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status-pending {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.status-acknowledged {
+  color: var(--mat-sys-primary);
+}
+
+.status-declined,
+.status-voided {
+  color: var(--mat-sys-error);
+}
+
+.status-date {
+  margin-left: 6px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 12px;
+}
+
+.void-reason {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+// A voided write-up stays visible but reads as no longer counting.
+tr.voided td:not(:nth-child(5)) {
+  color: var(--mat-sys-on-surface-variant);
+  text-decoration: line-through;
+}
+
+tr.voided .severity {
+  opacity: 0.5;
+}
+
+.actions-cell {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.history-card {
+  max-width: 720px;
+}
+
+.history-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.history {
+  margin: 0;
+  padding-left: 20px;
+
+  li {
+    padding: 6px 0;
+  }
+}
+
+.history-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+
+.history-action {
+  font-weight: 600;
+}
+
+.history-meta {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}
+
+.history-detail {
+  margin-top: 2px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  color: var(--mat-sys-on-surface-variant);
+}

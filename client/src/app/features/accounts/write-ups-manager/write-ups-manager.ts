@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -11,17 +11,41 @@ import { MatCardModule } from '@angular/material/card';
 
 import {
   DEFAULT_WRITE_UP_SEVERITY,
+  DEFAULT_WRITE_UP_TYPE,
   WRITE_UP_MAX_DESCRIPTION_LENGTH,
+  WRITE_UP_MAX_VOID_REASON_LENGTH,
   WRITE_UP_SEVERITIES,
+  WRITE_UP_TYPES,
+  WriteUpAcknowledgment,
   WriteUpDto,
+  WriteUpEventAction,
   WriteUpSeverity,
+  WriteUpType,
   WriteUpsApi,
+  writeUpTypeLabel,
 } from '../../../core/write-ups-api';
 import { formatDate } from '../../../core/week-utils';
 
-// Write-ups / warnings for one employee — used both by an admin
-// (canManage: add, edit, delete) and by the employee viewing their own
-// (canManage = false: read-only).
+const EVENT_LABELS: Record<WriteUpEventAction, string> = {
+  Created: 'Created',
+  Edited: 'Edited',
+  Voided: 'Voided',
+  Acknowledged: 'Acknowledged by the employee',
+  AcknowledgmentDeclined: 'Employee declined to acknowledge',
+};
+
+const STATUS_LABELS: Record<WriteUpAcknowledgment, string> = {
+  Pending: 'Awaiting acknowledgment',
+  Acknowledged: 'Acknowledged',
+  Declined: 'Declined to acknowledge',
+};
+
+// Write-ups / warnings for one employee. Used two ways:
+//  - canManage (an admin, on someone else's account): add, edit, void,
+//    record a declined acknowledgment, and see each write-up's history.
+//  - canAcknowledge (the employee viewing their own): read-only, plus an
+//    Acknowledge button on each write-up still pending.
+// Nothing is ever deleted — a mistaken write-up is voided with a reason.
 @Component({
   selector: 'app-write-ups-manager',
   imports: [
@@ -41,6 +65,7 @@ import { formatDate } from '../../../core/week-utils';
 export class WriteUpsManager implements OnChanges {
   @Input({ required: true }) accountId!: number;
   @Input() canManage = false;
+  @Input() canAcknowledge = false;
 
   private readonly api = inject(WriteUpsApi);
 
@@ -49,15 +74,31 @@ export class WriteUpsManager implements OnChanges {
   protected readonly showForm = signal(false);
   protected readonly editingId = signal<number | null>(null);
   protected readonly saving = signal(false);
-  protected readonly deletingId = signal<number | null>(null);
   protected readonly error = signal<string | null>(null);
 
+  // Row currently being acted on, so its buttons can't be double-clicked.
+  protected readonly busyId = signal<number | null>(null);
+
+  protected readonly voidingId = signal<number | null>(null);
+  protected readonly voidError = signal<string | null>(null);
+  protected voidReason = '';
+
+  protected readonly historyId = signal<number | null>(null);
+  protected readonly historyFor = computed(() => this.writeUps().find((w) => w.id === this.historyId()) ?? null);
+
   protected readonly severities = WRITE_UP_SEVERITIES;
+  protected readonly types = WRITE_UP_TYPES;
   protected readonly maxDescriptionLength = WRITE_UP_MAX_DESCRIPTION_LENGTH;
+  protected readonly maxVoidReasonLength = WRITE_UP_MAX_VOID_REASON_LENGTH;
+  protected readonly typeLabel = writeUpTypeLabel;
+
+  protected readonly hasPending = computed(() =>
+    this.writeUps().some((w) => !w.isVoided && w.acknowledgmentStatus !== 'Acknowledged'),
+  );
 
   protected get columns(): string[] {
-    const columns = ['date', 'severity', 'description', 'createdBy'];
-    return this.canManage ? [...columns, 'actions'] : columns;
+    const columns = ['date', 'type', 'severity', 'description', 'status', 'createdBy'];
+    return this.canManage || this.canAcknowledge ? [...columns, 'actions'] : columns;
   }
 
   protected form = this.blankForm();
@@ -75,17 +116,30 @@ export class WriteUpsManager implements OnChanges {
     });
   }
 
+  eventLabel(action: WriteUpEventAction): string {
+    return EVENT_LABELS[action];
+  }
+
+  statusLabel(status: WriteUpAcknowledgment): string {
+    return STATUS_LABELS[status];
+  }
+
   startAdd(): void {
+    this.closePanels();
     this.form = this.blankForm();
     this.editingId.set(null);
-    this.error.set(null);
     this.showForm.set(true);
   }
 
   startEdit(writeUp: WriteUpDto): void {
-    this.form = { date: writeUp.date, description: writeUp.description, severity: writeUp.severity };
+    this.closePanels();
+    this.form = {
+      date: writeUp.date,
+      description: writeUp.description,
+      severity: writeUp.severity,
+      type: writeUp.type,
+    };
     this.editingId.set(writeUp.id);
-    this.error.set(null);
     this.showForm.set(true);
   }
 
@@ -105,7 +159,12 @@ export class WriteUpsManager implements OnChanges {
       return;
     }
 
-    const request = { date: this.form.date, description, severity: this.form.severity };
+    const request = {
+      date: this.form.date,
+      description,
+      severity: this.form.severity,
+      type: this.form.type,
+    };
     const editingId = this.editingId();
     const call =
       editingId === null
@@ -127,25 +186,95 @@ export class WriteUpsManager implements OnChanges {
     });
   }
 
-  remove(writeUp: WriteUpDto): void {
-    if (!confirm(`Delete the write-up from ${writeUp.date}? This cannot be undone.`)) {
+  startVoid(writeUp: WriteUpDto): void {
+    this.closePanels();
+    this.voidReason = '';
+    this.voidingId.set(writeUp.id);
+  }
+
+  cancelVoid(): void {
+    this.voidingId.set(null);
+  }
+
+  confirmVoid(): void {
+    const id = this.voidingId();
+    const reason = this.voidReason.trim();
+    if (id === null) {
       return;
     }
-    this.deletingId.set(writeUp.id);
-    this.api.remove(this.accountId, writeUp.id).subscribe({
+    if (!reason) {
+      this.voidError.set('Enter a reason for voiding this write-up.');
+      return;
+    }
+
+    this.saving.set(true);
+    this.voidError.set(null);
+    this.api.void(this.accountId, id, reason).subscribe({
       next: () => {
-        this.deletingId.set(null);
+        this.saving.set(false);
+        this.voidingId.set(null);
         this.load();
       },
       error: (err) => {
-        this.deletingId.set(null);
-        alert(errorMessage(err, 'Failed to delete write-up.'));
+        this.saving.set(false);
+        this.voidError.set(errorMessage(err, 'Failed to void write-up.'));
       },
     });
   }
 
-  private blankForm(): { date: string; description: string; severity: WriteUpSeverity } {
-    return { date: formatDate(new Date()), description: '', severity: DEFAULT_WRITE_UP_SEVERITY };
+  toggleHistory(writeUp: WriteUpDto): void {
+    this.historyId.set(this.historyId() === writeUp.id ? null : writeUp.id);
+  }
+
+  acknowledge(writeUp: WriteUpDto): void {
+    const ok = confirm(
+      'Confirm that you have received this write-up.\n\nAcknowledging does not mean you agree with it.',
+    );
+    if (ok) {
+      this.run(writeUp, this.api.acknowledge(this.accountId, writeUp.id), 'Failed to acknowledge write-up.');
+    }
+  }
+
+  recordDeclined(writeUp: WriteUpDto): void {
+    const ok = confirm(
+      `Record that this employee declined to acknowledge the write-up from ${writeUp.date}? ` +
+        'They can still acknowledge it later.',
+    );
+    if (ok) {
+      this.run(writeUp, this.api.recordDeclined(this.accountId, writeUp.id), 'Failed to record the decline.');
+    }
+  }
+
+  private run(writeUp: WriteUpDto, call: ReturnType<WriteUpsApi['acknowledge']>, fallback: string): void {
+    this.busyId.set(writeUp.id);
+    call.subscribe({
+      next: () => {
+        this.busyId.set(null);
+        this.load();
+      },
+      error: (err) => {
+        this.busyId.set(null);
+        alert(errorMessage(err, fallback));
+      },
+    });
+  }
+
+  // Only one panel (add/edit form, void form, history) is open at a time.
+  private closePanels(): void {
+    this.cancelForm();
+    this.voidingId.set(null);
+    this.historyId.set(null);
+    this.error.set(null);
+    this.voidError.set(null);
+  }
+
+  private blankForm(): { date: string; description: string; severity: WriteUpSeverity; type: WriteUpType } {
+    return {
+      date: formatDate(new Date()),
+      description: '',
+      severity: DEFAULT_WRITE_UP_SEVERITY,
+      type: DEFAULT_WRITE_UP_TYPE,
+    };
   }
 }
 
@@ -163,7 +292,7 @@ function errorMessage(err: { status?: number; error?: unknown }, fallback: strin
     case 401:
       return `${fallback} Your session has expired — sign in again.`;
     case 403:
-      return `${fallback} Only an admin can add, edit or delete write-ups.`;
+      return `${fallback} You don't have permission to do that.`;
     case 404:
     case 405:
       return `${fallback} The server doesn't have this feature yet — restart it so it picks up the latest version.`;

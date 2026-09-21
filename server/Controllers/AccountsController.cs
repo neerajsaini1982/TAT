@@ -616,6 +616,15 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
             return NotFound();
         }
 
+        // Write-ups are a permanent record (they're voided, never deleted),
+        // so an account that's on one — as the employee or as whoever
+        // recorded or changed it — can't be removed either.
+        if (db.WriteUps.Any(w => w.AccountId == id || w.CreatedByAccountId == id) ||
+            db.WriteUpEvents.Any(e => e.ByAccountId == id))
+        {
+            return Conflict("This account has write-ups on record, so it can't be deleted. Deactivate it instead.");
+        }
+
         db.Accounts.Remove(account);
         db.SaveChanges();
         return NoContent();
