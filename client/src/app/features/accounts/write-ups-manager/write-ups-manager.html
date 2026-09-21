@@ -70,6 +70,32 @@
   </mat-card>
 }
 
+@if (acknowledgingId() !== null) {
+  <mat-card class="form-card">
+    <mat-card-content>
+      <form class="form" (ngSubmit)="confirmAcknowledge()" autocomplete="off">
+        <p class="form-note">
+          Typing your name confirms that you have received this write-up. It does not mean you agree with it.
+        </p>
+        <mat-form-field appearance="outline" class="description-field">
+          <mat-label>Your full name</mat-label>
+          <input matInput name="typedName" [(ngModel)]="typedName" autocomplete="off" required />
+          <mat-hint>Type it as it appears on your account: {{ signerName }}</mat-hint>
+        </mat-form-field>
+        @if (acknowledgeError()) {
+          <p class="error">{{ acknowledgeError() }}</p>
+        }
+        <div class="form-actions">
+          <button mat-flat-button color="primary" type="submit" [disabled]="saving() || !nameMatches()">
+            Acknowledge
+          </button>
+          <button mat-button type="button" (click)="cancelAcknowledge()">Cancel</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+}
+
 @if (voidingId() !== null) {
   <mat-card class="form-card">
     <mat-card-content>
@@ -169,6 +195,9 @@
         @if (w.acknowledgmentAt) {
           <span class="status-date">{{ w.acknowledgmentAt | date: 'mediumDate' }}</span>
         }
+        @if (w.acknowledgmentSignedName) {
+          <div class="signed-name">Signed: {{ w.acknowledgmentSignedName }}</div>
+        }
       }
     </td>
   </ng-container>
@@ -182,7 +211,7 @@
     <th mat-header-cell *matHeaderCellDef></th>
     <td mat-cell *matCellDef="let w" class="actions-cell">
       @if (canAcknowledge && !w.isVoided && w.acknowledgmentStatus !== 'Acknowledged') {
-        <button mat-stroked-button (click)="acknowledge(w)" [disabled]="busyId() === w.id">Acknowledge</button>
+        <button mat-stroked-button (click)="startAcknowledge(w)">Acknowledge</button>
       }
       @if (canManage) {
         <button mat-icon-button (click)="toggleHistory(w)" aria-label="History" title="History">

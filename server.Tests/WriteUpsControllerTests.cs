@@ -105,6 +105,9 @@ public sealed class WriteUpsControllerTests : IDisposable
             existing.AccountId, existing.Id,
             new UpdateWriteUpRequest(existing.Date, description ?? existing.Description, severity ?? existing.Severity, type ?? existing.Type)));
 
+    // What the employee types to acknowledge: their own full name.
+    private static AcknowledgeWriteUpRequest Signed(Account who) => new($"{who.FirstName} {who.LastName}");
+
     // ---- create ---------------------------------------------------------
 
     [Fact]
@@ -286,7 +289,7 @@ public sealed class WriteUpsControllerTests : IDisposable
         Assert.Null(seen.History);
 
         // ...and can acknowledge it.
-        Assert.Equal(WriteUpAcknowledgment.Acknowledged, Ok(As(admin).Acknowledge(admin.Id, aboutAdmin.Id)).AcknowledgmentStatus);
+        Assert.Equal(WriteUpAcknowledgment.Acknowledged, Ok(As(admin).Acknowledge(admin.Id, aboutAdmin.Id, Signed(admin))).AcknowledgmentStatus);
     }
 
     // ---- edit ------------------------------------------------------------
@@ -329,7 +332,7 @@ public sealed class WriteUpsControllerTests : IDisposable
     public void Editing_an_acknowledged_write_up_puts_it_back_to_pending_and_says_so()
     {
         var existing = Create(employee);
-        As(employee).Acknowledge(employee.Id, existing.Id);
+        As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee));
 
         var edited = Edit(existing, description: "Materially different");
 
@@ -428,7 +431,7 @@ public sealed class WriteUpsControllerTests : IDisposable
         var existing = Create(employee);
         As(admin).Void(employee.Id, existing.Id, new VoidWriteUpRequest("Entered in error"));
 
-        Assert.IsType<ConflictObjectResult>(As(employee).Acknowledge(employee.Id, existing.Id).Result);
+        Assert.IsType<ConflictObjectResult>(As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee)).Result);
         Assert.IsType<ConflictObjectResult>(As(admin).DeclineAcknowledgment(employee.Id, existing.Id).Result);
     }
 
@@ -439,7 +442,7 @@ public sealed class WriteUpsControllerTests : IDisposable
     {
         var existing = Create(employee);
 
-        var acknowledged = Ok(As(employee).Acknowledge(employee.Id, existing.Id));
+        var acknowledged = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee)));
 
         Assert.Equal(WriteUpAcknowledgment.Acknowledged, acknowledged.AcknowledgmentStatus);
         Assert.NotNull(acknowledged.AcknowledgmentAt);
@@ -451,12 +454,128 @@ public sealed class WriteUpsControllerTests : IDisposable
     }
 
     [Fact]
+    public void Acknowledging_stores_the_typed_name_and_logs_it()
+    {
+        var existing = Create(employee);
+
+        var acknowledged = Ok(As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest("emp Tester")));
+
+        Assert.Equal("emp Tester", acknowledged.AcknowledgmentSignedName);
+        var trail = Assert.Single(List(As(admin).GetAll(employee.Id))).History!;
+        Assert.Equal("Signed: emp Tester", trail.Last().Detail);
+    }
+
+    [Theory]
+    [InlineData("EMP TESTER", "EMP TESTER")]
+    [InlineData("  emp    Tester  ", "emp Tester")]
+    [InlineData("emp\tTester", "emp Tester")]
+    public void The_typed_name_ignores_case_and_extra_whitespace_but_is_stored_as_typed(string typed, string stored)
+    {
+        var existing = Create(employee);
+
+        var acknowledged = Ok(As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest(typed)));
+
+        Assert.Equal(WriteUpAcknowledgment.Acknowledged, acknowledged.AcknowledgmentStatus);
+        Assert.Equal(stored, acknowledged.AcknowledgmentSignedName);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void A_blank_name_does_not_acknowledge(string typed)
+    {
+        var existing = Create(employee);
+
+        var result = As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest(typed));
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(WriteUpAcknowledgment.Pending, db.WriteUps.Single().AcknowledgmentStatus);
+        Assert.Single(db.WriteUpEvents);
+    }
+
+    [Theory]
+    [InlineData("emp")]
+    [InlineData("Tester")]
+    [InlineData("emp Testerson")]
+    [InlineData("emp2 Tester")]
+    public void A_name_that_does_not_match_the_account_does_not_acknowledge_and_says_what_to_type(string typed)
+    {
+        var existing = Create(employee);
+
+        var result = As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest(typed));
+
+        var bad = Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Contains("emp Tester", Assert.IsType<string>(bad.Value));
+        Assert.Equal(WriteUpAcknowledgment.Pending, db.WriteUps.Single().AcknowledgmentStatus);
+        Assert.Null(db.WriteUps.Single().AcknowledgmentSignedName);
+        Assert.Single(db.WriteUpEvents);
+    }
+
+    [Fact]
+    public void A_coworkers_name_does_not_acknowledge()
+    {
+        var existing = Create(employee);
+
+        var result = As(employee).Acknowledge(employee.Id, existing.Id, Signed(otherEmployee));
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+    }
+
+    [Fact]
+    public void Acknowledging_again_needs_no_name_and_changes_nothing()
+    {
+        var existing = Create(employee);
+        var first = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee)));
+
+        // A retry, even one that arrives without a usable name, is a no-op
+        // rather than an error or a second entry.
+        var again = Ok(As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest("")));
+
+        Assert.Equal(first.AcknowledgmentAt, again.AcknowledgmentAt);
+        Assert.Equal("emp Tester", again.AcknowledgmentSignedName);
+        Assert.Equal(2, db.WriteUpEvents.Count());
+    }
+
+    [Fact]
+    public void An_edit_clears_the_signed_name_but_the_history_still_has_it()
+    {
+        var existing = Create(employee);
+        As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee));
+
+        var edited = Edit(existing, description: "Materially different");
+
+        Assert.Null(edited.AcknowledgmentSignedName);
+        Assert.Equal("Signed: emp Tester", edited.History!.Single(e => e.Action == WriteUpEventAction.Acknowledged).Detail);
+    }
+
+    [Fact]
+    public void A_declined_write_up_has_no_signed_name()
+    {
+        var existing = Create(employee);
+
+        var declined = Ok(As(admin).DeclineAcknowledgment(employee.Id, existing.Id));
+
+        Assert.Null(declined.AcknowledgmentSignedName);
+    }
+
+    [Fact]
+    public void An_employee_who_declined_must_still_type_their_name_to_acknowledge_later()
+    {
+        var existing = Create(employee);
+        As(admin).DeclineAcknowledgment(employee.Id, existing.Id);
+
+        Assert.IsType<BadRequestObjectResult>(
+            As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest("someone else")).Result);
+        Assert.Equal(WriteUpAcknowledgment.Declined, db.WriteUps.Single().AcknowledgmentStatus);
+    }
+
+    [Fact]
     public void Acknowledging_again_changes_nothing()
     {
         var existing = Create(employee);
-        var first = Ok(As(employee).Acknowledge(employee.Id, existing.Id));
+        var first = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee)));
 
-        var second = Ok(As(employee).Acknowledge(employee.Id, existing.Id));
+        var second = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee)));
 
         Assert.Equal(first.AcknowledgmentAt, second.AcknowledgmentAt);
         Assert.Equal(2, db.WriteUpEvents.Count());
@@ -467,8 +586,8 @@ public sealed class WriteUpsControllerTests : IDisposable
     {
         var existing = Create(employee);
 
-        Assert.IsType<NotFoundResult>(As(admin).Acknowledge(employee.Id, existing.Id).Result);
-        Assert.IsType<NotFoundResult>(As(otherEmployee).Acknowledge(employee.Id, existing.Id).Result);
+        Assert.IsType<NotFoundResult>(As(admin).Acknowledge(employee.Id, existing.Id, Signed(employee)).Result);
+        Assert.IsType<NotFoundResult>(As(otherEmployee).Acknowledge(employee.Id, existing.Id, Signed(employee)).Result);
         Assert.Equal(WriteUpAcknowledgment.Pending, db.WriteUps.Single().AcknowledgmentStatus);
     }
 
@@ -501,7 +620,7 @@ public sealed class WriteUpsControllerTests : IDisposable
     public void A_decline_cannot_be_recorded_over_an_acknowledgment()
     {
         var existing = Create(employee);
-        As(employee).Acknowledge(employee.Id, existing.Id);
+        As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee));
 
         Assert.IsType<ConflictObjectResult>(As(admin).DeclineAcknowledgment(employee.Id, existing.Id).Result);
         Assert.Equal(WriteUpAcknowledgment.Acknowledged, db.WriteUps.Single().AcknowledgmentStatus);
@@ -513,7 +632,7 @@ public sealed class WriteUpsControllerTests : IDisposable
         var existing = Create(employee);
         As(admin).DeclineAcknowledgment(employee.Id, existing.Id);
 
-        Assert.Equal(WriteUpAcknowledgment.Acknowledged, Ok(As(employee).Acknowledge(employee.Id, existing.Id)).AcknowledgmentStatus);
+        Assert.Equal(WriteUpAcknowledgment.Acknowledged, Ok(As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee))).AcknowledgmentStatus);
     }
 
     [Fact]
@@ -521,7 +640,7 @@ public sealed class WriteUpsControllerTests : IDisposable
     {
         var existing = Create(employee);
         Edit(existing, description: "Reworded");
-        As(employee).Acknowledge(employee.Id, existing.Id);
+        As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee));
 
         var trail = Assert.Single(List(As(admin).GetAll(employee.Id))).History!;
 

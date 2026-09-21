@@ -18,4 +18,5 @@ export class MyWriteUpsPage {
 
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
   protected readonly accountId = this.auth.accountId()!;
+  protected readonly fullName = `${this.auth.session()?.firstName ?? ''} ${this.auth.session()?.lastName ?? ''}`.trim();
 }

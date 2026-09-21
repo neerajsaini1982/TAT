@@ -67,6 +67,11 @@ export class WriteUpsManager implements OnChanges {
   @Input() canManage = false;
   @Input() canAcknowledge = false;
 
+  // The employee's full name as it is on their account — what they're asked
+  // to type to acknowledge. The server checks it too; this only lets the
+  // button wait until it looks right.
+  @Input() signerName = '';
+
   private readonly api = inject(WriteUpsApi);
 
   protected readonly writeUps = signal<WriteUpDto[]>([]);
@@ -82,6 +87,10 @@ export class WriteUpsManager implements OnChanges {
   protected readonly voidingId = signal<number | null>(null);
   protected readonly voidError = signal<string | null>(null);
   protected voidReason = '';
+
+  protected readonly acknowledgingId = signal<number | null>(null);
+  protected readonly acknowledgeError = signal<string | null>(null);
+  protected typedName = '';
 
   protected readonly historyId = signal<number | null>(null);
   protected readonly historyFor = computed(() => this.writeUps().find((w) => w.id === this.historyId()) ?? null);
@@ -226,13 +235,45 @@ export class WriteUpsManager implements OnChanges {
     this.historyId.set(this.historyId() === writeUp.id ? null : writeUp.id);
   }
 
-  acknowledge(writeUp: WriteUpDto): void {
-    const ok = confirm(
-      'Confirm that you have received this write-up.\n\nAcknowledging does not mean you agree with it.',
-    );
-    if (ok) {
-      this.run(writeUp, this.api.acknowledge(this.accountId, writeUp.id), 'Failed to acknowledge write-up.');
+  startAcknowledge(writeUp: WriteUpDto): void {
+    this.closePanels();
+    this.typedName = '';
+    this.acknowledgingId.set(writeUp.id);
+  }
+
+  cancelAcknowledge(): void {
+    this.acknowledgingId.set(null);
+  }
+
+  // Same rule as the server: case and extra spaces don't matter.
+  protected nameMatches(): boolean {
+    const typed = normalizeName(this.typedName).toLowerCase();
+    return typed !== '' && typed === normalizeName(this.signerName).toLowerCase();
+  }
+
+  confirmAcknowledge(): void {
+    const id = this.acknowledgingId();
+    if (id === null) {
+      return;
     }
+    if (!this.nameMatches()) {
+      this.acknowledgeError.set(`Type your full name as "${normalizeName(this.signerName)}" to acknowledge.`);
+      return;
+    }
+
+    this.saving.set(true);
+    this.acknowledgeError.set(null);
+    this.api.acknowledge(this.accountId, id, this.typedName).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.acknowledgingId.set(null);
+        this.load();
+      },
+      error: (err) => {
+        this.saving.set(false);
+        this.acknowledgeError.set(errorMessage(err, 'Failed to acknowledge write-up.'));
+      },
+    });
   }
 
   recordDeclined(writeUp: WriteUpDto): void {
@@ -245,7 +286,7 @@ export class WriteUpsManager implements OnChanges {
     }
   }
 
-  private run(writeUp: WriteUpDto, call: ReturnType<WriteUpsApi['acknowledge']>, fallback: string): void {
+  private run(writeUp: WriteUpDto, call: ReturnType<WriteUpsApi['recordDeclined']>, fallback: string): void {
     this.busyId.set(writeUp.id);
     call.subscribe({
       next: () => {
@@ -263,9 +304,11 @@ export class WriteUpsManager implements OnChanges {
   private closePanels(): void {
     this.cancelForm();
     this.voidingId.set(null);
+    this.acknowledgingId.set(null);
     this.historyId.set(null);
     this.error.set(null);
     this.voidError.set(null);
+    this.acknowledgeError.set(null);
   }
 
   private blankForm(): { date: string; description: string; severity: WriteUpSeverity; type: WriteUpType } {
@@ -299,4 +342,9 @@ function errorMessage(err: { status?: number; error?: unknown }, fallback: strin
     default:
       return fallback;
   }
+}
+
+// Collapses any run of whitespace to one space and trims.
+function normalizeName(name: string): string {
+  return name.split(/\s+/).filter(Boolean).join(' ');
 }

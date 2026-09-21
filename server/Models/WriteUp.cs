@@ -33,6 +33,14 @@ public class WriteUp
     // while Pending.
     public DateTime? AcknowledgmentAt { get; set; }
 
+    // The name the employee typed to acknowledge (whitespace-normalized, but
+    // otherwise as typed), so the record shows a deliberate act rather than
+    // a bare click. Only set while Acknowledged — an edit that resets the
+    // acknowledgment clears it here, but the WriteUpEvent for the original
+    // acknowledgment keeps it. Null for a write-up acknowledged before typed
+    // names existed.
+    public string? AcknowledgmentSignedName { get; set; }
+
     // Set when voided; the reason is required. Voided write-ups stay in the
     // employee's list (marked as voided) but can no longer be edited or
     // acknowledged.

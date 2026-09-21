@@ -26,6 +26,7 @@ public record WriteUpDto(
     DateTime CreatedAt,
     WriteUpAcknowledgment AcknowledgmentStatus,
     DateTime? AcknowledgmentAt,
+    string? AcknowledgmentSignedName,
     bool IsVoided,
     DateTime? VoidedAt,
     string? VoidReason,
@@ -46,3 +47,7 @@ public record UpdateWriteUpRequest(
     WriteUpType Type);
 
 public record VoidWriteUpRequest(string Reason);
+
+// The employee's full name, typed to confirm they received the write-up. It
+// has to match the name on their account (ignoring case and extra spaces).
+public record AcknowledgeWriteUpRequest(string TypedName);
