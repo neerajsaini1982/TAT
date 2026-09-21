@@ -44,6 +44,8 @@ export interface WriteUpEventDto {
   byName: string;
   at: string;
   detail: string | null;
+  // Set on an Acknowledged entry: the signature given at that moment.
+  signatureId: number | null;
 }
 
 export interface WriteUpDto {
@@ -60,6 +62,9 @@ export interface WriteUpDto {
   acknowledgmentAt: string | null;
   // What the employee typed to acknowledge; null until they do.
   acknowledgmentSignedName: string | null;
+  // The drawn signature currently on the write-up (fetch it with
+  // WriteUpsApi.signature); null unless it is acknowledged with a drawing.
+  acknowledgmentSignatureId: number | null;
   isVoided: boolean;
   voidedAt: string | null;
   // Only sent to whoever manages the write-up (an admin), never to the
@@ -103,8 +108,20 @@ export class WriteUpsApi {
 
   // typedName has to match the employee's name on their account (the server
   // ignores case and extra spaces and answers 400 with what to type if not).
-  acknowledge(accountId: number, writeUpId: number, typedName: string) {
-    return this.http.post<WriteUpDto>(`${this.base}/${accountId}/write-ups/${writeUpId}/acknowledge`, { typedName });
+  // signature is the drawing as a "data:image/png;base64,..." URL.
+  acknowledge(accountId: number, writeUpId: number, typedName: string, signature: string) {
+    return this.http.post<WriteUpDto>(`${this.base}/${accountId}/write-ups/${writeUpId}/acknowledge`, {
+      typedName,
+      signature,
+    });
+  }
+
+  // Fetched as a blob (not a plain <img src>) because the auth token is only
+  // attached to HttpClient requests via auth-interceptor.ts.
+  signature(accountId: number, writeUpId: number, signatureId: number) {
+    return this.http.get(`${this.base}/${accountId}/write-ups/${writeUpId}/signatures/${signatureId}`, {
+      responseType: 'blob',
+    });
   }
 
   recordDeclined(accountId: number, writeUpId: number) {

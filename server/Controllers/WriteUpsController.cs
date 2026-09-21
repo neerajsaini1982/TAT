@@ -6,6 +6,7 @@ using Server.Data;
 using Server.Dtos;
 using Server.Models;
 using Server.Security;
+using Server.Services;
 
 namespace Server.Controllers;
 
@@ -45,11 +46,14 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
         }
 
         var forManager = CanManage(account);
+
+        // Events are loaded for the employee too, though they never see them:
+        // it's how the write-up's current signature is found. Only a manager
+        // needs to know who did each one.
         var query = db.WriteUps.Include(w => w.CreatedByAccount).Where(w => w.AccountId == accountId);
-        if (forManager)
-        {
-            query = query.Include(w => w.Events).ThenInclude(e => e.ByAccount);
-        }
+        query = forManager
+            ? query.Include(w => w.Events).ThenInclude(e => e.ByAccount)
+            : query.Include(w => w.Events);
 
         var writeUps = query
             .OrderByDescending(w => w.Date)
@@ -214,8 +218,9 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
     // Only the employee the write-up is about can acknowledge it — an admin
     // acknowledging on their behalf would defeat the point (an admin who
     // hand-delivered it and the employee refused uses Decline instead). They
-    // confirm by typing their full name, which has to match their account:
-    // that makes acknowledging a deliberate act, and stores what they typed.
+    // confirm by typing their full name (which has to match their account) and
+    // drawing a signature, and both are stored: that makes acknowledging a
+    // deliberate act, with the signature kept on record.
     [HttpPost("{writeUpId:int}/acknowledge")]
     public ActionResult<WriteUpDto> Acknowledge(int accountId, int writeUpId, AcknowledgeWriteUpRequest request)
     {
@@ -255,10 +260,19 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
             return BadRequest($"The name doesn't match your account. Type your full name as \"{expectedName}\".");
         }
 
+        if (!SignaturePng.TryParse(request.Signature, out var png, out var signatureError))
+        {
+            return BadRequest(signatureError);
+        }
+
+        var now = DateTime.UtcNow;
+        var signature = new WriteUpSignature { WriteUp = writeUp, SignedName = typedName, SignedAt = now, Png = png };
+        writeUp.Signatures.Add(signature);
+
         writeUp.AcknowledgmentStatus = WriteUpAcknowledgment.Acknowledged;
-        writeUp.AcknowledgmentAt = DateTime.UtcNow;
+        writeUp.AcknowledgmentAt = now;
         writeUp.AcknowledgmentSignedName = typedName;
-        AddEvent(writeUp, WriteUpEventAction.Acknowledged, $"Signed: {typedName}");
+        AddEvent(writeUp, WriteUpEventAction.Acknowledged, $"Signed: {typedName}", signature);
         db.SaveChanges();
 
         return Ok(ToDto(writeUp, forManager: false));
@@ -305,6 +319,34 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
         return Ok(ToDto(writeUp, forManager: true));
     }
 
+    // The signature image itself. Same access as the write-up: the employee it
+    // belongs to, or an admin over them. It has to be one of this write-up's
+    // own signatures, so ids can't be used to reach someone else's.
+    [HttpGet("{writeUpId:int}/signatures/{signatureId:int}")]
+    public IActionResult GetSignature(int accountId, int writeUpId, int signatureId)
+    {
+        var account = FindAccount(accountId);
+        if (account is null || !CanView(account))
+        {
+            return NotFound();
+        }
+
+        var png = db.WriteUpSignatures
+            .Where(s => s.Id == signatureId && s.WriteUpId == writeUpId && s.WriteUp!.AccountId == accountId)
+            .Select(s => s.Png)
+            .SingleOrDefault();
+        if (png is null)
+        {
+            return NotFound();
+        }
+
+        // Stored bytes are only ever served back as an image, never sniffed
+        // into anything else.
+        Response.Headers.XContentTypeOptions = "nosniff";
+        Response.Headers.CacheControl = "private, no-store";
+        return File(png, "image/png");
+    }
+
     private static string? Validate(DateOnly date, string? description, WriteUpSeverity severity, WriteUpType type)
     {
         if (date == default)
@@ -342,7 +384,7 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
     private static string NormalizeName(string? name) =>
         string.Join(' ', (name ?? string.Empty).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
-    private void AddEvent(WriteUp writeUp, WriteUpEventAction action, string? detail)
+    private void AddEvent(WriteUp writeUp, WriteUpEventAction action, string? detail, WriteUpSignature? signature = null)
     {
         var caller = Caller();
         writeUp.Events.Add(new WriteUpEvent
@@ -352,6 +394,7 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
             ByAccount = caller,
             At = DateTime.UtcNow,
             Detail = detail,
+            Signature = signature,
         });
     }
 
@@ -389,6 +432,18 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
     private static string NameOf(Account? account) =>
         account is null ? string.Empty : $"{account.FirstName} {account.LastName}";
 
+    // The signature on the most recent acknowledgment — but only while it is
+    // still acknowledged: an edit resets the write-up to Pending, and the old
+    // signature then lives on only in the history.
+    private static int? CurrentSignatureId(WriteUp w) =>
+        w.AcknowledgmentStatus != WriteUpAcknowledgment.Acknowledged
+            ? null
+            : w.Events
+                .Where(e => e.Action == WriteUpEventAction.Acknowledged && e.SignatureId is not null)
+                .OrderByDescending(e => e.Id)
+                .Select(e => e.SignatureId)
+                .FirstOrDefault();
+
     private static WriteUpDto ToDto(WriteUp w, bool forManager) => new(
         w.Id,
         w.AccountId,
@@ -402,6 +457,7 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
         w.AcknowledgmentStatus,
         w.AcknowledgmentAt,
         w.AcknowledgmentSignedName,
+        CurrentSignatureId(w),
         w.IsVoided,
         w.VoidedAt,
         forManager ? w.VoidReason : null,
@@ -409,7 +465,7 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
             ? w.Events
                 .OrderBy(e => e.At)
                 .ThenBy(e => e.Id)
-                .Select(e => new WriteUpEventDto(e.Id, e.Action, e.ByAccountId, NameOf(e.ByAccount), e.At, e.Detail))
+                .Select(e => new WriteUpEventDto(e.Id, e.Action, e.ByAccountId, NameOf(e.ByAccount), e.At, e.Detail, e.SignatureId))
                 .ToList()
             : null);
 }

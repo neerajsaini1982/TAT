@@ -23,6 +23,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<SickTimeEntry> SickTimeEntries => Set<SickTimeEntry>();
     public DbSet<WriteUp> WriteUps => Set<WriteUp>();
     public DbSet<WriteUpEvent> WriteUpEvents => Set<WriteUpEvent>();
+    public DbSet<WriteUpSignature> WriteUpSignatures => Set<WriteUpSignature>();
 
     // SQLite has no native "datetime with offset" column type, so EF Core
     // round-trips every DateTime as Kind=Unspecified after a read — even
@@ -280,6 +281,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(e => e.WriteUpId);
+
+            // Restrict: a signature is never deleted out from under the
+            // history entry that points at it.
+            entity.HasOne(e => e.Signature)
+                .WithMany()
+                .HasForeignKey(e => e.SignatureId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WriteUpSignature>(entity =>
+        {
+            // Restrict (not Cascade): write-ups are never deleted, and if one
+            // ever were, this shouldn't silently go with it.
+            entity.HasOne(s => s.WriteUp)
+                .WithMany(w => w.Signatures)
+                .HasForeignKey(s => s.WriteUpId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(s => s.WriteUpId);
         });
     }
 

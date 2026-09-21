@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, computed, inject, signal } from '@angular/core';
+import { Component, Input, OnChanges, ViewChild, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -25,6 +25,8 @@ import {
   writeUpTypeLabel,
 } from '../../../core/write-ups-api';
 import { formatDate } from '../../../core/week-utils';
+import { SignatureImage } from '../signature-image/signature-image';
+import { SignaturePad } from '../signature-pad/signature-pad';
 
 const EVENT_LABELS: Record<WriteUpEventAction, string> = {
   Created: 'Created',
@@ -58,6 +60,8 @@ const STATUS_LABELS: Record<WriteUpAcknowledgment, string> = {
     MatInputModule,
     MatSelectModule,
     MatCardModule,
+    SignaturePad,
+    SignatureImage,
   ],
   templateUrl: './write-ups-manager.html',
   styleUrl: './write-ups-manager.scss',
@@ -87,6 +91,9 @@ export class WriteUpsManager implements OnChanges {
   protected readonly voidingId = signal<number | null>(null);
   protected readonly voidError = signal<string | null>(null);
   protected voidReason = '';
+
+  // The signing box, present only while the acknowledge panel is open.
+  @ViewChild(SignaturePad) private signaturePad?: SignaturePad;
 
   protected readonly acknowledgingId = signal<number | null>(null);
   protected readonly acknowledgeError = signal<string | null>(null);
@@ -260,10 +267,15 @@ export class WriteUpsManager implements OnChanges {
       this.acknowledgeError.set(`Type your full name as "${normalizeName(this.signerName)}" to acknowledge.`);
       return;
     }
+    const pad = this.signaturePad;
+    if (!pad?.hasInk()) {
+      this.acknowledgeError.set('Sign in the box to acknowledge.');
+      return;
+    }
 
     this.saving.set(true);
     this.acknowledgeError.set(null);
-    this.api.acknowledge(this.accountId, id, this.typedName).subscribe({
+    this.api.acknowledge(this.accountId, id, this.typedName, pad.toDataUrl()).subscribe({
       next: () => {
         this.saving.set(false);
         this.acknowledgingId.set(null);
