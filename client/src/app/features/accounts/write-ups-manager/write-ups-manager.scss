@@ -1,0 +1,84 @@
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.spacer {
+  flex: 1 1 auto;
+}
+
+.form-card {
+  max-width: 560px;
+  margin-bottom: 16px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.description-field {
+  width: 100%;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 0;
+}
+
+table {
+  width: 100%;
+}
+
+.description-cell {
+  // A write-up can run several lines; keep line breaks the admin typed.
+  white-space: pre-wrap;
+  padding-block: 8px;
+}
+
+.severity {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid currentColor;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.severity-low {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.severity-normal {
+  color: var(--mat-sys-primary);
+}
+
+.severity-high,
+.severity-critical {
+  color: var(--mat-sys-error);
+}
+
+.severity-critical {
+  background: var(--mat-sys-error);
+  color: var(--mat-sys-on-error);
+}
+
+.empty-hint {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 13px;
+}

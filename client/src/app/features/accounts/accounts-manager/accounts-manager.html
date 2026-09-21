@@ -104,6 +104,14 @@
         >
           <mat-icon>folder</mat-icon>
         </a>
+        <a
+          mat-icon-button
+          [routerLink]="['/', lockedLocationCode, 'admin', 'accounts', a.id, 'write-ups']"
+          aria-label="Write-ups"
+          title="Write-ups"
+        >
+          <mat-icon>gavel</mat-icon>
+        </a>
       }
       @if (a.locationCode) {
         @if (a.hasKioskPin && canViewKioskPin()) {
