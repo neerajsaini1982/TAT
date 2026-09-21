@@ -18,6 +18,10 @@ public class WriteUpEvent
 
     public DateTime At { get; set; } = DateTime.UtcNow;
 
+    // Set on an Acknowledged event: the signature given at that moment.
+    public int? SignatureId { get; set; }
+    public WriteUpSignature? Signature { get; set; }
+
     // Human-readable specifics: for Edited, each changed field as
     // "Field: old → new" (so the previous wording is recoverable); for
     // Voided, the reason.

@@ -75,10 +75,14 @@
     <mat-card-content>
       <form class="form" (ngSubmit)="confirmAcknowledge()" autocomplete="off">
         <p class="form-note">
-          Typing your name confirms that you have received this write-up. It does not mean you agree with it.
+          Signing confirms that you have received this write-up. It does not mean you agree with it.
         </p>
+        <div class="sign-block">
+          <span class="sign-label">Sign in the box</span>
+          <app-signature-pad #pad />
+        </div>
         <mat-form-field appearance="outline" class="description-field">
-          <mat-label>Your full name</mat-label>
+          <mat-label>Type your full name</mat-label>
           <input matInput name="typedName" [(ngModel)]="typedName" autocomplete="off" required />
           <mat-hint>Type it as it appears on your account: {{ signerName }}</mat-hint>
         </mat-form-field>
@@ -86,7 +90,12 @@
           <p class="error">{{ acknowledgeError() }}</p>
         }
         <div class="form-actions">
-          <button mat-flat-button color="primary" type="submit" [disabled]="saving() || !nameMatches()">
+          <button
+            mat-flat-button
+            color="primary"
+            type="submit"
+            [disabled]="saving() || !nameMatches() || !pad.hasInk()"
+          >
             Acknowledge
           </button>
           <button mat-button type="button" (click)="cancelAcknowledge()">Cancel</button>
@@ -149,6 +158,9 @@
             @if (e.detail) {
               <div class="history-detail">{{ e.detail }}</div>
             }
+            @if (e.signatureId) {
+              <app-signature-image class="signature-slot" [accountId]="w.accountId" [writeUpId]="w.id" [signatureId]="e.signatureId" />
+            }
           </li>
         }
       </ol>
@@ -194,6 +206,14 @@
         </span>
         @if (w.acknowledgmentAt) {
           <span class="status-date">{{ w.acknowledgmentAt | date: 'mediumDate' }}</span>
+        }
+        @if (w.acknowledgmentSignatureId) {
+          <app-signature-image
+            class="signature-slot"
+            [accountId]="w.accountId"
+            [writeUpId]="w.id"
+            [signatureId]="w.acknowledgmentSignatureId"
+          />
         }
         @if (w.acknowledgmentSignedName) {
           <div class="signed-name">Signed: {{ w.acknowledgmentSignedName }}</div>

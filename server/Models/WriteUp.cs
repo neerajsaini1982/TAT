@@ -49,4 +49,5 @@ public class WriteUp
     public bool IsVoided => VoidedAt is not null;
 
     public List<WriteUpEvent> Events { get; set; } = [];
+    public List<WriteUpSignature> Signatures { get; set; } = [];
 }

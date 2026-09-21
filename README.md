@@ -30,7 +30,7 @@ Team Lead Responsiabilities
 Employee Responsiabilities
 1. As an employee, I clock in and out of the system everytime I am on the shift
 2. Date and time entry is default from settings
-3. As an employee, I can view my own write-ups (read-only) from the account menu and acknowledge that I received each one by typing my full name. Acknowledging does not mean I agree with it. I can never see anyone else's, or the internal history of mine.
+3. As an employee, I can view my own write-ups (read-only) from the account menu and acknowledge that I received each one by typing my full name and signing with my finger, a stylus or a mouse. The signature is saved with the write-up, and stays on record even if the write-up is later edited. Acknowledging does not mean I agree with it. I can never see anyone else's, or the internal history of mine.
 
 
 Settings

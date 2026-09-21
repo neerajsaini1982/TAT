@@ -106,7 +106,11 @@ public sealed class WriteUpsControllerTests : IDisposable
             new UpdateWriteUpRequest(existing.Date, description ?? existing.Description, severity ?? existing.Severity, type ?? existing.Type)));
 
     // What the employee types to acknowledge: their own full name.
-    private static AcknowledgeWriteUpRequest Signed(Account who) => new($"{who.FirstName} {who.LastName}");
+    private static AcknowledgeWriteUpRequest Signed(Account who) => Ack($"{who.FirstName} {who.LastName}");
+
+    // A request with a valid drawn signature unless a test passes its own.
+    private static AcknowledgeWriteUpRequest Ack(string name, string? signature = null) =>
+        new(name, signature ?? TestPng.DataUrl());
 
     // ---- create ---------------------------------------------------------
 
@@ -458,7 +462,7 @@ public sealed class WriteUpsControllerTests : IDisposable
     {
         var existing = Create(employee);
 
-        var acknowledged = Ok(As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest("emp Tester")));
+        var acknowledged = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Ack("emp Tester")));
 
         Assert.Equal("emp Tester", acknowledged.AcknowledgmentSignedName);
         var trail = Assert.Single(List(As(admin).GetAll(employee.Id))).History!;
@@ -473,7 +477,7 @@ public sealed class WriteUpsControllerTests : IDisposable
     {
         var existing = Create(employee);
 
-        var acknowledged = Ok(As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest(typed)));
+        var acknowledged = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Ack(typed)));
 
         Assert.Equal(WriteUpAcknowledgment.Acknowledged, acknowledged.AcknowledgmentStatus);
         Assert.Equal(stored, acknowledged.AcknowledgmentSignedName);
@@ -486,7 +490,7 @@ public sealed class WriteUpsControllerTests : IDisposable
     {
         var existing = Create(employee);
 
-        var result = As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest(typed));
+        var result = As(employee).Acknowledge(employee.Id, existing.Id, Ack(typed));
 
         Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Equal(WriteUpAcknowledgment.Pending, db.WriteUps.Single().AcknowledgmentStatus);
@@ -502,7 +506,7 @@ public sealed class WriteUpsControllerTests : IDisposable
     {
         var existing = Create(employee);
 
-        var result = As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest(typed));
+        var result = As(employee).Acknowledge(employee.Id, existing.Id, Ack(typed));
 
         var bad = Assert.IsType<BadRequestObjectResult>(result.Result);
         Assert.Contains("emp Tester", Assert.IsType<string>(bad.Value));
@@ -529,7 +533,7 @@ public sealed class WriteUpsControllerTests : IDisposable
 
         // A retry, even one that arrives without a usable name, is a no-op
         // rather than an error or a second entry.
-        var again = Ok(As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest("")));
+        var again = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Ack("")));
 
         Assert.Equal(first.AcknowledgmentAt, again.AcknowledgmentAt);
         Assert.Equal("emp Tester", again.AcknowledgmentSignedName);
@@ -565,8 +569,189 @@ public sealed class WriteUpsControllerTests : IDisposable
         As(admin).DeclineAcknowledgment(employee.Id, existing.Id);
 
         Assert.IsType<BadRequestObjectResult>(
-            As(employee).Acknowledge(employee.Id, existing.Id, new AcknowledgeWriteUpRequest("someone else")).Result);
+            As(employee).Acknowledge(employee.Id, existing.Id, Ack("someone else")).Result);
         Assert.Equal(WriteUpAcknowledgment.Declined, db.WriteUps.Single().AcknowledgmentStatus);
+    }
+
+    // ---- drawn signature -------------------------------------------------
+
+    private static FileContentResult Image(IActionResult result) => Assert.IsType<FileContentResult>(result);
+
+    [Fact]
+    public void Acknowledging_stores_the_drawn_signature_and_points_the_history_at_it()
+    {
+        var existing = Create(employee);
+        var drawn = TestPng.Build(dataBytes: 321);
+
+        var acknowledged = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Ack("emp Tester", TestPng.DataUrl(drawn))));
+
+        var stored = db.WriteUpSignatures.Single();
+        Assert.Equal(drawn, stored.Png);
+        Assert.Equal("emp Tester", stored.SignedName);
+        Assert.Equal(existing.Id, stored.WriteUpId);
+        Assert.Equal(stored.Id, acknowledged.AcknowledgmentSignatureId);
+
+        var trail = Assert.Single(List(As(admin).GetAll(employee.Id))).History!;
+        Assert.Equal(stored.Id, trail.Last().SignatureId);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("http://example.com/sig.png")]
+    [InlineData("data:image/png;base64,!!!")]
+    public void Acknowledging_without_a_valid_signature_is_rejected_and_changes_nothing(string signature)
+    {
+        var existing = Create(employee);
+
+        var result = As(employee).Acknowledge(employee.Id, existing.Id, Ack("emp Tester", signature));
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(WriteUpAcknowledgment.Pending, db.WriteUps.Single().AcknowledgmentStatus);
+        Assert.Empty(db.WriteUpSignatures);
+        Assert.Single(db.WriteUpEvents);
+    }
+
+    [Fact]
+    public void Acknowledging_rejects_an_image_that_is_not_a_png()
+    {
+        var existing = Create(employee);
+        var notPng = "data:image/png;base64," + Convert.ToBase64String(new byte[500]);
+
+        Assert.IsType<BadRequestObjectResult>(As(employee).Acknowledge(employee.Id, existing.Id, Ack("emp Tester", notPng)).Result);
+        Assert.Empty(db.WriteUpSignatures);
+    }
+
+    [Fact]
+    public void The_name_is_still_checked_before_the_signature_is_saved()
+    {
+        var existing = Create(employee);
+
+        Assert.IsType<BadRequestObjectResult>(As(employee).Acknowledge(employee.Id, existing.Id, Ack("Someone Else")).Result);
+        Assert.Empty(db.WriteUpSignatures);
+    }
+
+    [Fact]
+    public void The_employee_and_their_admin_can_fetch_the_signature_image()
+    {
+        var existing = Create(employee);
+        var drawn = TestPng.Build(dataBytes: 55);
+        var id = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Ack("emp Tester", TestPng.DataUrl(drawn)))).AcknowledgmentSignatureId!.Value;
+
+        var mine = Image(As(employee).GetSignature(employee.Id, existing.Id, id));
+        var theirs = Image(As(admin).GetSignature(employee.Id, existing.Id, id));
+
+        Assert.Equal("image/png", mine.ContentType);
+        Assert.Equal(drawn, mine.FileContents);
+        Assert.Equal(drawn, theirs.FileContents);
+    }
+
+    [Fact]
+    public void Nobody_else_can_fetch_a_signature_image()
+    {
+        var existing = Create(employee);
+        var id = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee))).AcknowledgmentSignatureId!.Value;
+        var lead = Seed("lead", AccountRole.Lead, location);
+        var outsider = Seed("outsider", AccountRole.Admin, otherLocation);
+
+        Assert.IsType<NotFoundResult>(As(otherEmployee).GetSignature(employee.Id, existing.Id, id));
+        Assert.IsType<NotFoundResult>(As(lead).GetSignature(employee.Id, existing.Id, id));
+        Assert.IsType<NotFoundResult>(As(outsider).GetSignature(employee.Id, existing.Id, id));
+    }
+
+    [Fact]
+    public void A_signature_id_cannot_be_used_through_a_different_write_up_or_employee()
+    {
+        var mine = Create(employee);
+        var theirs = Create(otherEmployee);
+        var mySignature = Ok(As(employee).Acknowledge(employee.Id, mine.Id, Signed(employee))).AcknowledgmentSignatureId!.Value;
+        var theirSignature = Ok(As(otherEmployee).Acknowledge(otherEmployee.Id, theirs.Id, Signed(otherEmployee))).AcknowledgmentSignatureId!.Value;
+
+        // Right employee and write-up, but someone else's signature id.
+        Assert.IsType<NotFoundResult>(As(admin).GetSignature(employee.Id, mine.Id, theirSignature));
+        // Another employee's write-up path with my signature id.
+        Assert.IsType<NotFoundResult>(As(admin).GetSignature(otherEmployee.Id, theirs.Id, mySignature));
+        // An employee can't reach a coworker's by guessing ids either.
+        Assert.IsType<NotFoundResult>(As(employee).GetSignature(otherEmployee.Id, theirs.Id, theirSignature));
+        Assert.IsType<NotFoundResult>(As(admin).GetSignature(employee.Id, mine.Id, 9999));
+    }
+
+    [Fact]
+    public void An_edit_drops_the_current_signature_but_the_original_stays_on_record()
+    {
+        var existing = Create(employee);
+        var original = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Ack("emp Tester", TestPng.DataUrl(TestPng.Build(dataBytes: 11)))))
+            .AcknowledgmentSignatureId!.Value;
+
+        var edited = Edit(existing, description: "Materially different");
+
+        Assert.Null(edited.AcknowledgmentSignatureId);
+        Assert.Single(db.WriteUpSignatures);
+
+        // Still reachable through the history entry that pointed at it.
+        var fromHistory = edited.History!.Single(e => e.Action == WriteUpEventAction.Acknowledged).SignatureId;
+        Assert.Equal(original, fromHistory);
+        Assert.Equal(TestPng.Build(dataBytes: 11), Image(As(admin).GetSignature(employee.Id, existing.Id, original)).FileContents);
+
+        // Signing again adds a second one and becomes the current signature.
+        var second = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Ack("emp Tester", TestPng.DataUrl(TestPng.Build(dataBytes: 22)))));
+        Assert.Equal(2, db.WriteUpSignatures.Count());
+        Assert.NotEqual(original, second.AcknowledgmentSignatureId);
+        Assert.Equal(TestPng.Build(dataBytes: 11), Image(As(admin).GetSignature(employee.Id, existing.Id, original)).FileContents);
+    }
+
+    [Fact]
+    public void The_employee_sees_the_current_signature_id_but_not_the_history()
+    {
+        var existing = Create(employee);
+        var id = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee))).AcknowledgmentSignatureId;
+
+        var listed = Assert.Single(List(As(employee).GetAll(employee.Id)));
+
+        Assert.Equal(id, listed.AcknowledgmentSignatureId);
+        Assert.Null(listed.History);
+    }
+
+    [Fact]
+    public void A_retry_after_acknowledging_adds_no_second_signature()
+    {
+        var existing = Create(employee);
+        var first = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee)));
+
+        var again = Ok(As(employee).Acknowledge(employee.Id, existing.Id, Ack("", "")));
+
+        Assert.Equal(first.AcknowledgmentSignatureId, again.AcknowledgmentSignatureId);
+        Assert.Single(db.WriteUpSignatures);
+    }
+
+    [Fact]
+    public void A_declined_write_up_has_no_signature_and_signing_later_still_needs_one()
+    {
+        var existing = Create(employee);
+
+        var declined = Ok(As(admin).DeclineAcknowledgment(employee.Id, existing.Id));
+        Assert.Null(declined.AcknowledgmentSignatureId);
+
+        Assert.IsType<BadRequestObjectResult>(As(employee).Acknowledge(employee.Id, existing.Id, Ack("emp Tester", "")).Result);
+        Assert.Equal(WriteUpAcknowledgment.Declined, db.WriteUps.Single().AcknowledgmentStatus);
+        Assert.Equal(WriteUpAcknowledgment.Acknowledged, Ok(As(employee).Acknowledge(employee.Id, existing.Id, Signed(employee))).AcknowledgmentStatus);
+    }
+
+    [Fact]
+    public void A_write_up_acknowledged_before_signatures_existed_simply_has_none()
+    {
+        var existing = Create(employee);
+        var row = db.WriteUps.Single();
+        row.AcknowledgmentStatus = WriteUpAcknowledgment.Acknowledged;
+        row.AcknowledgmentAt = DateTime.UtcNow;
+        row.AcknowledgmentSignedName = "emp Tester";
+        db.WriteUpEvents.Add(new WriteUpEvent { WriteUpId = existing.Id, Action = WriteUpEventAction.Acknowledged, ByAccountId = employee.Id, Detail = "Signed: emp Tester" });
+        db.SaveChanges();
+
+        var listed = Assert.Single(List(As(employee).GetAll(employee.Id)));
+
+        Assert.Equal(WriteUpAcknowledgment.Acknowledged, listed.AcknowledgmentStatus);
+        Assert.Null(listed.AcknowledgmentSignatureId);
     }
 
     [Fact]

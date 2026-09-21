@@ -180,3 +180,19 @@ tr.voided .severity {
   white-space: pre-wrap;
   color: var(--mat-sys-on-surface-variant);
 }
+
+.sign-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.sign-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.signature-slot {
+  margin: 4px 0;
+}

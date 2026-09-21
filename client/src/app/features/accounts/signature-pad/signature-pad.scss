@@ -1,0 +1,51 @@
+:host {
+  display: block;
+  width: 100%;
+  max-width: 500px;
+}
+
+// Always white, like paper, so the ink is readable in dark mode too — and
+// matches the white the exported image is drawn on.
+.pad {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 500 / 160;
+  background: #fff;
+  border: 1px solid var(--mat-sys-outline);
+}
+
+.surface {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  // Without this a finger dragging across the box scrolls the page instead of
+  // drawing.
+  touch-action: none;
+  user-select: none;
+}
+
+.placeholder {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9a9a9a;
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.baseline {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 28px;
+  border-bottom: 1px solid #bdbdbd;
+  pointer-events: none;
+}
+
+.pad-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}

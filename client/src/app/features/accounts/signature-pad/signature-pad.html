@@ -1,0 +1,19 @@
+<div class="pad">
+  <canvas
+    #canvas
+    class="surface"
+    role="img"
+    aria-label="Signature area. Draw your signature here with your finger, a stylus or a mouse."
+    (pointerdown)="start($event)"
+    (pointermove)="move($event)"
+    (pointerup)="end()"
+    (pointercancel)="end()"
+  ></canvas>
+  @if (!hasInk()) {
+    <span class="placeholder" aria-hidden="true">Sign here</span>
+  }
+  <span class="baseline" aria-hidden="true"></span>
+</div>
+<div class="pad-actions">
+  <button mat-button type="button" (click)="clear()" [disabled]="!hasInk()">Clear</button>
+</div>
