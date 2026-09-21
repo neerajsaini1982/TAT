@@ -158,6 +158,7 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
             changes.Add($"Acknowledgment reset to Pending (was {writeUp.AcknowledgmentStatus}).");
             writeUp.AcknowledgmentStatus = WriteUpAcknowledgment.Pending;
             writeUp.AcknowledgmentAt = null;
+            writeUp.AcknowledgmentSignedName = null;
         }
 
         writeUp.Date = request.Date;
@@ -212,9 +213,11 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
 
     // Only the employee the write-up is about can acknowledge it — an admin
     // acknowledging on their behalf would defeat the point (an admin who
-    // hand-delivered it and the employee refused uses Decline instead).
+    // hand-delivered it and the employee refused uses Decline instead). They
+    // confirm by typing their full name, which has to match their account:
+    // that makes acknowledging a deliberate act, and stores what they typed.
     [HttpPost("{writeUpId:int}/acknowledge")]
-    public ActionResult<WriteUpDto> Acknowledge(int accountId, int writeUpId)
+    public ActionResult<WriteUpDto> Acknowledge(int accountId, int writeUpId, AcknowledgeWriteUpRequest request)
     {
         var account = FindAccount(accountId);
         if (account is null || CallerAccountId() != account.Id)
@@ -240,9 +243,22 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
             return Ok(ToDto(writeUp, forManager: false));
         }
 
+        var typedName = NormalizeName(request.TypedName);
+        if (typedName.Length == 0)
+        {
+            return BadRequest("Type your full name to acknowledge this write-up.");
+        }
+
+        var expectedName = NormalizeName($"{account.FirstName} {account.LastName}");
+        if (!string.Equals(typedName, expectedName, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest($"The name doesn't match your account. Type your full name as \"{expectedName}\".");
+        }
+
         writeUp.AcknowledgmentStatus = WriteUpAcknowledgment.Acknowledged;
         writeUp.AcknowledgmentAt = DateTime.UtcNow;
-        AddEvent(writeUp, WriteUpEventAction.Acknowledged, null);
+        writeUp.AcknowledgmentSignedName = typedName;
+        AddEvent(writeUp, WriteUpEventAction.Acknowledged, $"Signed: {typedName}");
         db.SaveChanges();
 
         return Ok(ToDto(writeUp, forManager: false));
@@ -321,6 +337,11 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
         return null;
     }
 
+    // Collapses any run of whitespace to one space and trims, so stray or
+    // doubled spaces don't make an otherwise correct name fail to match.
+    private static string NormalizeName(string? name) =>
+        string.Join(' ', (name ?? string.Empty).Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+
     private void AddEvent(WriteUp writeUp, WriteUpEventAction action, string? detail)
     {
         var caller = Caller();
@@ -380,6 +401,7 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
         w.CreatedAt,
         w.AcknowledgmentStatus,
         w.AcknowledgmentAt,
+        w.AcknowledgmentSignedName,
         w.IsVoided,
         w.VoidedAt,
         forManager ? w.VoidReason : null,

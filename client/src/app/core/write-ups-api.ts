@@ -58,6 +58,8 @@ export interface WriteUpDto {
   createdAt: string;
   acknowledgmentStatus: WriteUpAcknowledgment;
   acknowledgmentAt: string | null;
+  // What the employee typed to acknowledge; null until they do.
+  acknowledgmentSignedName: string | null;
   isVoided: boolean;
   voidedAt: string | null;
   // Only sent to whoever manages the write-up (an admin), never to the
@@ -99,8 +101,10 @@ export class WriteUpsApi {
     return this.http.post<WriteUpDto>(`${this.base}/${accountId}/write-ups/${writeUpId}/void`, { reason });
   }
 
-  acknowledge(accountId: number, writeUpId: number) {
-    return this.http.post<WriteUpDto>(`${this.base}/${accountId}/write-ups/${writeUpId}/acknowledge`, {});
+  // typedName has to match the employee's name on their account (the server
+  // ignores case and extra spaces and answers 400 with what to type if not).
+  acknowledge(accountId: number, writeUpId: number, typedName: string) {
+    return this.http.post<WriteUpDto>(`${this.base}/${accountId}/write-ups/${writeUpId}/acknowledge`, { typedName });
   }
 
   recordDeclined(accountId: number, writeUpId: number) {
