@@ -11,7 +11,12 @@ public record LocationSettingsDto(
     int LateClockInGraceMinutes,
     int BreakLimitMinutes,
     int LunchLimitMinutes,
-    int OvertimeDailyThresholdMinutes,
+    OvertimePreset OvertimePreset,
+    int? OvertimeDailyThresholdMinutes,
+    int? DailyDoubleTimeAfterMinutes,
+    int? WeeklyOvertimeAfterMinutes,
+    int? SeventhDayDoubleTimeAfterMinutes,
+    DayOfWeek WorkweekStartDay,
     bool DevelopmentMode,
     bool ScheduleVisibilityEnabled,
     bool AdminSeesAllSchedules,
@@ -32,7 +37,10 @@ public record LocationSettingsDto(
     DateOnly? PayDayStartDate,
     int? PayPeriodDays,
     // Computed from PayDayStartDate/PayPeriodDays (see LocationSettings.GetNextPayDate) — not stored.
-    DateOnly? NextPayDate);
+    DateOnly? NextPayDate,
+    // Never round-trips the stored passcode; true only tells the UI a kiosk
+    // device can log in for this location, same HasSmtpPassword pattern.
+    bool HasKioskPasscode);
 
 public record UpdateLocationSettingsRequest(
     TimeFormat TimeFormat,
@@ -43,7 +51,12 @@ public record UpdateLocationSettingsRequest(
     int LateClockInGraceMinutes,
     int BreakLimitMinutes,
     int LunchLimitMinutes,
-    int OvertimeDailyThresholdMinutes,
+    OvertimePreset OvertimePreset,
+    int? OvertimeDailyThresholdMinutes,
+    int? DailyDoubleTimeAfterMinutes,
+    int? WeeklyOvertimeAfterMinutes,
+    int? SeventhDayDoubleTimeAfterMinutes,
+    DayOfWeek WorkweekStartDay,
     bool DevelopmentMode,
     bool ScheduleVisibilityEnabled,
     bool AdminSeesAllSchedules,
@@ -60,7 +73,14 @@ public record UpdateLocationSettingsRequest(
     string? SmtpFromAddress,
     string? SmtpFromName,
     DateOnly? PayDayStartDate,
-    int? PayPeriodDays);
+    int? PayPeriodDays,
+    // Blank/omitted leaves the existing stored passcode untouched, same
+    // "blank means unchanged" rule SmtpPassword uses.
+    string? KioskPasscode,
+    // Explicitly clears the stored passcode (disables kiosk login for this
+    // location) — a blank KioskPasscode alone can't mean "clear it" because
+    // blank also means "unchanged".
+    bool ClearKioskPasscode);
 
 // Lets an admin verify SMTP settings actually work before (or after) saving
 // them. SmtpHost/Username/etc mirror whatever is currently in the form —
@@ -91,3 +111,13 @@ public record EmployeeLocationSettingsDto(
     int LunchLimitMinutes,
     // Computed from LocationSettings.GetNextPayDate; null when pay day tracking isn't configured.
     DateOnly? NextPayDate);
+
+// One selectable overtime preset with the rule values it fills in (see
+// OvertimePolicy.ForPreset). The workweek start day isn't part of a preset —
+// it's a property of the location, so choosing a preset leaves it alone.
+public record OvertimePresetDto(
+    OvertimePreset Preset,
+    int? OvertimeDailyThresholdMinutes,
+    int? DailyDoubleTimeAfterMinutes,
+    int? WeeklyOvertimeAfterMinutes,
+    int? SeventhDayDoubleTimeAfterMinutes);

@@ -5,6 +5,19 @@ import { API_BASE_URL } from './api-config';
 
 export type TimeFormat = 'TwelveHour' | 'TwentyFourHour';
 export type DateFormat = 'MmDdYyyy' | 'DdMmYyyy' | 'YyyyMmDd' | 'DdMmmYyyy' | 'MmmDdYyyy';
+export type OvertimePreset = 'None' | 'Federal' | 'California' | 'Custom';
+export type WorkweekDay = 'Sunday' | 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday';
+
+// The rule values one preset fills in (see LocationSettingsController.GetOvertimePresets).
+// Workweek start isn't part of a preset — selecting one leaves it alone. A null
+// threshold means that rule is off.
+export interface OvertimePresetDto {
+  preset: OvertimePreset;
+  overtimeDailyThresholdMinutes: number | null;
+  dailyDoubleTimeAfterMinutes: number | null;
+  weeklyOvertimeAfterMinutes: number | null;
+  seventhDayDoubleTimeAfterMinutes: number | null;
+}
 
 export interface LocationSettingsDto {
   timeFormat: TimeFormat;
@@ -15,7 +28,12 @@ export interface LocationSettingsDto {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
-  overtimeDailyThresholdMinutes: number;
+  overtimePreset: OvertimePreset;
+  overtimeDailyThresholdMinutes: number | null;
+  dailyDoubleTimeAfterMinutes: number | null;
+  weeklyOvertimeAfterMinutes: number | null;
+  seventhDayDoubleTimeAfterMinutes: number | null;
+  workweekStartDay: WorkweekDay;
   developmentMode: boolean;
   scheduleVisibilityEnabled: boolean;
   adminSeesAllSchedules: boolean;
@@ -32,6 +50,9 @@ export interface LocationSettingsDto {
   payDayStartDate: string | null;
   payPeriodDays: number | null;
   nextPayDate: string | null;
+  // Never round-trips the stored passcode; true only tells the UI a kiosk
+  // device can log in for this location.
+  hasKioskPasscode: boolean;
 }
 
 export interface UpdateLocationSettingsRequest {
@@ -43,7 +64,12 @@ export interface UpdateLocationSettingsRequest {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
-  overtimeDailyThresholdMinutes: number;
+  overtimePreset: OvertimePreset;
+  overtimeDailyThresholdMinutes: number | null;
+  dailyDoubleTimeAfterMinutes: number | null;
+  weeklyOvertimeAfterMinutes: number | null;
+  seventhDayDoubleTimeAfterMinutes: number | null;
+  workweekStartDay: WorkweekDay;
   developmentMode: boolean;
   scheduleVisibilityEnabled: boolean;
   adminSeesAllSchedules: boolean;
@@ -59,6 +85,11 @@ export interface UpdateLocationSettingsRequest {
   smtpFromName: string | null;
   payDayStartDate: string | null;
   payPeriodDays: number | null;
+  // Blank leaves the existing stored passcode untouched, same "blank means
+  // unchanged" rule smtpPassword uses.
+  kioskPasscode: string | null;
+  // Explicitly clears the stored passcode (disables kiosk login).
+  clearKioskPasscode: boolean;
 }
 
 export interface SendTestEmailRequest {
@@ -91,6 +122,10 @@ export class LocationSettingsApi {
   get(locationCode?: string) {
     const params = locationCode ? `?locationCode=${encodeURIComponent(locationCode)}` : '';
     return this.http.get<LocationSettingsDto>(`${this.base}${params}`);
+  }
+
+  getOvertimePresets() {
+    return this.http.get<OvertimePresetDto[]>(`${this.base}/overtime-presets`);
   }
 
   getMine() {

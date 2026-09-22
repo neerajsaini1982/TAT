@@ -66,6 +66,8 @@ if (sqliteDirectory is not null)
 builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(sqliteConnectionString));
 
 builder.Services.AddScoped<TokenService>();
+builder.Services.AddScoped<TimeEntryPunchService>();
+builder.Services.AddScoped<KioskPinService>();
 
 // Keys live outside publish/wwwroot (both get rm -rf'd on every
 // publish-win.sh rebuild — see that script) so encrypted SSNs stay readable
@@ -77,6 +79,7 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath))
     .SetApplicationName("TAT");
 builder.Services.AddSingleton<SsnProtector>();
+builder.Services.AddSingleton<PinProtector>();
 
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<IScheduleNotifier, ScheduleNotifier>();
@@ -104,7 +107,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy("SaOnly", policy => policy.RequireRole(nameof(AccountRole.Sa)))
     .AddPolicy("AdminOrAbove", policy => policy.RequireRole(nameof(AccountRole.Sa), nameof(AccountRole.Admin)))
-    .AddPolicy("LeadOrAbove", policy => policy.RequireRole(nameof(AccountRole.Sa), nameof(AccountRole.Admin), nameof(AccountRole.Lead)));
+    .AddPolicy("LeadOrAbove", policy => policy.RequireRole(nameof(AccountRole.Sa), nameof(AccountRole.Admin), nameof(AccountRole.Lead)))
+    .AddPolicy("Kiosk", policy => policy.RequireRole(nameof(AccountRole.Kiosk)));
 
 var app = builder.Build();
 

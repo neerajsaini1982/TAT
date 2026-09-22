@@ -47,10 +47,27 @@ public class LocationSettings
     public int BreakLimitMinutes { get; set; } = 15;
     // A Lunch longer than this many minutes is flagged.
     public int LunchLimitMinutes { get; set; } = 30;
+    // Overtime rules for the hours report — see OvertimePolicy for what each
+    // threshold means and OvertimeCalculator for how they combine. Holds the
+    // resolved values; OvertimePreset just records which starting point the
+    // admin picked. The defaults reproduce the original behavior (daily
+    // overtime after 8 hours, nothing else), which is what existing
+    // locations were migrated to.
+    public OvertimePreset OvertimePreset { get; set; } = OvertimePreset.Custom;
     // Net worked time beyond this many minutes in a single day counts as
-    // overtime on the hours report (see ReportsController). Defaults to 480
-    // (8 hours).
-    public int OvertimeDailyThresholdMinutes { get; set; } = 480;
+    // overtime. Null: no daily overtime.
+    public int? OvertimeDailyThresholdMinutes { get; set; } = 480;
+    public int? DailyDoubleTimeAfterMinutes { get; set; }
+    public int? WeeklyOvertimeAfterMinutes { get; set; }
+    public int? SeventhDayDoubleTimeAfterMinutes { get; set; }
+    public DayOfWeek WorkweekStartDay { get; set; } = DayOfWeek.Monday;
+
+    public OvertimePolicy GetOvertimePolicy() => new(
+        OvertimeDailyThresholdMinutes,
+        DailyDoubleTimeAfterMinutes,
+        WeeklyOvertimeAfterMinutes,
+        SeventhDayDoubleTimeAfterMinutes,
+        WorkweekStartDay);
 
     // When on, exposes extra diagnostics/test affordances for this location.
     public bool DevelopmentMode { get; set; } = false;
@@ -78,6 +95,12 @@ public class LocationSettings
     public bool SmtpUseSsl { get; set; } = true;
     public string? SmtpFromAddress { get; set; }
     public string? SmtpFromName { get; set; }
+
+    // Hashed the same way as an Admin/Lead password (PasswordHasher). Shared
+    // by every kiosk device at this location to start a kiosk session (see
+    // AuthController.KioskLogin) — null means kiosk clock-in isn't set up
+    // for this location yet.
+    public string? KioskPasscodeHash { get; set; }
 
     // A single known pay day plus the recurrence interval, from which every
     // future pay date is derived on read (see GetNextPayDate) — avoids

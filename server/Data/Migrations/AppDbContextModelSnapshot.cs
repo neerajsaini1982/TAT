@@ -70,6 +70,9 @@ namespace Server.Data.Migrations
                     b.Property<bool>("IsOnShiftSchedule")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsOvertimeExempt")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("JobTitle")
                         .HasColumnType("TEXT");
 
@@ -92,6 +95,15 @@ namespace Server.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("PhotoFileName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PinEncrypted")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("PinFailedAttempts")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("PinLockedUntil")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Role")
@@ -382,6 +394,9 @@ namespace Server.Data.Migrations
                     b.Property<int>("ClockInWindowMinutes")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int?>("DailyDoubleTimeAfterMinutes")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("DateFormat")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -391,6 +406,9 @@ namespace Server.Data.Migrations
 
                     b.Property<bool>("EmployeeSeesAllSchedules")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("KioskPasscodeHash")
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("LateClockInGraceMinutes")
                         .HasColumnType("INTEGER");
@@ -404,8 +422,12 @@ namespace Server.Data.Migrations
                     b.Property<int>("LunchLimitMinutes")
                         .HasColumnType("INTEGER");
 
-                    b.Property<int>("OvertimeDailyThresholdMinutes")
+                    b.Property<int?>("OvertimeDailyThresholdMinutes")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("OvertimePreset")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<DateOnly?>("PayDayStartDate")
                         .HasColumnType("TEXT");
@@ -414,6 +436,9 @@ namespace Server.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<bool>("ScheduleVisibilityEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("SeventhDayDoubleTimeAfterMinutes")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("SmtpFromAddress")
@@ -442,6 +467,13 @@ namespace Server.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("WeeklyOvertimeAfterMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("WorkweekStartDay")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
@@ -687,6 +719,124 @@ namespace Server.Data.Migrations
                     b.ToTable("TimeEntrySegments");
                 });
 
+            modelBuilder.Entity("Server.Models.WriteUp", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("AcknowledgmentAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AcknowledgmentSignedName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AcknowledgmentStatus")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CreatedByAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("VoidReason")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("VoidedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByAccountId");
+
+                    b.HasIndex("AccountId", "Date");
+
+                    b.ToTable("WriteUps");
+                });
+
+            modelBuilder.Entity("Server.Models.WriteUpEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ByAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("SignatureId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("WriteUpId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ByAccountId");
+
+                    b.HasIndex("SignatureId");
+
+                    b.HasIndex("WriteUpId");
+
+                    b.ToTable("WriteUpEvents");
+                });
+
+            modelBuilder.Entity("Server.Models.WriteUpSignature", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<byte[]>("Png")
+                        .IsRequired()
+                        .HasColumnType("BLOB");
+
+                    b.Property<DateTime>("SignedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("SignedName")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("WriteUpId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WriteUpId");
+
+                    b.ToTable("WriteUpSignatures");
+                });
+
             modelBuilder.Entity("Server.Models.Account", b =>
                 {
                     b.HasOne("Server.Models.Location", "Location")
@@ -907,6 +1057,62 @@ namespace Server.Data.Migrations
                     b.Navigation("TimeEntry");
                 });
 
+            modelBuilder.Entity("Server.Models.WriteUp", b =>
+                {
+                    b.HasOne("Server.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Server.Models.Account", "CreatedByAccount")
+                        .WithMany()
+                        .HasForeignKey("CreatedByAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("CreatedByAccount");
+                });
+
+            modelBuilder.Entity("Server.Models.WriteUpEvent", b =>
+                {
+                    b.HasOne("Server.Models.Account", "ByAccount")
+                        .WithMany()
+                        .HasForeignKey("ByAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Server.Models.WriteUpSignature", "Signature")
+                        .WithMany()
+                        .HasForeignKey("SignatureId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Server.Models.WriteUp", "WriteUp")
+                        .WithMany("Events")
+                        .HasForeignKey("WriteUpId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ByAccount");
+
+                    b.Navigation("Signature");
+
+                    b.Navigation("WriteUp");
+                });
+
+            modelBuilder.Entity("Server.Models.WriteUpSignature", b =>
+                {
+                    b.HasOne("Server.Models.WriteUp", "WriteUp")
+                        .WithMany("Signatures")
+                        .HasForeignKey("WriteUpId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("WriteUp");
+                });
+
             modelBuilder.Entity("Server.Models.Availability", b =>
                 {
                     b.Navigation("Days");
@@ -927,6 +1133,13 @@ namespace Server.Data.Migrations
             modelBuilder.Entity("Server.Models.TimeEntry", b =>
                 {
                     b.Navigation("Segments");
+                });
+
+            modelBuilder.Entity("Server.Models.WriteUp", b =>
+                {
+                    b.Navigation("Events");
+
+                    b.Navigation("Signatures");
                 });
 #pragma warning restore 612, 618
         }

@@ -6,6 +6,7 @@ using Server.Data;
 using Server.Dtos;
 using Server.Models;
 using Server.Security;
+using Server.Services;
 
 namespace Server.Controllers;
 
@@ -27,6 +28,11 @@ public class ReportsController(AppDbContext db) : ControllerBase
     // assignment in range don't appear at all (nothing to report), and a
     // draft (not-yet-posted) assignment doesn't count as "scheduled" either
     // — same rule as what employees themselves see (GetMine).
+    //
+    // Overtime comes from the location's rules (OvertimeCalculator). Weekly
+    // and seventh-day rules span whole workweeks, so hours are loaded for
+    // every workweek the range touches and then trimmed back to the range —
+    // a report starting on a Wednesday still counts that week's Mon/Tue.
     [HttpGet("hours")]
     public ActionResult<IEnumerable<EmployeeHoursReportDto>> GetHoursReport(
         [FromQuery] string? locationCode, [FromQuery] DateOnly startDate, [FromQuery] DateOnly endDate)
@@ -45,7 +51,9 @@ public class ReportsController(AppDbContext db) : ControllerBase
         var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == location.Id);
         var breakLimitMinutes = settings?.BreakLimitMinutes ?? 15;
         var lunchLimitMinutes = settings?.LunchLimitMinutes ?? 30;
-        var overtimeThresholdMinutes = settings?.OvertimeDailyThresholdMinutes ?? 480;
+        // No settings row yet means the defaults (daily overtime after 8 hours).
+        var overtimePolicy = (settings ?? new LocationSettings()).GetOvertimePolicy();
+        var (loadStart, loadEnd) = OvertimeCalculator.WorkweekSpan(startDate, endDate, overtimePolicy.WorkweekStartDay);
 
         // Sa/Admin see the whole location; anyone else (Lead, Employee) only
         // ever gets their own row back, regardless of what locationCode was
@@ -57,7 +65,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
         var assignmentsQuery = db.ShiftAssignments
             .Include(a => a.Account)
             .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
-            .Where(a => a.Shift!.LocationId == location.Id && a.Date >= startDate && a.Date <= endDate && a.IsPublished);
+            .Where(a => a.Shift!.LocationId == location.Id && a.Date >= loadStart && a.Date <= loadEnd && a.IsPublished);
         if (!canSeeEveryone)
         {
             assignmentsQuery = assignmentsQuery.Where(a => a.AccountId == callerAccountId);
@@ -105,7 +113,9 @@ public class ReportsController(AppDbContext db) : ControllerBase
                 entriesByAssignmentId,
                 breakLimitMinutes,
                 lunchLimitMinutes,
-                overtimeThresholdMinutes))
+                overtimePolicy,
+                startDate,
+                endDate))
             .Where(e => e.TotalNetWorkedMinutes > 0 || e.OpenEntryDays > 0 || e.TotalSickMinutes > 0)
             .OrderBy(e => e.FullName)
             .ToList();
@@ -120,7 +130,9 @@ public class ReportsController(AppDbContext db) : ControllerBase
         Dictionary<int, TimeEntry> entriesByAssignmentId,
         int breakLimitMinutes,
         int lunchLimitMinutes,
-        int overtimeThresholdMinutes)
+        OvertimePolicy overtimePolicy,
+        DateOnly startDate,
+        DateOnly endDate)
     {
         // Union of every date with either a shift assignment or a manually
         // recorded sick entry — a date can have one, the other, or both.
@@ -139,19 +151,42 @@ public class ReportsController(AppDbContext db) : ControllerBase
                 sickEntriesByDate[date].ToList(),
                 entriesByAssignmentId,
                 breakLimitMinutes,
-                lunchLimitMinutes,
-                overtimeThresholdMinutes))
+                lunchLimitMinutes))
+            .ToList();
+
+        // Rules run over every loaded day (whole workweeks), then only the
+        // requested range is kept — see GetHoursReport. An exempt employee is
+        // owed no premium pay, so no rules apply to them.
+        var payByDate = OvertimeCalculator
+            .Calculate(account.IsOvertimeExempt ? OvertimePolicy.None : overtimePolicy, days
+                .Where(d => d.NetWorkedMinutes is not null)
+                .Select(d => new DayHours(d.Date, d.NetWorkedMinutes!.Value)))
+            .ToDictionary(p => p.Date);
+
+        days = days
+            .Where(d => d.Date >= startDate && d.Date <= endDate)
+            .Select(d => payByDate.TryGetValue(d.Date, out var pay)
+                ? d with
+                {
+                    RegularMinutes = pay.RegularMinutes,
+                    OvertimeMinutes = pay.OvertimeMinutes,
+                    DoubleTimeMinutes = pay.DoubleTimeMinutes,
+                }
+                : d)
             .ToList();
 
         return new EmployeeHoursReportDto(
             account.Id,
             $"{account.FirstName} {account.LastName}",
+            account.IsOvertimeExempt,
             days.Sum(d => d.WorkedMinutes ?? 0),
             days.Sum(d => d.BreakMinutes),
             days.Sum(d => d.LunchMinutes),
             days.Sum(d => d.NetWorkedMinutes ?? 0),
             days.Sum(d => d.ScheduledMinutes ?? 0),
+            days.Sum(d => d.RegularMinutes),
             days.Sum(d => d.OvertimeMinutes),
+            days.Sum(d => d.DoubleTimeMinutes),
             days.Count(d => d.IsAbsent),
             days.Count(d => d.StillClockedIn),
             days.Sum(d => d.SickMinutes),
@@ -168,8 +203,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
         List<SickTimeEntry> daySickEntries,
         Dictionary<int, TimeEntry> entriesByAssignmentId,
         int breakLimitMinutes,
-        int lunchLimitMinutes,
-        int overtimeThresholdMinutes)
+        int lunchLimitMinutes)
     {
         var isAbsent = dayAssignments.Any(a => a.IsAbsent);
         var absenceNote = dayAssignments.FirstOrDefault(a => a.IsAbsent)?.AbsenceNote;
@@ -235,7 +269,6 @@ public class ReportsController(AppDbContext db) : ControllerBase
         // Per the report spec: net worked time is worked time less lunch
         // only — break time is not subtracted out.
         var netWorkedMinutes = workedMinutes is not null ? workedMinutes - lunchMinutes : null;
-        var overtimeMinutes = netWorkedMinutes is not null ? Math.Max(0, netWorkedMinutes.Value - overtimeThresholdMinutes) : 0;
 
         // Split shifts (rare) fold multiple assignments into one day row;
         // sick minutes are summed across them, but an admin edit needs one
@@ -255,7 +288,10 @@ public class ReportsController(AppDbContext db) : ControllerBase
             .ToList();
 
         return new DailyHoursDto(
-            date, workedMinutes, breakMinutes, lunchMinutes, netWorkedMinutes, scheduledMinutes, overtimeMinutes,
+            date, workedMinutes, breakMinutes, lunchMinutes, netWorkedMinutes, scheduledMinutes,
+            // Regular/overtime/double-time are filled in by BuildEmployeeReport,
+            // which needs the whole workweek to split them.
+            RegularMinutes: 0, OvertimeMinutes: 0, DoubleTimeMinutes: 0,
             isAbsent, absenceNote, leftEarly, leftEarlyNote, stillClockedIn, hasLongBreak, hasLongLunch, notes,
             sickMinutes, shiftAssignmentId, manualSickNotes);
     }

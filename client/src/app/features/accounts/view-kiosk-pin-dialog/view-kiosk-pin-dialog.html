@@ -1,0 +1,11 @@
+<h2 mat-dialog-title>Kiosk PIN — {{ data.employeeName }}</h2>
+<mat-dialog-content class="content">
+  @if (data.pin) {
+    <p class="pin">{{ data.pin }}</p>
+  } @else {
+    <p class="empty">No kiosk PIN set for this employee yet.</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-flat-button color="primary" (click)="close()">Close</button>
+</mat-dialog-actions>

@@ -41,7 +41,15 @@ export interface AccountDto {
   dateOfBirth: string | null;
   hireDate: string | null;
   employmentType: EmploymentType | null;
+  // Salaried and exempt from overtime: the payroll report counts all of this
+  // employee's worked time as regular. Recorded by an admin — not implied by
+  // employmentType (a full-time hourly employee is not exempt).
+  isOvertimeExempt: boolean;
   hasPhoto: boolean;
+  // Whether this account can punch at a kiosk device — the PIN itself
+  // never round-trips. See kiosk-schedule.ts.
+  hasKioskPin: boolean;
+  kioskPinLockedUntil: string | null;
 }
 
 export interface CreateAccountRequest {
@@ -61,6 +69,7 @@ export interface CreateAccountRequest {
   dateOfBirth: string | null;
   hireDate: string | null;
   employmentType: EmploymentType | null;
+  isOvertimeExempt: boolean;
 }
 
 export interface UpdateMineRequest {
@@ -91,6 +100,7 @@ export interface UpdateAccountRequest {
   dateOfBirth: string | null;
   hireDate: string | null;
   employmentType: EmploymentType | null;
+  isOvertimeExempt: boolean;
 }
 
 @Service()
@@ -121,6 +131,20 @@ export class AccountsApi {
 
   resetCode(id: number) {
     return this.http.post<AccountDto>(`${this.base}/${id}/reset-code`, {});
+  }
+
+  // Admin-only — Lead can set/reset a PIN (below) but not look an existing
+  // one back up. Pin is null when the account has no kiosk PIN set yet.
+  getKioskPin(id: number) {
+    return this.http.get<{ pin: string | null }>(`${this.base}/${id}/kiosk-pin`);
+  }
+
+  setKioskPin(id: number, pin: string) {
+    return this.http.post<AccountDto>(`${this.base}/${id}/kiosk-pin`, { pin });
+  }
+
+  clearKioskPinLock(id: number) {
+    return this.http.post<AccountDto>(`${this.base}/${id}/kiosk-pin/clear-lock`, {});
   }
 
   resetMyCode() {

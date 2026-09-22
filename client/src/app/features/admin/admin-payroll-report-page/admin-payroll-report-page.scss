@@ -86,10 +86,10 @@
 
 // Grand totals as a modular row of equal cells, separated by 1px verticals
 // and closed top and bottom by 2px rules. This is the report's headline —
-// the four numbers that get keyed into ADP — so it reads before the roster.
+// the numbers that get keyed into ADP — so it reads before the roster.
 .summary {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   border-top: 2px solid var(--mat-sys-on-surface);
   border-bottom: 2px solid var(--mat-sys-on-surface);
   margin-bottom: 12px;
@@ -114,7 +114,7 @@
   color: var(--mat-sys-on-surface-variant);
 }
 
-// Tabular figures keep the four totals optically aligned even though each
+// Tabular figures keep the totals optically aligned even though each
 // sits in its own cell.
 .summary-value {
   margin: 0;
@@ -229,6 +229,7 @@
 
 .mat-column-netWorkedTime,
 .mat-column-overtimeTime,
+.mat-column-doubleTimeTime,
 .mat-column-sickTime,
 .mat-column-totalTime {
   width: 118px;
@@ -360,27 +361,6 @@ th.mat-column-totalTime,
   text-align: right;
 }
 
-.sick-input {
-  width: 70px;
-  padding: 6px 8px;
-  border: 1px solid var(--mat-sys-outline);
-  border-radius: 0;
-  background: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  font: inherit;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
-
-  &:disabled {
-    opacity: 0.45;
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--mat-sys-primary);
-    outline-offset: 2px;
-  }
-}
-
 .manual-sick-value {
   display: inline-block;
   padding: 6px 8px;
@@ -473,6 +453,14 @@ th.mat-column-totalTime,
     }
   }
 
+  // Five cells in two columns would strand Total Paid in a half-width row of
+  // its own, so it takes the full width instead.
+  .summary-cell.is-total {
+    grid-column: 1 / -1;
+    border-left: none;
+    padding-left: 0;
+  }
+
   .summary-value {
     font-size: 32px;
   }
@@ -532,6 +520,7 @@ th.mat-column-totalTime,
   // than a right-aligned column it can't compare against anything.
   td.mat-column-netWorkedTime,
   td.mat-column-overtimeTime,
+  td.mat-column-doubleTimeTime,
   td.mat-column-sickTime,
   td.mat-column-totalTime {
     width: auto;
@@ -550,6 +539,7 @@ th.mat-column-totalTime,
   }
 
   td.total-col {
+    grid-column: 1 / -1;
     border-left: none;
     box-shadow: inset 3px 0 0 var(--mat-sys-primary);
     padding-left: 10px !important;

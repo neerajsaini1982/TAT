@@ -8,16 +8,15 @@
 //    six digits and clears a previous error on the next keypress, so a
 //    failed attempt doesn't leave the boxes ruled red while someone retypes.
 //
-// The auth call, dev defaults, route parameter and `isSignedIn` rule are
-// untouched.
+// The auth call, route parameter and `isSignedIn` rule are untouched. The
+// code always starts empty, even in dev mode.
 
-import { Component, inject, isDevMode, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
 import { Auth } from '../../../core/auth';
-import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/current-week-schedule';
 import { PayDayBanner } from '../../schedule/pay-day-banner/pay-day-banner';
 
@@ -32,7 +31,7 @@ export class EmployeeHome {
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
-  protected readonly userCode = signal(isDevMode() ? DEV_DEFAULTS.employeeCode : '');
+  protected readonly userCode = signal('');
   protected readonly error = signal<string | null>(null);
   protected readonly loading = signal(false);
 

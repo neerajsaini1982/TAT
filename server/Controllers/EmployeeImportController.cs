@@ -376,7 +376,10 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
         a.DateOfBirth?.ToString("yyyy-MM-dd"),
         a.HireDate?.ToString("yyyy-MM-dd"),
         a.EmploymentType?.ToString(),
-        a.PhotoFileName is not null);
+        a.IsOvertimeExempt,
+        a.PhotoFileName is not null,
+        a.PinEncrypted is not null,
+        a.PinLockedUntil);
 
     private sealed record ParsedRow(
         string FirstName,

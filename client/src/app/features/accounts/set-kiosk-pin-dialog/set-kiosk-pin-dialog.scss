@@ -1,0 +1,12 @@
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 280px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 0 0 8px;
+  font-size: 13px;
+}

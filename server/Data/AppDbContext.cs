@@ -21,6 +21,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
     public DbSet<EmploymentPeriod> EmploymentPeriods => Set<EmploymentPeriod>();
     public DbSet<SickTimeEntry> SickTimeEntries => Set<SickTimeEntry>();
+    public DbSet<WriteUp> WriteUps => Set<WriteUp>();
+    public DbSet<WriteUpEvent> WriteUpEvents => Set<WriteUpEvent>();
+    public DbSet<WriteUpSignature> WriteUpSignatures => Set<WriteUpSignature>();
 
     // SQLite has no native "datetime with offset" column type, so EF Core
     // round-trips every DateTime as Kind=Unspecified after a read — even
@@ -129,6 +132,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             entity.Property(s => s.TimeFormat).HasConversion<string>();
             entity.Property(s => s.DateFormat).HasConversion<string>();
+            entity.Property(s => s.OvertimePreset).HasConversion<string>();
+            entity.Property(s => s.WorkweekStartDay).HasConversion<string>();
 
             entity.HasOne(s => s.Location)
                 .WithMany()
@@ -237,6 +242,64 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(e => new { e.AccountId, e.Date });
+        });
+
+        modelBuilder.Entity<WriteUp>(entity =>
+        {
+            entity.Property(w => w.Severity).HasConversion<string>();
+            entity.Property(w => w.Type).HasConversion<string>();
+            entity.Property(w => w.AcknowledgmentStatus).HasConversion<string>();
+
+            // Restrict, not Cascade: write-ups are a permanent record, so
+            // deleting an account must not quietly take them along —
+            // AccountsController.Delete refuses instead.
+            entity.HasOne(w => w.Account)
+                .WithMany()
+                .HasForeignKey(w => w.AccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(w => w.CreatedByAccount)
+                .WithMany()
+                .HasForeignKey(w => w.CreatedByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(w => new { w.AccountId, w.Date });
+        });
+
+        modelBuilder.Entity<WriteUpEvent>(entity =>
+        {
+            entity.Property(e => e.Action).HasConversion<string>();
+
+            entity.HasOne(e => e.WriteUp)
+                .WithMany(w => w.Events)
+                .HasForeignKey(e => e.WriteUpId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ByAccount)
+                .WithMany()
+                .HasForeignKey(e => e.ByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.WriteUpId);
+
+            // Restrict: a signature is never deleted out from under the
+            // history entry that points at it.
+            entity.HasOne(e => e.Signature)
+                .WithMany()
+                .HasForeignKey(e => e.SignatureId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<WriteUpSignature>(entity =>
+        {
+            // Restrict (not Cascade): write-ups are never deleted, and if one
+            // ever were, this shouldn't silently go with it.
+            entity.HasOne(s => s.WriteUp)
+                .WithMany(w => w.Signatures)
+                .HasForeignKey(s => s.WriteUpId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(s => s.WriteUpId);
         });
     }
 

@@ -52,7 +52,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .ThenBy(a => a.Account!.LastName)
             .ToList();
 
-        var breakWindows = ComputeBreakWindows(assignments);
+        var breakWindows = ComputeBreakWindows(db, assignments);
         return Ok(assignments.Select(a => ToDto(a, breakWindows)));
     }
 
@@ -199,7 +199,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .ThenBy(a => a.Account!.LastName)
             .ToList();
 
-        var breakWindows = ComputeBreakWindows(assignments);
+        var breakWindows = ComputeBreakWindows(db, assignments);
         return Ok(assignments.Select(a => ToDto(a, breakWindows)));
     }
 
@@ -243,7 +243,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
 
         assignment.Shift = shift;
         assignment.Account = account;
-        var breakWindows = ComputeBreakWindows([assignment]);
+        var breakWindows = ComputeBreakWindows(db, [assignment]);
         await notifier.NotifyLocationChanged(shift.Location!.LocationCode);
         return Ok(ToDto(assignment, breakWindows));
     }
@@ -289,7 +289,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         db.SaveChanges();
 
         assignment.Account = account;
-        var breakWindows = ComputeBreakWindows([assignment]);
+        var breakWindows = ComputeBreakWindows(db, [assignment]);
         await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
         return Ok(ToDto(assignment, breakWindows));
     }
@@ -353,7 +353,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         assignment.AbsentMarkedAt = DateTime.UtcNow;
         db.SaveChanges();
 
-        var breakWindows = ComputeBreakWindows([assignment]);
+        var breakWindows = ComputeBreakWindows(db, [assignment]);
         await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
         return Ok(ToDto(assignment, breakWindows));
     }
@@ -387,7 +387,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         assignment.SickHoursRecordedAt = DateTime.UtcNow;
         db.SaveChanges();
 
-        var breakWindows = ComputeBreakWindows([assignment]);
+        var breakWindows = ComputeBreakWindows(db, [assignment]);
         await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
         return Ok(ToDto(assignment, breakWindows));
     }
@@ -466,7 +466,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     // paid and stays in — same convention current-week-schedule.ts uses for
     // actual worked hours (see workedMinutes there), applied here to the
     // *scheduled* span instead of clocked-in/out times.
-    private static double ComputeHours(TimeOnly start, TimeOnly end, IEnumerable<ScheduledBreak> scheduledBreaks)
+    internal static double ComputeHours(TimeOnly start, TimeOnly end, IEnumerable<ScheduledBreak> scheduledBreaks)
     {
         var span = end - start;
         if (span < TimeSpan.Zero)
@@ -516,7 +516,8 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     // contain every sibling — GetMine, for instance, only loads one
     // account's assignments, but staggering needs everyone sharing that
     // location + date.
-    private Dictionary<(int AssignmentId, int ScheduledBreakId), (TimeOnly Start, TimeOnly End)> ComputeBreakWindows(
+    internal static Dictionary<(int AssignmentId, int ScheduledBreakId), (TimeOnly Start, TimeOnly End)> ComputeBreakWindows(
+        AppDbContext db,
         IReadOnlyCollection<ShiftAssignment> assignments)
     {
         var keys = assignments.Select(a => (a.Shift!.LocationId, a.Date)).Distinct().ToList();
@@ -580,7 +581,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         return result;
     }
 
-    private static ShiftAssignmentDto ToDto(
+    internal static ShiftAssignmentDto ToDto(
         ShiftAssignment a,
         IReadOnlyDictionary<(int AssignmentId, int ScheduledBreakId), (TimeOnly Start, TimeOnly End)> breakWindows) => new(
         a.Id,

@@ -22,10 +22,10 @@ export interface CreateSickTimeEntryRequest {
   note: string | null;
 }
 
-// Admin/Sa only — records sick hours for a day the employee had no shift
-// assignment at all. See ShiftAssignmentsApi.setSickMinutes for the
-// already-scheduled case. ReportsApi.getHoursReport folds both into the
-// same per-day/per-employee sick totals.
+// Admin/Sa only — the one way sick hours are recorded (the payroll report's
+// "Add Sick Hours Manually" button), for any date whether or not the
+// employee had a shift. ReportsApi.getHoursReport adds these to any sick
+// minutes already stored on the day's shift assignment.
 @Service()
 export class SickTimeEntriesApi {
   private readonly http = inject(HttpClient);

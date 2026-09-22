@@ -10,6 +10,7 @@ import { AdminHome } from './features/admin/admin-home/admin-home';
 import { AdminAccountsPage } from './features/admin/admin-accounts-page/admin-accounts-page';
 import { EmployeeImportPage } from './features/admin/employee-import-page/employee-import-page';
 import { EmployeeDocumentsPage } from './features/admin/employee-documents-page/employee-documents-page';
+import { EmployeeWriteUpsPage } from './features/admin/employee-write-ups-page/employee-write-ups-page';
 import { AdminShiftsPage } from './features/admin/admin-shifts-page/admin-shifts-page';
 import { AdminAvailabilityPage } from './features/admin/admin-availability-page/admin-availability-page';
 import { AdminSchedulePage } from './features/admin/admin-schedule-page/admin-schedule-page';
@@ -17,10 +18,12 @@ import { AdminScheduleAssignPage } from './features/admin/admin-schedule-assign-
 import { AdminLocationSettingsPage } from './features/admin/admin-location-settings-page/admin-location-settings-page';
 import { AdminPayrollReportPage } from './features/admin/admin-payroll-report-page/admin-payroll-report-page';
 import { EmployeeHome } from './features/employee/employee-home/employee-home';
+import { KioskHome } from './features/kiosk/kiosk-home/kiosk-home';
 import { AvailabilityPage } from './features/employee/availability-page/availability-page';
 import { AvailabilityCalendarPage } from './features/employee/availability-calendar-page/availability-calendar-page';
 import { EmployeeSchedulePage } from './features/employee/employee-schedule-page/employee-schedule-page';
 import { MyDocumentsPage } from './features/employee/my-documents-page/my-documents-page';
+import { MyWriteUpsPage } from './features/employee/my-write-ups-page/my-write-ups-page';
 import { HelpPage } from './features/employee/help-page/help-page';
 import { saGuard, adminGuard, adminOnlyGuard, employeeGuard } from './core/guards';
 
@@ -39,6 +42,7 @@ export const routes: Routes = [
   { path: ':locationCode/admin/accounts', component: AdminAccountsPage, canActivate: [adminOnlyGuard] },
   { path: ':locationCode/admin/accounts/import', component: EmployeeImportPage, canActivate: [adminOnlyGuard] },
   { path: ':locationCode/admin/accounts/:id/documents', component: EmployeeDocumentsPage, canActivate: [adminOnlyGuard] },
+  { path: ':locationCode/admin/accounts/:id/write-ups', component: EmployeeWriteUpsPage, canActivate: [adminOnlyGuard] },
   { path: ':locationCode/admin/shifts', component: AdminShiftsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/availability', component: AdminAvailabilityPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/schedule', component: AdminSchedulePage, canActivate: [adminGuard] },
@@ -51,12 +55,15 @@ export const routes: Routes = [
   { path: ':locationCode/employee/availability2', component: AvailabilityCalendarPage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/schedule', component: EmployeeSchedulePage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/documents', component: MyDocumentsPage, canActivate: [employeeGuard] },
+  { path: ':locationCode/employee/write-ups', component: MyWriteUpsPage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/help', component: HelpPage, canActivate: [employeeGuard] },
   // Reuses AdminPayrollReportPage as-is — GetHoursReport scopes a non-Admin
   // caller down to just their own row server-side (see ReportsController),
   // so the one page doubles as a self-service report, with sick-hours
   // editing hidden client-side for anyone but Admin/Sa.
   { path: ':locationCode/employee/reports', component: AdminPayrollReportPage, canActivate: [employeeGuard] },
+
+  { path: ':locationCode/kiosk', component: KioskHome },
 
   { path: ':locationCode', component: LocationHome, pathMatch: 'full' },
 ];

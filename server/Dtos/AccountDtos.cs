@@ -34,7 +34,12 @@ public record AccountDto(
     string? DateOfBirth,
     string? HireDate,
     string? EmploymentType,
-    bool HasPhoto);
+    bool IsOvertimeExempt,
+    bool HasPhoto,
+    // Whether this account can punch at a kiosk device (see
+    // KioskController) — the PIN itself never round-trips.
+    bool HasKioskPin,
+    DateTime? KioskPinLockedUntil);
 
 public record CreateAccountRequest(
     // Required unless Role is Employee — employees log in with a UserCode
@@ -54,7 +59,9 @@ public record CreateAccountRequest(
     string? Ssn,
     DateOnly? DateOfBirth,
     DateOnly? HireDate,
-    EmploymentType? EmploymentType);
+    EmploymentType? EmploymentType,
+    // See Account.IsOvertimeExempt.
+    bool IsOvertimeExempt = false);
 
 public record UpdateAccountRequest(
     string FirstName,
@@ -75,7 +82,8 @@ public record UpdateAccountRequest(
     string? Ssn,
     DateOnly? DateOfBirth,
     DateOnly? HireDate,
-    EmploymentType? EmploymentType);
+    EmploymentType? EmploymentType,
+    bool IsOvertimeExempt = false);
 
 // LoginLink is built client-side (it already knows its own origin) and
 // passed through rather than the server guessing its hostname.
@@ -98,3 +106,9 @@ public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 // An admin (or Sa) setting a new password on an account they manage, e.g.
 // after the holder forgot it (see AccountsController.ResetPassword).
 public record ResetPasswordRequest(string NewPassword);
+
+// Exactly 4 digits — validated in AccountsController.SetKioskPin.
+public record SetKioskPinRequest(string Pin);
+
+// Null when the account has no kiosk PIN set yet — see AccountsController.GetKioskPin.
+public record KioskPinDto(string? Pin);

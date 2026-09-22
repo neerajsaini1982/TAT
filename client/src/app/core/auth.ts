@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 
 import { API_BASE_URL } from './api-config';
 
-export type Role = 'Sa' | 'Admin' | 'Lead' | 'Employee';
+export type Role = 'Sa' | 'Admin' | 'Lead' | 'Employee' | 'Kiosk';
 
 export interface AuthResponse {
   token: string;
@@ -54,6 +54,16 @@ export class Auth {
   async employeeLogin(locationCode: string, userCode: string): Promise<void> {
     const res = await firstValueFrom(
       this.http.post<AuthResponse>(`${API_BASE_URL}/auth/employee-login`, { locationCode, userCode })
+    );
+    this.setSession(res);
+  }
+
+  // Logs in the shared kiosk device itself, not any one employee — see
+  // KioskController for how individual punches then identify themselves
+  // with their own PIN.
+  async kioskLogin(locationCode: string, passcode: string): Promise<void> {
+    const res = await firstValueFrom(
+      this.http.post<AuthResponse>(`${API_BASE_URL}/auth/kiosk-login`, { locationCode, passcode })
     );
     this.setSession(res);
   }

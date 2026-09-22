@@ -104,6 +104,41 @@
         >
           <mat-icon>folder</mat-icon>
         </a>
+        <a
+          mat-icon-button
+          [routerLink]="['/', lockedLocationCode, 'admin', 'accounts', a.id, 'write-ups']"
+          aria-label="Write-ups"
+          title="Write-ups"
+        >
+          <mat-icon>gavel</mat-icon>
+        </a>
+      }
+      @if (a.locationCode) {
+        @if (a.hasKioskPin && canViewKioskPin()) {
+          <button mat-icon-button (click)="viewKioskPin(a)" title="View kiosk PIN" aria-label="View kiosk PIN">
+            <mat-icon>visibility</mat-icon>
+          </button>
+        }
+        <button
+          mat-icon-button
+          (click)="setKioskPin(a)"
+          [disabled]="settingPinId() === a.id"
+          [title]="a.hasKioskPin ? 'Reset kiosk PIN' : 'Set kiosk PIN'"
+          aria-label="Set kiosk PIN"
+        >
+          <mat-icon>{{ a.hasKioskPin ? 'password' : 'pin' }}</mat-icon>
+        </button>
+        @if (a.kioskPinLockedUntil) {
+          <button
+            mat-icon-button
+            (click)="clearKioskPinLock(a)"
+            [disabled]="settingPinId() === a.id"
+            [title]="'Kiosk PIN locked until ' + (a.kioskPinLockedUntil | date: 'short') + ' — click to clear'"
+            aria-label="Clear kiosk PIN lock"
+          >
+            <mat-icon>lock_open</mat-icon>
+          </button>
+        }
       }
       <button mat-icon-button (click)="startEdit(a)" aria-label="Edit">
         <mat-icon>edit</mat-icon>

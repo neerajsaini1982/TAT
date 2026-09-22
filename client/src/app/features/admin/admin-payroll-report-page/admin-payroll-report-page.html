@@ -42,9 +42,6 @@
 @if (error()) {
   <p class="error">{{ error() }}</p>
 }
-@if (sickHoursError()) {
-  <p class="error">{{ sickHoursError() }}</p>
-}
 
 @if (loading()) {
   <p class="status">Loading…</p>
@@ -68,6 +65,11 @@
       <p class="summary-label">Overtime</p>
       <p class="summary-value">{{ formatDecimalHours(totals().overtimeMinutes) }}</p>
       <p class="summary-sub">{{ formatDuration(totals().overtimeMinutes) }}</p>
+    </div>
+    <div class="summary-cell" [class.is-flagged]="totals().doubleTimeMinutes > 0">
+      <p class="summary-label">Double Time</p>
+      <p class="summary-value">{{ formatDecimalHours(totals().doubleTimeMinutes) }}</p>
+      <p class="summary-sub">{{ formatDuration(totals().doubleTimeMinutes) }}</p>
     </div>
     <div class="summary-cell">
       <p class="summary-label">Sick</p>
@@ -128,8 +130,8 @@
         <th mat-header-cell *matHeaderCellDef>Regular</th>
         <td mat-cell *matCellDef="let emp" data-label="Regular">
           <div class="time-cell">
-            <span class="time-decimal">{{ formatDecimalHours(regularMinutes(emp)) }}</span>
-            <span class="time-hm">{{ formatDuration(regularMinutes(emp)) }}</span>
+            <span class="time-decimal">{{ formatDecimalHours(emp.totalRegularMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(emp.totalRegularMinutes) }}</span>
           </div>
         </td>
         <td mat-footer-cell *matFooterCellDef>
@@ -152,6 +154,22 @@
           <div class="time-cell">
             <span class="time-decimal">{{ formatDecimalHours(totals().overtimeMinutes) }}</span>
             <span class="time-hm">{{ formatDuration(totals().overtimeMinutes) }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="doubleTimeTime">
+        <th mat-header-cell *matHeaderCellDef>Double Time</th>
+        <td mat-cell *matCellDef="let emp" data-label="Double Time" [class.flag]="emp.totalDoubleTimeMinutes > 0">
+          <div class="time-cell">
+            <span class="time-decimal">{{ formatDecimalHours(emp.totalDoubleTimeMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(emp.totalDoubleTimeMinutes) }}</span>
+          </div>
+        </td>
+        <td mat-footer-cell *matFooterCellDef [class.flag]="totals().doubleTimeMinutes > 0">
+          <div class="time-cell">
+            <span class="time-decimal">{{ formatDecimalHours(totals().doubleTimeMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(totals().doubleTimeMinutes) }}</span>
           </div>
         </td>
       </ng-container>
@@ -191,6 +209,9 @@
       <ng-container matColumnDef="notes">
         <th mat-header-cell *matHeaderCellDef>Notes</th>
         <td mat-cell *matCellDef="let emp" class="notes-cell">
+          @if (emp.isOvertimeExempt) {
+            <span class="tag" title="Exempt from overtime — all hours are regular">Exempt</span>
+          }
           @if (emp.absentDays > 0) {
             <span class="tag tag-flag">{{ emp.absentDays }} absent day{{ emp.absentDays > 1 ? 's' : '' }}</span>
           }
@@ -214,7 +235,8 @@
             <span class="day-head-date">Day</span>
             <span class="day-head-num">Regular</span>
             <span class="day-head-num">Overtime</span>
-            <span class="day-head-num">Sick (editable)</span>
+            <span class="day-head-num">Double Time</span>
+            <span class="day-head-num">Sick</span>
             <span class="day-head-num">Total</span>
             <span class="day-head-notes">Notes</span>
           </div>
@@ -224,36 +246,19 @@
                 <tr [class.absent-row]="day.isAbsent">
                   <td class="day-date-col">{{ dayLabel(day.date) }}</td>
                   @if (day.isAbsent) {
-                    <td colspan="2" class="day-absent-col" data-label="Status">
+                    <td colspan="3" class="day-absent-col" data-label="Status">
                       Absent
                       @if (day.absenceNote) {
                         — {{ day.absenceNote }}
                       }
                     </td>
                   } @else {
-                    <td class="day-numeric-col" data-label="Regular">{{ day.netWorkedMinutes !== null ? formatDuration(day.netWorkedMinutes) : '—' }}</td>
+                    <td class="day-numeric-col" data-label="Regular">{{ day.netWorkedMinutes !== null ? formatDuration(day.regularMinutes) : '—' }}</td>
                     <td class="day-numeric-col" data-label="Overtime" [class.flag]="day.overtimeMinutes > 0">{{ formatDuration(day.overtimeMinutes) }}</td>
+                    <td class="day-numeric-col" data-label="Double Time" [class.flag]="day.doubleTimeMinutes > 0">{{ formatDuration(day.doubleTimeMinutes) }}</td>
                   }
                   <td class="day-sick-col" data-label="Sick hrs">
-                    @if (day.shiftAssignmentId !== null && canAddSickHours) {
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.25"
-                        class="sick-input"
-                        [attr.aria-label]="'Sick hours for ' + dayLabel(day.date)"
-                        [value]="(day.sickMinutes / 60).toFixed(2)"
-                        [disabled]="isSavingSickHours(day)"
-                        (change)="updateSickHours(day, $any($event.target).value)"
-                      />
-                    } @else {
-                      <!-- Either no ShiftAssignment this day (sick hours were
-                           entered manually via "Add Sick Hours Manually" and
-                           aren't editable inline here), or the viewer isn't
-                           Admin/Sa — SetSickMinutes is Admin/Sa-only
-                           server-side, so read-only avoids a 403 on save. -->
-                      <span class="manual-sick-value">{{ (day.sickMinutes / 60).toFixed(2) }}</span>
-                    }
+                    <span class="manual-sick-value">{{ (day.sickMinutes / 60).toFixed(2) }}</span>
                   </td>
                   <td class="day-numeric-col day-total-col" data-label="Total">{{ formatDuration((day.netWorkedMinutes ?? 0) + day.sickMinutes) }}</td>
                   <td class="notes-cell">
@@ -268,6 +273,9 @@
                     }
                     @if (day.overtimeMinutes > 0) {
                       <span class="tag tag-flag">{{ formatDuration(day.overtimeMinutes) }} overtime</span>
+                    }
+                    @if (day.doubleTimeMinutes > 0) {
+                      <span class="tag tag-flag">{{ formatDuration(day.doubleTimeMinutes) }} double time</span>
                     }
                     @for (note of day.notes; track note) {
                       <span class="tag">{{ note }}</span>

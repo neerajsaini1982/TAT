@@ -30,6 +30,7 @@
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'schedule']">Schedule</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'schedule-assign']">Schedule (Quick Assign)</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'payroll-report']">Payroll Report</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'write-ups']">My Write-Ups</a>
       @if (auth.role() === 'Admin') {
         <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'settings']">Settings</a>
       }
@@ -62,6 +63,7 @@
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'schedule']">My Schedule</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'availability']">My Availability</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'reports']">Report</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'write-ups']">My Write-Ups</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'help']">Help</a>
       <button mat-menu-item (click)="openAccountDialog()">Account</button>
       <button mat-menu-item (click)="resetCode()" [disabled]="resettingCode()">Reset My Code</button>

@@ -1,30 +1,66 @@
 @if (sessionExpired) {
-  <mat-card class="session-expired-banner">
-    <mat-card-content>
-      <mat-icon>info</mat-icon>
-      <span>Your session timed out. Please log in again.</span>
-    </mat-card-content>
-  </mat-card>
+  <div class="session-expired-banner" role="status">
+    <mat-icon aria-hidden="true">info</mat-icon>
+    <span>Your session timed out. Please log in again.</span>
+  </div>
 }
 
-<div class="cards">
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Admin</mat-card-title>
-      <mat-card-subtitle>Manage accounts and settings for this location</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-actions>
-      <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'admin']">Continue</a>
-    </mat-card-actions>
-  </mat-card>
+<div class="picker">
+  <header class="picker-head">
+    <p class="kicker">Location {{ locationCode }}</p>
+    <h1>Choose your portal</h1>
+    <p class="lede">Select how you'd like to sign in to this location.</p>
+  </header>
 
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Employee</mat-card-title>
-      <mat-card-subtitle>Clock in and out for your shift</mat-card-subtitle>
-    </mat-card-header>
-    <mat-card-actions>
-      <a mat-flat-button color="primary" [routerLink]="['/', locationCode, 'employee']">Continue</a>
-    </mat-card-actions>
-  </mat-card>
+  <div class="cards">
+    <a class="portal-card" [routerLink]="['/', locationCode, 'admin']">
+      <span class="portal-icon"><mat-icon aria-hidden="true">admin_panel_settings</mat-icon></span>
+      <span class="portal-body">
+        <span class="portal-title">Admin</span>
+        <span class="portal-desc">Manage accounts, schedules, and settings for this location.</span>
+        <span class="portal-tags">
+          <span>Schedules</span>
+          <span>Accounts</span>
+          <span>Payroll</span>
+        </span>
+      </span>
+      <span class="portal-cta">
+        Continue
+        <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+      </span>
+    </a>
+
+    <a class="portal-card" [routerLink]="['/', locationCode, 'employee']">
+      <span class="portal-icon"><mat-icon aria-hidden="true">schedule</mat-icon></span>
+      <span class="portal-body">
+        <span class="portal-title">Employee</span>
+        <span class="portal-desc">Clock in and out for your shift.</span>
+        <span class="portal-tags">
+          <span>Clock in</span>
+          <span>Schedule</span>
+          <span>Availability</span>
+        </span>
+      </span>
+      <span class="portal-cta">
+        Continue
+        <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+      </span>
+    </a>
+
+    <a class="portal-card" [routerLink]="['/', locationCode, 'kiosk']">
+      <span class="portal-icon"><mat-icon aria-hidden="true">tablet_mac</mat-icon></span>
+      <span class="portal-body">
+        <span class="portal-title">Kiosk</span>
+        <span class="portal-desc">Clock in and out from a shared device.</span>
+        <span class="portal-tags">
+          <span>PIN punch</span>
+          <span>Schedule</span>
+        </span>
+      </span>
+      <span class="portal-cta">
+        Continue
+        <mat-icon aria-hidden="true">arrow_forward</mat-icon>
+      </span>
+    </a>
+  </div>
 </div>

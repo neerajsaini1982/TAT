@@ -2,6 +2,7 @@
   <span class="legend-item"><span class="swatch swatch-scheduled"></span>Scheduled</span>
   <span class="legend-item"><span class="swatch swatch-worked"></span>Worked</span>
   <span class="legend-item"><span class="swatch swatch-over"></span>Overtime</span>
+  <span class="legend-item"><span class="swatch swatch-double"></span>Double time</span>
   <span class="legend-item"><span class="swatch swatch-sick"></span>Sick</span>
   <span class="legend-item"><span class="swatch swatch-absent"></span>Absent</span>
 </div>
@@ -35,6 +36,9 @@
               @if (row.overtime > 0) {
                 <span class="seg seg-over" [style.width.%]="pct(row.overtime)"></span>
               }
+              @if (row.doubleTime > 0) {
+                <span class="seg seg-double" [style.width.%]="pct(row.doubleTime)"></span>
+              }
               @if (row.sick > 0) {
                 <span class="seg seg-sick" [style.width.%]="pct(row.sick)"></span>
               }
@@ -50,6 +54,9 @@
           {{ varianceLabel(row) }}
           @if (row.overtime > 0) {
             <span class="variance-sub flag">{{ duration(row.overtime) }} overtime</span>
+          }
+          @if (row.doubleTime > 0) {
+            <span class="variance-sub flag">{{ duration(row.doubleTime) }} double time</span>
           }
           @if (!isDaily() && row.sick > 0) {
             <span class="variance-sub"><span class="dot dot-sick"></span>{{ duration(row.sick) }} sick</span>
@@ -75,8 +82,14 @@
             </div>
             @if (row.overtime > 0) {
               <div class="tip-stat">
-                <dt><span class="swatch swatch-over"></span>Overtime (past daily limit)</dt>
+                <dt><span class="swatch swatch-over"></span>Overtime</dt>
                 <dd>{{ duration(row.overtime) }}</dd>
+              </div>
+            }
+            @if (row.doubleTime > 0) {
+              <div class="tip-stat">
+                <dt><span class="swatch swatch-double"></span>Double time</dt>
+                <dd>{{ duration(row.doubleTime) }}</dd>
               </div>
             }
             @if (row.sick > 0) {

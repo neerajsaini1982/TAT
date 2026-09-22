@@ -64,6 +64,29 @@
   }
 }
 
+// The generic .section-content row is a wrapping flex line of ~220px fields,
+// which is too narrow for these fields' hints: Material reserves one line for
+// a hint, so a wrapped one spilled onto the next row. A two-column grid with
+// dynamic hint height gives them room and keeps rows from overlapping.
+.overtime-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+
+  mat-form-field {
+    min-width: 0;
+  }
+
+  .full-row {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 600px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .role-visibility-options {
   display: flex;
   flex-direction: column;

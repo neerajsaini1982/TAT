@@ -12,7 +12,15 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatDialog } from '@angular/material/dialog';
 import { forkJoin } from 'rxjs';
 
-import { DateFormat, LocationSettingsApi, LocationSettingsDto, TimeFormat } from '../../../core/location-settings-api';
+import {
+  DateFormat,
+  LocationSettingsApi,
+  LocationSettingsDto,
+  OvertimePreset,
+  OvertimePresetDto,
+  TimeFormat,
+  WorkweekDay,
+} from '../../../core/location-settings-api';
 import { EmailTemplateDto, EmailTemplatesApi } from '../../../core/email-templates-api';
 import { AllowedPunchDeviceDto, AllowedPunchDevicesApi } from '../../../core/allowed-punch-devices-api';
 import { AccountsApi } from '../../../core/accounts-api';
@@ -63,6 +71,15 @@ const DATE_FORMATS: DateFormatOption[] = [
   { value: 'MmmDdYyyy', label: `MMM DD, YYYY (${dateFormatExample('MmmDdYyyy')})` },
 ];
 
+const OVERTIME_PRESETS: { value: OvertimePreset; label: string }[] = [
+  { value: 'None', label: 'No overtime' },
+  { value: 'Federal', label: 'Federal — overtime after 40 hours/week' },
+  { value: 'California', label: 'California — daily 8/12, weekly 40, 7th day' },
+  { value: 'Custom', label: 'Custom' },
+];
+
+const WORKWEEK_DAYS: WorkweekDay[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 const TIME_ZONES: TimeZoneOption[] = [
   { value: 'America/Los_Angeles', label: 'Pacific Time (US)' },
   { value: 'America/Denver', label: 'Mountain Time (US)' },
@@ -85,7 +102,12 @@ interface FormModel {
   lateClockInGraceMinutes: number;
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
-  overtimeDailyThresholdMinutes: number;
+  overtimePreset: OvertimePreset;
+  overtimeDailyThresholdMinutes: number | null;
+  dailyDoubleTimeAfterMinutes: number | null;
+  weeklyOvertimeAfterMinutes: number | null;
+  seventhDayDoubleTimeAfterMinutes: number | null;
+  workweekStartDay: WorkweekDay;
   developmentMode: boolean;
   scheduleVisibilityEnabled: boolean;
   adminSeesAllSchedules: boolean;
@@ -101,6 +123,7 @@ interface FormModel {
   smtpFromName: string;
   payDayStartDate: string;
   payPeriodDays: number | null;
+  kioskPasscode: string;
 }
 
 const emptyForm = (): FormModel => ({
@@ -112,7 +135,12 @@ const emptyForm = (): FormModel => ({
   lateClockInGraceMinutes: 5,
   breakLimitMinutes: 15,
   lunchLimitMinutes: 30,
+  overtimePreset: 'Custom',
   overtimeDailyThresholdMinutes: 480,
+  dailyDoubleTimeAfterMinutes: null,
+  weeklyOvertimeAfterMinutes: null,
+  seventhDayDoubleTimeAfterMinutes: null,
+  workweekStartDay: 'Monday',
   developmentMode: false,
   scheduleVisibilityEnabled: true,
   adminSeesAllSchedules: true,
@@ -128,6 +156,7 @@ const emptyForm = (): FormModel => ({
   smtpFromName: '',
   payDayStartDate: '',
   payPeriodDays: null,
+  kioskPasscode: '',
 });
 
 @Component({
@@ -178,11 +207,18 @@ export class AdminLocationSettingsPage implements OnInit {
 
   protected readonly timeZones = TIME_ZONES;
   protected readonly dateFormats = DATE_FORMATS;
+  protected readonly overtimePresetOptions = OVERTIME_PRESETS;
+  protected readonly workweekDays = WORKWEEK_DAYS;
+  // Rule values per preset, loaded from the server so this page carries no
+  // copy of them. Empty until load() finishes.
+  private overtimePresets: OvertimePresetDto[] = [];
   protected readonly loading = signal(false);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly saved = signal(false);
   protected readonly hasSmtpPassword = signal(false);
+  protected readonly hasKioskPasscode = signal(false);
+  protected readonly clearingKioskPasscode = signal(false);
   protected readonly templates = signal<EmailTemplateDto[]>([]);
   protected readonly testingEmail = signal(false);
   protected readonly testEmailResult = signal<'success' | 'error' | null>(null);
@@ -208,8 +244,10 @@ export class AdminLocationSettingsPage implements OnInit {
       templates: this.templatesApi.getAll(this.locationCode),
       devices: this.devicesApi.getAll(this.locationCode),
       me: this.accountsApi.getMine(),
+      overtimePresets: this.settingsApi.getOvertimePresets(),
     }).subscribe({
-      next: ({ settings, templates, devices, me }) => {
+      next: ({ settings, templates, devices, me, overtimePresets }) => {
+        this.overtimePresets = overtimePresets;
         this.applySettings(settings);
         this.templates.set(templates);
         this.allowedDevices.set(devices);
@@ -225,6 +263,7 @@ export class AdminLocationSettingsPage implements OnInit {
 
   private applySettings(settings: LocationSettingsDto): void {
     this.hasSmtpPassword.set(settings.hasSmtpPassword);
+    this.hasKioskPasscode.set(settings.hasKioskPasscode);
     this.form = {
       timeFormat: settings.timeFormat,
       dateFormat: settings.dateFormat,
@@ -234,7 +273,12 @@ export class AdminLocationSettingsPage implements OnInit {
       lateClockInGraceMinutes: settings.lateClockInGraceMinutes,
       breakLimitMinutes: settings.breakLimitMinutes,
       lunchLimitMinutes: settings.lunchLimitMinutes,
+      overtimePreset: settings.overtimePreset,
       overtimeDailyThresholdMinutes: settings.overtimeDailyThresholdMinutes,
+      dailyDoubleTimeAfterMinutes: settings.dailyDoubleTimeAfterMinutes,
+      weeklyOvertimeAfterMinutes: settings.weeklyOvertimeAfterMinutes,
+      seventhDayDoubleTimeAfterMinutes: settings.seventhDayDoubleTimeAfterMinutes,
+      workweekStartDay: settings.workweekStartDay,
       developmentMode: settings.developmentMode,
       scheduleVisibilityEnabled: settings.scheduleVisibilityEnabled,
       adminSeesAllSchedules: settings.adminSeesAllSchedules,
@@ -250,10 +294,31 @@ export class AdminLocationSettingsPage implements OnInit {
       smtpFromName: settings.smtpFromName ?? '',
       payDayStartDate: settings.payDayStartDate ?? '',
       payPeriodDays: settings.payPeriodDays,
+      kioskPasscode: '',
     };
   }
 
-  save(): void {
+  // Copies a preset's rule values into the form. Custom has no values of its
+  // own, so choosing it just keeps whatever is there; the workweek start day
+  // is never touched, since it belongs to the location rather than a preset.
+  applyOvertimePreset(preset: OvertimePreset): void {
+    const values = this.overtimePresets.find((p) => p.preset === preset);
+    if (!values) {
+      return;
+    }
+    this.form.overtimeDailyThresholdMinutes = values.overtimeDailyThresholdMinutes;
+    this.form.dailyDoubleTimeAfterMinutes = values.dailyDoubleTimeAfterMinutes;
+    this.form.weeklyOvertimeAfterMinutes = values.weeklyOvertimeAfterMinutes;
+    this.form.seventhDayDoubleTimeAfterMinutes = values.seventhDayDoubleTimeAfterMinutes;
+  }
+
+  // Hand-editing any rule means the values are no longer a preset's. (The
+  // server re-checks on save and would also record Custom.)
+  markOvertimeCustom(): void {
+    this.form.overtimePreset = 'Custom';
+  }
+
+  save(clearKioskPasscode = false): void {
     this.saving.set(true);
     this.error.set(null);
     this.saved.set(false);
@@ -268,7 +333,12 @@ export class AdminLocationSettingsPage implements OnInit {
           lateClockInGraceMinutes: this.form.lateClockInGraceMinutes,
           breakLimitMinutes: this.form.breakLimitMinutes,
           lunchLimitMinutes: this.form.lunchLimitMinutes,
+          overtimePreset: this.form.overtimePreset,
           overtimeDailyThresholdMinutes: this.form.overtimeDailyThresholdMinutes,
+          dailyDoubleTimeAfterMinutes: this.form.dailyDoubleTimeAfterMinutes,
+          weeklyOvertimeAfterMinutes: this.form.weeklyOvertimeAfterMinutes,
+          seventhDayDoubleTimeAfterMinutes: this.form.seventhDayDoubleTimeAfterMinutes,
+          workweekStartDay: this.form.workweekStartDay,
           developmentMode: this.form.developmentMode,
           scheduleVisibilityEnabled: this.form.scheduleVisibilityEnabled,
           adminSeesAllSchedules: this.form.adminSeesAllSchedules,
@@ -284,6 +354,8 @@ export class AdminLocationSettingsPage implements OnInit {
           smtpFromName: this.form.smtpFromName || null,
           payDayStartDate: this.form.payDayStartDate || null,
           payPeriodDays: this.form.payPeriodDays,
+          kioskPasscode: this.form.kioskPasscode || null,
+          clearKioskPasscode,
         },
         this.locationCode,
       )
@@ -292,12 +364,22 @@ export class AdminLocationSettingsPage implements OnInit {
           this.applySettings(settings);
           this.saving.set(false);
           this.saved.set(true);
+          this.clearingKioskPasscode.set(false);
         },
         error: (err) => {
           this.saving.set(false);
+          this.clearingKioskPasscode.set(false);
           this.error.set(err?.error ?? 'Failed to save settings.');
         },
       });
+  }
+
+  disableKiosk(): void {
+    if (!confirm('Disable kiosk clock-in for this location? Any kiosk device currently logged in will need a new passcode to log back in.')) {
+      return;
+    }
+    this.clearingKioskPasscode.set(true);
+    this.save(true);
   }
 
   // Tests whatever SMTP fields are currently in the form, not necessarily

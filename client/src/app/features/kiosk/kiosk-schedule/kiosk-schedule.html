@@ -1,0 +1,72 @@
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (!loading()) {
+  <mat-card class="roster-card">
+    <mat-card-content>
+      @if (rows().length === 0) {
+        <p class="empty">No shifts scheduled for today.</p>
+      } @else {
+        <div class="table-scroll">
+          <table class="roster-table">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Shift</th>
+                <th>Clock In / Clock Out</th>
+                <th>Breaks</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of rows(); track row.assignment.id) {
+                <tr>
+                  <td class="employee-cell">
+                    <span class="employee-dot" [style.--employee-color]="employeeColor(row.assignment.accountId)"></span>
+                    {{ row.assignment.accountFirstName }} {{ row.assignment.accountLastName }}
+                  </td>
+                  <td class="shift-cell">
+                    <span class="shift-name">{{ row.assignment.shiftName }}</span>
+                    <span class="shift-time">{{ scheduledTime(row) }}</span>
+                  </td>
+                  <td class="punch-cell">
+                    {{ punchTime(row.entry?.clockInAt) }} / {{ punchTime(row.entry?.clockOutAt) }}
+                  </td>
+                  <td class="punch-cell">
+                    @for (seg of segmentsFor(row); track seg.id) {
+                      <div class="segment-line">
+                        {{ seg.kind }}: {{ punchTime(seg.startAt) }}–{{ seg.endAt ? punchTime(seg.endAt) : 'ongoing' }}
+                      </div>
+                    } @empty {
+                      -
+                    }
+                  </td>
+                  <td class="actions-cell">
+                    @if (canClockIn(row)) {
+                      <button type="button" mat-flat-button color="primary" (click)="clockIn(row)">Clock In</button>
+                    }
+                    @if (canStartSegment(row)) {
+                      <button type="button" mat-stroked-button (click)="startSegment(row, 'Break')">Start Break</button>
+                      <button type="button" mat-stroked-button (click)="startSegment(row, 'Lunch')">Start Lunch</button>
+                      <button type="button" mat-flat-button color="primary" (click)="clockOut(row)">Clock Out</button>
+                    }
+                    @if (canEndSegment(row)) {
+                      <button type="button" mat-stroked-button (click)="endSegment(row)">End Break/Lunch</button>
+                    }
+                    @if (row.entry?.clockOutAt) {
+                      <span class="done-label">
+                        <mat-icon>check_circle</mat-icon>
+                        Done
+                      </span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </mat-card-content>
+  </mat-card>
+}

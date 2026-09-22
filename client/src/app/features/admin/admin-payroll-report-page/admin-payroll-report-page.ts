@@ -11,8 +11,7 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatTable, MatTableModule } from '@angular/material/table';
 import { MatDialog } from '@angular/material/dialog';
 
-import { DailyHoursDto, EmployeeHoursReportDto, ReportsApi } from '../../../core/reports-api';
-import { ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
+import { EmployeeHoursReportDto, ReportsApi } from '../../../core/reports-api';
 import { formatDurationOrDash } from '../../../core/duration-format';
 import { addDays, dayOfWeekLabel, formatDate, toMmDdYyyy } from '../../../core/week-utils';
 import { Auth } from '../../../core/auth';
@@ -38,18 +37,16 @@ import { PayrollHoursChart } from '../payroll-hours-chart/payroll-hours-chart';
 })
 export class AdminPayrollReportPage implements OnInit {
   private readonly reportsApi = inject(ReportsApi);
-  private readonly shiftAssignmentsApi = inject(ShiftAssignmentsApi);
   private readonly route = inject(ActivatedRoute);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(Auth);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
 
   // This page is reachable by Lead and Employee as well as Admin/Sa (see
-  // adminGuard/employeeGuard), but both POST /api/sick-time-entries and
-  // ShiftAssignments' SetSickMinutes are Admin/Sa-only server-side — hide
-  // the "Add Sick Hours" button and the inline per-day sick-hours input
-  // rather than let a Lead/Employee open a dialog or edit that can only
-  // 403 on save.
+  // adminGuard/employeeGuard), but POST /api/sick-time-entries is Admin/Sa-only
+  // server-side — hide the "Add Sick Hours" button rather than let a
+  // Lead/Employee open a dialog that can only 403 on save. Sick hours are
+  // read-only everywhere else on this page.
   protected readonly canAddSickHours = this.auth.role() === 'Admin' || this.auth.role() === 'Sa';
 
   // CdkTable only re-evaluates matRowDef's `when` predicate when it
@@ -62,16 +59,11 @@ export class AdminPayrollReportPage implements OnInit {
     'fullName',
     'netWorkedTime',
     'overtimeTime',
+    'doubleTimeTime',
     'sickTime',
     'totalTime',
     'notes',
   ];
-
-  // Assignment IDs with a sick-hours save in flight — disables that row's
-  // input and lets the template show a per-row saving/error state without a
-  // full report reload (which would collapse every expanded row).
-  protected readonly savingSickHoursFor = signal<ReadonlySet<number>>(new Set());
-  protected readonly sickHoursError = signal<string | null>(null);
 
   // Defaults to the trailing week, same as the report is most often run.
   protected startDate = formatDate(addDays(new Date(), -6));
@@ -116,8 +108,9 @@ export class AdminPayrollReportPage implements OnInit {
   protected readonly totals = computed(() => {
     const rows = this.filteredReport();
     return {
-      regularMinutes: rows.reduce((sum, r) => sum + this.regularMinutes(r), 0),
+      regularMinutes: rows.reduce((sum, r) => sum + r.totalRegularMinutes, 0),
       overtimeMinutes: rows.reduce((sum, r) => sum + r.totalOvertimeMinutes, 0),
+      doubleTimeMinutes: rows.reduce((sum, r) => sum + r.totalDoubleTimeMinutes, 0),
       sickMinutes: rows.reduce((sum, r) => sum + r.totalSickMinutes, 0),
       totalMinutes: rows.reduce((sum, r) => sum + this.totalMinutes(r), 0),
       absentDays: rows.reduce((sum, r) => sum + r.absentDays, 0),
@@ -125,18 +118,12 @@ export class AdminPayrollReportPage implements OnInit {
     };
   });
 
-  // totalNetWorkedMinutes includes overtime, but ADP takes regular and
-  // overtime hours as two separate entries — this is the "Net Worked Time"
-  // column's regular-hours-only figure (excludes whatever's already
-  // counted in the Overtime column) so the two columns add back up to the
-  // actual time worked without double-counting overtime into regular.
-  regularMinutes(emp: EmployeeHoursReportDto): number {
-    return emp.totalNetWorkedMinutes - emp.totalOvertimeMinutes;
-  }
-
-  // Total Hours = regular + overtime + sick, i.e. every paid minute in the
-  // range regardless of column. Equivalent to totalNetWorkedMinutes (which
-  // already includes overtime) + totalSickMinutes.
+  // Total Hours = regular + overtime + double time + sick, i.e. every paid
+  // minute in the range regardless of column. Equivalent to
+  // totalNetWorkedMinutes (which already includes the overtime and
+  // double-time) + totalSickMinutes. ADP takes each rate as its own entry, so
+  // the server splits them (totalRegular/Overtime/DoubleTimeMinutes) under
+  // the location's overtime rules.
   totalMinutes(emp: EmployeeHoursReportDto): number {
     return emp.totalNetWorkedMinutes + emp.totalSickMinutes;
   }
@@ -207,56 +194,5 @@ export class AdminPayrollReportPage implements OnInit {
 
   dayLabel(isoDate: string): string {
     return `${dayOfWeekLabel(isoDate)} ${toMmDdYyyy(isoDate)}`;
-  }
-
-  isSavingSickHours(day: DailyHoursDto): boolean {
-    return day.shiftAssignmentId !== null && this.savingSickHoursFor().has(day.shiftAssignmentId);
-  }
-
-  // Admin types the decimal-hours figure directly (same convention as the
-  // read-only ADP numbers elsewhere on this page) — converted to minutes
-  // for storage. On success, refetches rather than patching the signal in
-  // place: a day can fold in more than one ShiftAssignment (split shifts),
-  // and this write only targets one of them, so the day's true total can
-  // only come from the server. Deliberately doesn't reset expandedIds like
-  // run() does, so the row the admin is editing stays open. Only called for
-  // a day that has a ShiftAssignment — see the template's shiftAssignmentId
-  // !== null guard, which is what makes the input editable at all.
-  updateSickHours(day: DailyHoursDto, rawValue: string): void {
-    const shiftAssignmentId = day.shiftAssignmentId;
-    if (shiftAssignmentId === null) {
-      return;
-    }
-
-    const hours = parseFloat(rawValue);
-    if (rawValue.trim() === '' || isNaN(hours) || hours < 0) {
-      this.sickHoursError.set('Sick hours must be a number 0 or greater.');
-      return;
-    }
-
-    this.sickHoursError.set(null);
-    this.savingSickHoursFor.update((current) => new Set(current).add(shiftAssignmentId));
-
-    this.shiftAssignmentsApi.setSickMinutes(shiftAssignmentId, { sickMinutes: Math.round(hours * 60) }).subscribe({
-      next: () => {
-        this.savingSickHoursFor.update((current) => {
-          const next = new Set(current);
-          next.delete(shiftAssignmentId);
-          return next;
-        });
-        this.reportsApi.getHoursReport(this.locationCode, this.startDate, this.endDate).subscribe({
-          next: (report) => this.report.set(report),
-          error: (err) => this.sickHoursError.set(err?.error ?? 'Saved, but failed to refresh the report.'),
-        });
-      },
-      error: (err) => {
-        this.sickHoursError.set(err?.error ?? 'Failed to save sick hours.');
-        this.savingSickHoursFor.update((current) => {
-          const next = new Set(current);
-          next.delete(shiftAssignmentId);
-          return next;
-        });
-      },
-    });
   }
 }

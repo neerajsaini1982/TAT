@@ -7,6 +7,7 @@ using Server.Dtos;
 using Server.Hubs;
 using Server.Models;
 using Server.Security;
+using Server.Services;
 
 namespace Server.Controllers;
 
@@ -15,12 +16,15 @@ namespace Server.Controllers;
 // per-location window (LocationSettings.ClockInWindowMinutes) before that
 // shift's start time, then moves through any number of break/lunch
 // segments — at most one open (no EndAt) at a time — before clocking out.
-// Leads/Admins get one override on top of that: AdminClockOut, for closing
-// out an entry the employee didn't (see its doc comment).
+// The actual state-transition rules live in TimeEntryPunchService, shared
+// with KioskController's PIN-verified punches; this controller just derives
+// accountId from the caller's own JWT and maps the result to an HTTP
+// response. Leads/Admins get one override on top of that: AdminClockOut,
+// for closing out an entry the employee didn't (see its doc comment).
 [ApiController]
 [Route("api/time-entries")]
 [Authorize]
-public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) : ControllerBase
+public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier, TimeEntryPunchService punchService) : ControllerBase
 {
     // The caller's entries for a given date, so the client can render the
     // right buttons (Clock In / Break / Lunch / Clock Out) for shifts
@@ -34,7 +38,7 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
             .Where(t => t.AccountId == accountId && t.ShiftAssignment!.Date == date)
             .ToList();
 
-        return Ok(entries.Select(ToDto));
+        return Ok(entries.Select(TimeEntryPunchService.ToDto));
     }
 
     // Every entry for a location/date, so the admin schedule grid can see
@@ -60,115 +64,26 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
             .Where(t => t.ShiftAssignment!.Date == date && t.ShiftAssignment.Shift!.LocationId == location.Id)
             .ToList();
 
-        return Ok(entries.Select(ToDto));
+        return Ok(entries.Select(TimeEntryPunchService.ToDto));
     }
 
     [HttpPost("clock-in")]
-    public ActionResult<TimeEntryDto> ClockIn(ClockInRequest request)
-    {
-        var accountId = CallerAccountId();
-        var assignment = db.ShiftAssignments
-            .Include(a => a.Shift)
-            .SingleOrDefault(a => a.Id == request.ShiftAssignmentId);
-
-        if (assignment is null || assignment.AccountId != accountId || !assignment.IsPublished)
-        {
-            return NotFound();
-        }
-
-        var today = DateOnly.FromDateTime(DateTime.Now);
-        if (assignment.Date != today)
-        {
-            return BadRequest("You can only clock in for today's shift.");
-        }
-
-        if (db.TimeEntries.Any(t => t.ShiftAssignmentId == assignment.Id))
-        {
-            return Conflict("Already clocked in for this shift.");
-        }
-
-        var deviceError = CheckDeviceAllowed(assignment.Shift!.LocationId);
-        if (deviceError is not null)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden, deviceError);
-        }
-
-        var windowMinutes = db.LocationSettings
-            .Where(s => s.LocationId == assignment.Shift!.LocationId)
-            .Select(s => (int?)s.ClockInWindowMinutes)
-            .SingleOrDefault() ?? 15;
-
-        var scheduledStart = assignment.Date.ToDateTime(assignment.Shift!.StartTime);
-        var earliestAllowed = scheduledStart.AddMinutes(-windowMinutes);
-        if (DateTime.Now < earliestAllowed)
-        {
-            return BadRequest($"You can't clock in until {earliestAllowed:h:mm tt}.");
-        }
-
-        var entry = new TimeEntry
-        {
-            AccountId = accountId,
-            ShiftAssignmentId = assignment.Id,
-            ClockInAt = DateTime.UtcNow,
-        };
-
-        db.TimeEntries.Add(entry);
-
-        // Showing up supersedes an earlier absence mark.
-        assignment.IsAbsent = false;
-        assignment.AbsenceNote = null;
-
-        db.SaveChanges();
-
-        return Ok(ToDto(entry));
-    }
+    public ActionResult<TimeEntryDto> ClockIn(ClockInRequest request) =>
+        ToActionResult(punchService.ClockIn(CallerAccountId(), request.ShiftAssignmentId, ClientIp()));
 
     // Starts a new break/lunch segment — any number allowed per shift, but
-    // only one open (no EndAt) at a time, enforced below.
+    // only one open (no EndAt) at a time, enforced in TimeEntryPunchService.
     [HttpPost("{id:int}/segments/start")]
-    public ActionResult<TimeEntryDto> StartSegment(int id, StartSegmentRequest request) => Transition(id, entry =>
-    {
-        if (entry.ClockOutAt is not null)
-        {
-            return "Already clocked out.";
-        }
-        if (entry.Segments.Any(s => s.EndAt is null))
-        {
-            return "End your current break or lunch before starting another.";
-        }
-
-        entry.Segments.Add(new TimeEntrySegment { Kind = request.Kind, StartAt = DateTime.UtcNow });
-        return null;
-    });
+    public ActionResult<TimeEntryDto> StartSegment(int id, StartSegmentRequest request) =>
+        ToActionResult(punchService.StartSegment(CallerAccountId(), id, request.Kind, ClientIp()));
 
     [HttpPost("{id:int}/segments/end")]
-    public ActionResult<TimeEntryDto> EndSegment(int id) => Transition(id, entry =>
-    {
-        var open = entry.Segments.FirstOrDefault(s => s.EndAt is null);
-        if (open is null)
-        {
-            return "Not currently on a break or lunch.";
-        }
-
-        open.EndAt = DateTime.UtcNow;
-        return null;
-    });
+    public ActionResult<TimeEntryDto> EndSegment(int id) =>
+        ToActionResult(punchService.EndSegment(CallerAccountId(), id, ClientIp()));
 
     [HttpPost("{id:int}/clock-out")]
-    public ActionResult<TimeEntryDto> ClockOut(int id) => Transition(id, entry =>
-    {
-        if (entry.ClockOutAt is not null)
-        {
-            return "Already clocked out.";
-        }
-        if (entry.Segments.Any(s => s.EndAt is null))
-        {
-            return "End your current break or lunch before clocking out.";
-        }
-
-        entry.ClockOutAt = DateTime.UtcNow;
-        return null;
-    });
+    public ActionResult<TimeEntryDto> ClockOut(int id) =>
+        ToActionResult(punchService.ClockOut(CallerAccountId(), id, ClientIp()));
 
     // Lets a Lead/Admin close out someone else's entry directly — e.g. they
     // left early, or forgot to clock out. Unlike the self clock-out above,
@@ -203,7 +118,7 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
         db.SaveChanges();
 
         await notifier.NotifyLocationChanged(entry.ShiftAssignment!.Shift!.Location!.LocationCode);
-        return Ok(ToDto(entry));
+        return Ok(TimeEntryPunchService.ToDto(entry));
     }
 
     // Lets a Lead/Admin set every punch on a shift's TimeEntry directly,
@@ -263,7 +178,7 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
         db.SaveChanges();
 
         await notifier.NotifyLocationChanged(assignment.Shift!.Location!.LocationCode);
-        return Ok(ToDto(entry));
+        return Ok(TimeEntryPunchService.ToDto(entry));
     }
 
     // Lets a Lead/Admin flag (or clear) that an employee left before the end
@@ -301,7 +216,7 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
         db.SaveChanges();
 
         await notifier.NotifyLocationChanged(entry.ShiftAssignment!.Shift!.Location!.LocationCode);
-        return Ok(ToDto(entry));
+        return Ok(TimeEntryPunchService.ToDto(entry));
     }
 
     // Sanity-checks segment ordering and overlap only — deliberately not
@@ -342,53 +257,18 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
         return null;
     }
 
-    // Applies a state-transition function to the caller's own entry, saving
-    // and returning the updated DTO on success, or the returned message as a
-    // 400 when the transition isn't valid from the entry's current state.
-    private ActionResult<TimeEntryDto> Transition(int id, Func<TimeEntry, string?> apply)
+    // Maps a TimeEntryPunchService result to the same HTTP shape the old
+    // inline controller logic returned — same 404/400/409/403 semantics as
+    // before the extraction, for both self-service and (via KioskController)
+    // kiosk callers.
+    private ActionResult<TimeEntryDto> ToActionResult(PunchResult result) => result.StatusCode switch
     {
-        var entry = db.TimeEntries
-            .Include(t => t.Segments)
-            .Include(t => t.ShiftAssignment).ThenInclude(a => a!.Shift)
-            .SingleOrDefault(t => t.Id == id);
-        if (entry is null || entry.AccountId != CallerAccountId())
-        {
-            return NotFound();
-        }
-
-        var deviceError = CheckDeviceAllowed(entry.ShiftAssignment!.Shift!.LocationId);
-        if (deviceError is not null)
-        {
-            return StatusCode(StatusCodes.Status403Forbidden, deviceError);
-        }
-
-        var error = apply(entry);
-        if (error is not null)
-        {
-            return BadRequest(error);
-        }
-
-        db.SaveChanges();
-        return Ok(ToDto(entry));
-    }
-
-    // When LocationSettings.ClockInAnywhere is off, restricts self-service
-    // punches to IPs an Admin has approved for that location. Admin
-    // overrides (AdminClockOut/AdminEditTimes) aren't subject to this — an
-    // admin acting on someone else's entry isn't punching from the
-    // employee's device.
-    private string? CheckDeviceAllowed(int locationId)
-    {
-        var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == locationId);
-        if (settings is null || settings.ClockInAnywhere)
-        {
-            return null;
-        }
-
-        var ip = ClientIp();
-        var allowed = ip is not null && db.AllowedPunchDevices.Any(d => d.LocationId == locationId && d.IpAddress == ip);
-        return allowed ? null : "Clock-in/out is restricted to approved devices at this location. Contact your admin.";
-    }
+        StatusCodes.Status200OK => Ok(result.Entry),
+        StatusCodes.Status409Conflict => Conflict(result.Error),
+        StatusCodes.Status403Forbidden => StatusCode(StatusCodes.Status403Forbidden, result.Error),
+        StatusCodes.Status404NotFound => NotFound(),
+        _ => BadRequest(result.Error),
+    };
 
     // Prefers X-Forwarded-For (set by Azure App Service's front end) over
     // the socket-level RemoteIpAddress, which on Azure reflects the
@@ -411,23 +291,4 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier) 
 
     private int CallerAccountId() =>
         int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
-
-    private static TimeEntryDto ToDto(TimeEntry t) => new(
-        t.Id,
-        t.ShiftAssignmentId,
-        t.AccountId,
-        t.ClockInAt,
-        t.ClockOutAt,
-        t.Segments
-            .OrderBy(s => s.StartAt)
-            .Select(s => new TimeEntrySegmentDto(s.Id, s.Kind, s.StartAt, s.EndAt))
-            .ToList(),
-        t.ClockedOutByAccountId,
-        t.Note,
-        t.LeftEarly,
-        t.LeftEarlyNote,
-        t.LeftEarlyMarkedByAccountId,
-        t.LeftEarlyMarkedAt,
-        t.EditedByAccountId,
-        t.EditedAt);
 }
