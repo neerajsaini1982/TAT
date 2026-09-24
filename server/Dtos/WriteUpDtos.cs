@@ -31,18 +31,26 @@ public record WriteUpDto(
     // The drawn signature currently on the write-up (fetch the image from
     // .../signatures/{id}); null unless it is Acknowledged with a drawing.
     int? AcknowledgmentSignatureId,
+    // The signature whoever recorded the write-up gave when creating it
+    // (optional); their name and the time are CreatedByName / CreatedAt.
+    int? AuthorSignatureId,
     bool IsVoided,
     DateTime? VoidedAt,
     string? VoidReason,
     IReadOnlyList<WriteUpEventDto>? History);
 
 // Severity and Type are optional so a client that leaves them out gets
-// Normal / Written.
+// Normal / Written. Both signatures are optional "data:image/png;base64,..."
+// URLs (see SignaturePng), for when the write-up is delivered in person:
+// EmployeeSignature is the employee acknowledging receipt on the spot, and
+// AuthorSignature is whoever is recording it.
 public record CreateWriteUpRequest(
     DateOnly Date,
     string Description,
     WriteUpSeverity? Severity = null,
-    WriteUpType? Type = null);
+    WriteUpType? Type = null,
+    string? EmployeeSignature = null,
+    string? AuthorSignature = null);
 
 public record UpdateWriteUpRequest(
     DateOnly Date,

@@ -22,6 +22,7 @@ interface FormModel {
   isActive: boolean;
   isOnShiftSchedule: boolean;
   canSeeAllSchedules: boolean;
+  canWriteUpOthers: boolean;
   hourlyRate: number | null;
   // Write-only — always reset to '' when editing (see constructor); never
   // pre-filled with the real value. Blank means "leave unchanged" on update.
@@ -45,6 +46,7 @@ const emptyForm = (): FormModel => ({
   isActive: true,
   isOnShiftSchedule: true,
   canSeeAllSchedules: false,
+  canWriteUpOthers: false,
   hourlyRate: null,
   ssn: '',
   ssnMasked: null,
@@ -288,6 +290,7 @@ export class AccountFormDialog implements OnDestroy {
         isActive: this.form.isActive,
         isOnShiftSchedule: this.form.isOnShiftSchedule,
         canSeeAllSchedules: this.form.canSeeAllSchedules,
+        canWriteUpOthers: this.form.canWriteUpOthers,
         role: this.form.role,
         // Sent whenever the field is editable (promoting off Employee, or
         // renaming an Employee's username in place) — when it's disabled

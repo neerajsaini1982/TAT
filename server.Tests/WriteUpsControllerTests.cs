@@ -296,6 +296,118 @@ public sealed class WriteUpsControllerTests : IDisposable
         Assert.Equal(WriteUpAcknowledgment.Acknowledged, Ok(As(admin).Acknowledge(admin.Id, aboutAdmin.Id, Signed(admin))).AcknowledgmentStatus);
     }
 
+    // ---- signed in person at creation -------------------------------------
+
+    private WriteUpDto CreateSigned(Account caller, Account target, string? employeeSignature, string? authorSignature) =>
+        Assert.IsType<WriteUpDto>(Assert.IsType<CreatedAtActionResult>(
+            As(caller).Create(target.Id, new CreateWriteUpRequest(Today, "Late", EmployeeSignature: employeeSignature, AuthorSignature: authorSignature)).Result).Value);
+
+    [Fact]
+    public void Signatures_are_optional_when_creating()
+    {
+        var created = CreateSigned(admin, employee, null, null);
+
+        Assert.Null(created.AuthorSignatureId);
+        Assert.Null(created.AcknowledgmentSignatureId);
+        Assert.Equal(WriteUpAcknowledgment.Pending, created.AcknowledgmentStatus);
+        Assert.Empty(db.WriteUpSignatures);
+    }
+
+    [Fact]
+    public void The_author_can_sign_when_creating_and_it_is_stamped_with_their_name_and_time()
+    {
+        var created = CreateSigned(admin, employee, null, TestPng.DataUrl());
+
+        var signature = db.WriteUpSignatures.Single(s => s.Id == created.AuthorSignatureId);
+        Assert.Equal("admin Tester", signature.SignedName);
+        Assert.Equal(created.CreatedAt, signature.SignedAt);
+        Assert.Equal(WriteUpAcknowledgment.Pending, created.AcknowledgmentStatus);
+        Assert.Equal(created.AuthorSignatureId, Assert.Single(List(As(employee).GetAll(employee.Id))).AuthorSignatureId);
+    }
+
+    [Fact]
+    public void An_employee_signing_in_person_acknowledges_it_under_their_own_name()
+    {
+        var created = CreateSigned(admin, employee, TestPng.DataUrl(), TestPng.DataUrl());
+
+        Assert.Equal(WriteUpAcknowledgment.Acknowledged, created.AcknowledgmentStatus);
+        Assert.Equal("emp Tester", created.AcknowledgmentSignedName);
+        Assert.NotNull(created.AcknowledgmentAt);
+        Assert.NotEqual(created.AuthorSignatureId, created.AcknowledgmentSignatureId);
+        Assert.Equal("emp Tester", db.WriteUpSignatures.Single(s => s.Id == created.AcknowledgmentSignatureId).SignedName);
+        Assert.Contains(created.History!, e => e.Action == WriteUpEventAction.Acknowledged && e.Detail == "Signed in person: emp Tester");
+
+        // Nothing left for the employee to do from their own portal.
+        var existing = Assert.Single(List(As(employee).GetAll(employee.Id)));
+        Assert.Equal(created.AcknowledgmentSignatureId, existing.AcknowledgmentSignatureId);
+    }
+
+    [Fact]
+    public void A_bad_signature_rejects_the_whole_write_up()
+    {
+        var result = As(admin).Create(employee.Id, new CreateWriteUpRequest(Today, "Late", EmployeeSignature: "data:image/png;base64,AAAA"));
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Empty(db.WriteUps);
+        Assert.Empty(db.WriteUpSignatures);
+    }
+
+    // ---- CanWriteUpOthers -------------------------------------------------
+
+    private Account Writer(AccountRole role = AccountRole.Lead, Location? at = null)
+    {
+        var writer = Seed("writer", role, at ?? location);
+        writer.CanWriteUpOthers = true;
+        db.SaveChanges();
+        return writer;
+    }
+
+    [Fact]
+    public void An_account_with_CanWriteUpOthers_can_create_a_write_up_for_a_coworker_without_seeing_its_history()
+    {
+        var writer = Writer();
+
+        var result = As(writer).Create(employee.Id, new CreateWriteUpRequest(Today, "Left the register open"));
+
+        var created = Assert.IsType<WriteUpDto>(Assert.IsType<CreatedAtActionResult>(result.Result).Value);
+        Assert.Null(created.History);
+        Assert.Equal(writer.Id, db.WriteUps.Single().CreatedByAccountId);
+    }
+
+    [Fact]
+    public void CanWriteUpOthers_grants_nothing_but_create()
+    {
+        var writer = Writer(AccountRole.Employee);
+        var existing = Create(employee);
+
+        Assert.IsType<NotFoundResult>(As(writer).GetAll(employee.Id).Result);
+        Assert.IsType<NotFoundResult>(
+            As(writer).Update(employee.Id, existing.Id, new UpdateWriteUpRequest(Today, "x", WriteUpSeverity.Low, WriteUpType.Note)).Result);
+        Assert.IsType<NotFoundResult>(As(writer).Void(employee.Id, existing.Id, new VoidWriteUpRequest("x")).Result);
+        Assert.IsType<NotFoundResult>(As(writer).DeclineAcknowledgment(employee.Id, existing.Id).Result);
+    }
+
+    [Fact]
+    public void CanWriteUpOthers_does_not_reach_themselves_or_another_location()
+    {
+        var writer = Writer();
+        var outsider = Seed("outsider", AccountRole.Employee, otherLocation);
+
+        Assert.IsType<NotFoundResult>(As(writer).Create(writer.Id, new CreateWriteUpRequest(Today, "x")).Result);
+        Assert.IsType<NotFoundResult>(As(writer).Create(outsider.Id, new CreateWriteUpRequest(Today, "x")).Result);
+        Assert.Empty(db.WriteUps);
+    }
+
+    [Fact]
+    public void Revoking_CanWriteUpOthers_takes_effect_immediately()
+    {
+        var writer = Writer();
+        writer.CanWriteUpOthers = false;
+        db.SaveChanges();
+
+        Assert.IsType<NotFoundResult>(As(writer).Create(employee.Id, new CreateWriteUpRequest(Today, "x")).Result);
+    }
+
     // ---- edit ------------------------------------------------------------
 
     [Fact]

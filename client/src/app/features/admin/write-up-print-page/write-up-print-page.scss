@@ -1,0 +1,179 @@
+// A paper document, on screen and in print: white, black ink, no app
+// chrome. Portrait, unlike the app's default landscape @page (which suits
+// the schedule printouts) — see the named page below.
+:host {
+  display: block;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  max-width: 8.5in;
+  margin: 0 auto 12px;
+}
+
+.missing {
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.document {
+  page: write-up;
+  max-width: 8.5in;
+  margin: 0 auto;
+  padding: 0.6in;
+  background: #fff;
+  color: #111;
+  border: 1px solid #ccc;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #111;
+
+  h1 {
+    margin: 0;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+    font-weight: 700;
+  }
+}
+
+.org {
+  margin: 0 0 2px;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.printed {
+  margin: 0;
+  font-size: 11px;
+  color: #555;
+}
+
+.voided {
+  margin: 16px 0 0;
+  padding: 8px 12px;
+  border: 2px solid #b00020;
+  color: #b00020;
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px 24px;
+  margin: 20px 0;
+
+  dt {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #555;
+  }
+
+  dd {
+    margin: 2px 0 0;
+    font-weight: 600;
+  }
+}
+
+.description {
+  h2 {
+    margin: 0 0 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #555;
+  }
+
+  p {
+    margin: 0;
+    min-height: 1.2in;
+    padding: 10px 12px;
+    border: 1px solid #999;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+}
+
+.statement {
+  margin: 20px 0 28px;
+  font-size: 12px;
+}
+
+.signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px;
+  break-inside: avoid;
+}
+
+// The ruled line reads as "sign here" on paper whether or not a signature
+// was captured in the app.
+.signature-area {
+  display: flex;
+  align-items: flex-end;
+  height: 90px;
+  border-bottom: 1px solid #111;
+}
+
+app-signature-image.large {
+  --signature-max-width: 100%;
+  --signature-max-height: 86px;
+  --signature-border: none;
+}
+
+.signer-role {
+  margin: 4px 0 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #555;
+}
+
+.signer-name {
+  margin: 2px 0 0;
+  font-weight: 700;
+}
+
+.signer-date {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.blank {
+  display: inline-block;
+  width: 1.8in;
+  border-bottom: 1px solid #111;
+}
+
+@page write-up {
+  size: letter portrait;
+  margin: 0.5in;
+}
+
+@media print {
+  .no-print {
+    display: none;
+  }
+
+  .document {
+    max-width: none;
+    padding: 0;
+    border: none;
+  }
+}
