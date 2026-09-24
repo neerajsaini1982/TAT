@@ -15,6 +15,8 @@ public record AccountDto(
     // Per-employee override that grants a roster view of everyone's shifts
     // regardless of role/LocationSettings — see Account.CanSeeAllSchedules.
     bool CanSeeAllSchedules,
+    // See Account.CanWriteUpOthers.
+    bool CanWriteUpOthers,
     string? UserCode,
     string? LocationCode,
     // Populated by the ADP employee-directory import (see
@@ -83,7 +85,9 @@ public record UpdateAccountRequest(
     DateOnly? DateOfBirth,
     DateOnly? HireDate,
     EmploymentType? EmploymentType,
-    bool IsOvertimeExempt = false);
+    bool IsOvertimeExempt = false,
+    // See Account.CanWriteUpOthers.
+    bool CanWriteUpOthers = false);
 
 // LoginLink is built client-side (it already knows its own origin) and
 // passed through rather than the server guessing its hostname.

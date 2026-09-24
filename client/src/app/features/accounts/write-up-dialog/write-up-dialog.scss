@@ -1,0 +1,65 @@
+// Never wider than the dialog itself (which caps at 80vw), so the pads
+// wrap onto their own rows instead of the dialog scrolling sideways.
+.content {
+  width: 760px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 12px;
+
+  mat-form-field {
+    flex: 1 1 160px;
+  }
+}
+
+.description-field {
+  width: 100%;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 8px 0 0;
+}
+
+// Side by side where there's room, stacked on a phone. Both optional.
+.signatures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px 20px;
+  margin-top: 8px;
+}
+
+.signer {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 6px;
+}
+
+.signer-role {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.signer-name {
+  font-weight: 700;
+}
+
+.stamp {
+  margin: 0;
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+}
+
+.hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+}

@@ -62,11 +62,11 @@
                 @if (showEmployeeNames()) {
                   <th class="col-employee">Employee</th>
                 }
-                <th class="col-shift">Shift</th>
+                <th class="col-shift">Schedule</th>
                 <th class="col-clock">Clock In / Clock Out</th>
                 <th class="col-breaks">Breaks</th>
                 <th class="col-status">Status</th>
-                @if (showEmployeeNames() && canManageOthers()) {
+                @if (showActions()) {
                   <th class="col-actions"></th>
                 }
               </tr>
@@ -80,16 +80,11 @@
                       {{ shift.employeeName }}
                     </td>
                   }
-                  <td class="shift-cell" data-label="Shift">
-                    <span class="shift-name">{{ shift.assignment.shiftName }}</span>
+                  <td class="shift-cell" data-label="Schedule">
                     <span class="shift-time">{{ scheduledTime(shift.assignment) }}</span>
-                    @for (b of scheduledBreaksOfKind(shift.assignment, 'Break'); track $index) {
-                      <span class="shift-scheduled-break">Break: {{ scheduledBreakTime(b) }}</span>
+                    @for (b of scheduledBreaksInOrder(shift.assignment); track $index) {
+                      <span class="shift-scheduled-break">{{ b.kind }}: {{ scheduledBreakTime(b) }}</span>
                     }
-                    @for (b of scheduledBreaksOfKind(shift.assignment, 'Lunch'); track $index) {
-                      <span class="shift-scheduled-break">Lunch: {{ scheduledBreakTime(b) }}</span>
-                    }
-                    <span class="shift-total">Total: {{ hoursLabel(shift.assignment.hours) }}</span>
                   </td>
 
                   <td class="punch-cell clock-cell" data-label="Clock In / Clock Out">
@@ -131,7 +126,7 @@
                   <td class="punch-cell breaks-cell" data-label="Breaks">
                     @for (seg of segmentsFor(shift); track seg.id) {
                       <div class="segment-line">
-                        {{ seg.kind }}: {{ punchTime(seg.startAt) }}–{{ seg.endAt ? punchTime(seg.endAt) : 'ongoing' }}
+                        {{ seg.kind }}: {{ punchTime(seg.startAt) }} – {{ seg.endAt ? punchTime(seg.endAt) : 'ongoing' }}
                         @if (shift.isMine && !seg.endAt) {
                           <button type="button" class="punch-btn" mat-stroked-button (click)="endSegment(shift)" [disabled]="busyShiftId() === shift.assignment.id">
                             End
@@ -169,20 +164,28 @@
                     }
                   </td>
 
-                  @if (showEmployeeNames() && canManageOthers()) {
+                  @if (showActions()) {
                     <td class="actions-cell">
-                      @if (shift.assignment.isAbsent) {
-                        <button type="button" class="clear-absent-btn" mat-icon-button (click)="clearAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Clear absent">
-                          <mat-icon>how_to_reg</mat-icon>
-                        </button>
-                      } @else {
-                        <button type="button" class="mark-absent-btn" mat-icon-button (click)="markAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Mark absent">
-                          <mat-icon>person_off</mat-icon>
+                      @if (canManageOthers()) {
+                        @if (shift.assignment.isAbsent) {
+                          <button type="button" class="clear-absent-btn" mat-icon-button (click)="clearAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Clear absent">
+                            <mat-icon>how_to_reg</mat-icon>
+                          </button>
+                        } @else {
+                          <button type="button" class="mark-absent-btn" mat-icon-button (click)="markAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Mark absent">
+                            <mat-icon>person_off</mat-icon>
+                          </button>
+                        }
+                        <button type="button" mat-icon-button (click)="editTimes(shift)" [disabled]="shift.assignment.isAbsent" title="Edit punch times">
+                          <mat-icon>schedule</mat-icon>
                         </button>
                       }
-                      <button type="button" mat-icon-button (click)="editTimes(shift)" [disabled]="shift.assignment.isAbsent" title="Edit punch times">
-                        <mat-icon>schedule</mat-icon>
-                      </button>
+                      <!-- Nobody can write themselves up (the server 404s it). -->
+                      @if (canWriteUpOthers() && !shift.isMine) {
+                        <button type="button" mat-icon-button (click)="writeUp(shift)" title="Write up">
+                          <mat-icon>edit_note</mat-icon>
+                        </button>
+                      }
                     </td>
                   }
                 </tr>

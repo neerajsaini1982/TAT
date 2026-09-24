@@ -20,7 +20,10 @@ namespace Server.Controllers;
 //    They can NOT do any of that for their own account — a write-up about
 //    yourself has to come from someone else (a different Admin, or Sa).
 //  - Leads get no special access: a write-up is HR-sensitive, so it isn't
-//    something to hand out by default.
+//    something to hand out by default. An admin can opt a specific account
+//    in with Account.CanWriteUpOthers, which allows creating a write-up for
+//    another employee in the same location — and nothing else: no listing,
+//    editing, or voiding, and never for their own account.
 // Lookups that fail the access check return 404 rather than 403, so the API
 // doesn't confirm that another employee's account exists.
 //
@@ -64,11 +67,10 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Policy = "AdminOrAbove")]
     public ActionResult<WriteUpDto> Create(int accountId, CreateWriteUpRequest request)
     {
         var account = FindAccount(accountId);
-        if (account is null || !CanManage(account))
+        if (account is null || !(CanManage(account) || CanWriteUp(account)))
         {
             return NotFound();
         }
@@ -81,7 +83,30 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
             return BadRequest(validationError);
         }
 
+        // Parsed up front so a bad image rejects the whole request rather than
+        // saving a write-up without the signature someone just gave.
+        byte[]? employeePng = null;
+        if (!string.IsNullOrWhiteSpace(request.EmployeeSignature))
+        {
+            if (!SignaturePng.TryParse(request.EmployeeSignature, out var png, out var error))
+            {
+                return BadRequest($"Employee signature: {error}");
+            }
+            employeePng = png;
+        }
+
+        byte[]? authorPng = null;
+        if (!string.IsNullOrWhiteSpace(request.AuthorSignature))
+        {
+            if (!SignaturePng.TryParse(request.AuthorSignature, out var png, out var error))
+            {
+                return BadRequest($"Your signature: {error}");
+            }
+            authorPng = png;
+        }
+
         var caller = Caller();
+        var now = DateTime.UtcNow;
         var writeUp = new WriteUp
         {
             AccountId = accountId,
@@ -91,14 +116,40 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
             Type = type,
             CreatedByAccountId = caller.Id,
             CreatedByAccount = caller,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = now,
         };
-        AddEvent(writeUp, WriteUpEventAction.Created, null);
+
+        // The author's signature rides on the Created event, the same way an
+        // acknowledgment's signature rides on its Acknowledged event.
+        WriteUpSignature? authorSignature = null;
+        if (authorPng is not null)
+        {
+            authorSignature = new WriteUpSignature { WriteUp = writeUp, SignedName = NameOf(caller), SignedAt = now, Png = authorPng };
+            writeUp.Signatures.Add(authorSignature);
+        }
+        AddEvent(writeUp, WriteUpEventAction.Created, null, authorSignature);
+
+        // Signed in person: that's the employee acknowledging receipt, so it
+        // settles the acknowledgment exactly as signing it later from their
+        // own portal would. The event is by the caller (who was there to
+        // witness it); the signature carries the employee's name.
+        if (employeePng is not null)
+        {
+            var employeeName = NormalizeName(NameOf(account));
+            var employeeSignature = new WriteUpSignature { WriteUp = writeUp, SignedName = employeeName, SignedAt = now, Png = employeePng };
+            writeUp.Signatures.Add(employeeSignature);
+            writeUp.AcknowledgmentStatus = WriteUpAcknowledgment.Acknowledged;
+            writeUp.AcknowledgmentAt = now;
+            writeUp.AcknowledgmentSignedName = employeeName;
+            AddEvent(writeUp, WriteUpEventAction.Acknowledged, $"Signed in person: {employeeName}", employeeSignature);
+        }
 
         db.WriteUps.Add(writeUp);
         db.SaveChanges();
 
-        return CreatedAtAction(nameof(GetAll), new { accountId }, ToDto(writeUp, forManager: true));
+        // A CanWriteUpOthers caller gets the write-up back as the employee
+        // would see it — no audit history.
+        return CreatedAtAction(nameof(GetAll), new { accountId }, ToDto(writeUp, forManager: CanManage(account)));
     }
 
     [HttpPut("{writeUpId:int}")]
@@ -420,6 +471,14 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
         CanAccess(account) &&
         CallerAccountId() != account.Id;
 
+    // A non-admin opted in with Account.CanWriteUpOthers, writing up an
+    // employee in their own location — never themselves. Checked against
+    // the stored flag (not the token) so revoking it takes effect at once.
+    private bool CanWriteUp(Account account) =>
+        Caller() is { IsActive: true, CanWriteUpOthers: true } &&
+        CanAccess(account) &&
+        CallerAccountId() != account.Id;
+
     private bool CanView(Account account) => CallerAccountId() == account.Id || CanManage(account);
 
     private bool CanAccess(Account account) =>
@@ -444,6 +503,12 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
                 .Select(e => e.SignatureId)
                 .FirstOrDefault();
 
+    private static int? AuthorSignatureId(WriteUp w) =>
+        w.Events
+            .Where(e => e.Action == WriteUpEventAction.Created)
+            .Select(e => e.SignatureId)
+            .FirstOrDefault();
+
     private static WriteUpDto ToDto(WriteUp w, bool forManager) => new(
         w.Id,
         w.AccountId,
@@ -458,6 +523,7 @@ public class WriteUpsController(AppDbContext db) : ControllerBase
         w.AcknowledgmentAt,
         w.AcknowledgmentSignedName,
         CurrentSignatureId(w),
+        AuthorSignatureId(w),
         w.IsVoided,
         w.VoidedAt,
         forManager ? w.VoidReason : null,

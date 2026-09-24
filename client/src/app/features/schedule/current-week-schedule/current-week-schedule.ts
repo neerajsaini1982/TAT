@@ -12,12 +12,14 @@ import { BreakKind, ScheduledBreakDto } from '../../../core/shifts-api';
 import { LocationSettingsApi, TimeFormat } from '../../../core/location-settings-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { Auth } from '../../../core/auth';
+import { AccountsApi } from '../../../core/accounts-api';
 import { employeeColor } from '../../../core/employee-colors';
 import { formatInstant, formatTimeOnly } from '../../../core/location-time';
 import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-flags';
 import { addDays, combineDateAndTime, dayOfWeekLabel, formatDate, formatWeekRange, hoursMinutesLabel, mondayOf, toMmDdYyyy } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../../admin/note-dialog/note-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../../admin/edit-time-entry-dialog/edit-time-entry-dialog';
+import { WriteUpDialog, WriteUpDialogData } from '../../accounts/write-up-dialog/write-up-dialog';
 
 interface DayShift {
   assignment: ShiftAssignmentDto;
@@ -107,6 +109,7 @@ export class CurrentWeekSchedule implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
   private readonly auth = inject(Auth);
+  private readonly accountsApi = inject(AccountsApi);
   private readonly myAccountId = this.auth.accountId();
 
   protected readonly loading = signal(true);
@@ -127,6 +130,17 @@ export class CurrentWeekSchedule implements OnInit {
     const role = this.auth.role();
     return role === 'Sa' || role === 'Admin' || role === 'Lead';
   });
+  // Admin/Sa can always write someone up; anyone else only with their
+  // account's Can Writeup Others access (loaded in ngOnInit). The server
+  // re-checks both on create.
+  private readonly hasWriteUpAccess = signal(false);
+  protected readonly canWriteUpOthers = computed(() => {
+    const role = this.auth.role();
+    return role === 'Sa' || role === 'Admin' || this.hasWriteUpAccess();
+  });
+  protected readonly showActions = computed(
+    () => this.showEmployeeNames() && (this.canManageOthers() || this.canWriteUpOthers()),
+  );
   // Whether the logged/scheduled totals above are just the caller's own —
   // true whenever 'mine' scope is showing a roster, since hoursScope (see
   // load()) restricts those totals to the caller there; 'location' scope
@@ -163,6 +177,14 @@ export class CurrentWeekSchedule implements OnInit {
 
   ngOnInit(): void {
     this.load();
+
+    const role = this.auth.role();
+    if (role !== 'Sa' && role !== 'Admin') {
+      this.accountsApi.getMine().subscribe({
+        next: (account) => this.hasWriteUpAccess.set(account.canWriteUpOthers),
+        error: () => this.hasWriteUpAccess.set(false),
+      });
+    }
 
     if (this.locationCode) {
       this.realtime
@@ -317,15 +339,16 @@ export class CurrentWeekSchedule implements OnInit {
   }
 
   scheduledTime(shift: ShiftAssignmentDto): string {
-    return `${formatTimeOnly(shift.shiftStartTime, this.timeFormat)}–${formatTimeOnly(shift.shiftEndTime, this.timeFormat)}`;
+    return `${formatTimeOnly(shift.shiftStartTime, this.timeFormat)} – ${formatTimeOnly(shift.shiftEndTime, this.timeFormat)}`;
   }
 
-  scheduledBreaksOfKind(shift: ShiftAssignmentDto, kind: BreakKind): ScheduledBreakDto[] {
-    return shift.scheduledBreaks.filter((b) => b.kind === kind);
+  // Breaks and lunches listed in the order they happen during the shift.
+  scheduledBreaksInOrder(shift: ShiftAssignmentDto): ScheduledBreakDto[] {
+    return [...shift.scheduledBreaks].sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
   scheduledBreakTime(b: ScheduledBreakDto): string {
-    return `${formatTimeOnly(b.startTime, this.timeFormat)}–${formatTimeOnly(b.endTime, this.timeFormat)}`;
+    return `${formatTimeOnly(b.startTime, this.timeFormat)} – ${formatTimeOnly(b.endTime, this.timeFormat)}`;
   }
 
   // "-" is the universal empty state for a punch cell: it just hasn't
@@ -487,6 +510,12 @@ export class CurrentWeekSchedule implements OnInit {
   // Location-scope only — lets an admin set every punch on today's entry
   // directly, whether correcting a mistake or filling one in from scratch.
   // Same dialog/endpoint admin-schedule-page's weekly grid uses.
+  writeUp(shift: DayShift): void {
+    this.dialog.open<WriteUpDialog, WriteUpDialogData>(WriteUpDialog, {
+      data: { accountId: shift.assignment.accountId, employeeName: shift.employeeName },
+    });
+  }
+
   editTimes(shift: DayShift): void {
     this.dialog
       .open<EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult>(EditTimeEntryDialog, {

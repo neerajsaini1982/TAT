@@ -510,6 +510,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         account.IsActive = request.IsActive;
         account.IsOnShiftSchedule = request.IsOnShiftSchedule;
         account.CanSeeAllSchedules = request.CanSeeAllSchedules;
+        account.CanWriteUpOthers = request.CanWriteUpOthers;
         account.Role = request.Role;
         account.HourlyRate = request.HourlyRate;
         account.DateOfBirth = request.DateOfBirth;
@@ -707,6 +708,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         a.IsActive,
         a.IsOnShiftSchedule,
         a.CanSeeAllSchedules,
+        a.CanWriteUpOthers,
         a.UserCode,
         a.Location?.LocationCode,
         a.BirthDate,

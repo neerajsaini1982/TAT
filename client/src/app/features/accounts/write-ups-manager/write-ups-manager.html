@@ -61,7 +61,7 @@
         }
         <div class="form-actions">
           <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
-            {{ editingId() === null ? 'Add' : 'Save' }}
+            Save
           </button>
           <button mat-button type="button" (click)="cancelForm()">Cancel</button>
         </div>
@@ -224,7 +224,12 @@
 
   <ng-container matColumnDef="createdBy">
     <th mat-header-cell *matHeaderCellDef>Recorded By</th>
-    <td mat-cell *matCellDef="let w">{{ w.createdByName }}</td>
+    <td mat-cell *matCellDef="let w">
+      {{ w.createdByName }}
+      @if (w.authorSignatureId) {
+        <app-signature-image class="signature-slot" [accountId]="w.accountId" [writeUpId]="w.id" [signatureId]="w.authorSignatureId" />
+      }
+    </td>
   </ng-container>
 
   <ng-container matColumnDef="actions">
@@ -234,6 +239,15 @@
         <button mat-stroked-button (click)="startAcknowledge(w)">Acknowledge</button>
       }
       @if (canManage) {
+        <a
+          mat-icon-button
+          [routerLink]="['/', locationCode, 'admin', 'accounts', w.accountId, 'write-ups', w.id, 'print']"
+          target="_blank"
+          aria-label="Print"
+          title="Print"
+        >
+          <mat-icon>print</mat-icon>
+        </a>
         <button mat-icon-button (click)="toggleHistory(w)" aria-label="History" title="History">
           <mat-icon>history</mat-icon>
         </button>

@@ -22,6 +22,9 @@ export interface AccountDto {
   // regardless of role/location Schedule Visibility settings. Defaults false;
   // does not affect clock-in/out, which always stays self-service only.
   canSeeAllSchedules: boolean;
+  // Lets a non-admin record a write-up against a coworker from the schedule
+  // screen — create only; it grants no view of existing write-ups.
+  canWriteUpOthers: boolean;
   userCode: string | null;
   locationCode: string | null;
   // Populated by the ADP employee-directory import (see employee-import-api.ts);
@@ -90,6 +93,7 @@ export interface UpdateAccountRequest {
   isActive: boolean;
   isOnShiftSchedule: boolean;
   canSeeAllSchedules: boolean;
+  canWriteUpOthers: boolean;
   role: Role;
   // Only required when role moves away from Employee.
   username?: string;

@@ -65,6 +65,9 @@ export interface WriteUpDto {
   // The drawn signature currently on the write-up (fetch it with
   // WriteUpsApi.signature); null unless it is acknowledged with a drawing.
   acknowledgmentSignatureId: number | null;
+  // The signature of whoever recorded it, given when creating it (optional);
+  // their name and the time are createdByName / createdAt.
+  authorSignatureId: number | null;
   isVoided: boolean;
   voidedAt: string | null;
   // Only sent to whoever manages the write-up (an admin), never to the
@@ -78,6 +81,14 @@ export interface WriteUpRequest {
   description: string;
   severity: WriteUpSeverity;
   type: WriteUpType;
+}
+
+// Signatures given in person when the write-up is created, both optional
+// ("data:image/png;base64,..." from SignaturePad). An employee signature
+// acknowledges the write-up on the spot.
+export interface CreateWriteUpRequest extends WriteUpRequest {
+  employeeSignature?: string;
+  authorSignature?: string;
 }
 
 // Any signed-in employee can list and acknowledge their own write-ups;
@@ -94,7 +105,7 @@ export class WriteUpsApi {
     return this.http.get<WriteUpDto[]>(`${this.base}/${accountId}/write-ups`);
   }
 
-  create(accountId: number, request: WriteUpRequest) {
+  create(accountId: number, request: CreateWriteUpRequest) {
     return this.http.post<WriteUpDto>(`${this.base}/${accountId}/write-ups`, request);
   }
 
