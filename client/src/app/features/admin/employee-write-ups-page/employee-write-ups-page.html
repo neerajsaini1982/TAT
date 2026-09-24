@@ -5,4 +5,8 @@
   <h2>Write-Ups @if (account()) { — {{ account()!.firstName }} {{ account()!.lastName }} }</h2>
 </div>
 
-<app-write-ups-manager [accountId]="accountId" [canManage]="true" />
+<app-write-ups-manager
+  [accountId]="accountId"
+  [canManage]="true"
+  [employeeName]="account() ? account()!.firstName + ' ' + account()!.lastName : ''"
+/>

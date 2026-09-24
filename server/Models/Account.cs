@@ -27,6 +27,13 @@ public class Account
     // Lead). Does not affect clock-in/out, which stays self-service only
     // regardless of this flag (see TimeEntriesController.ClockIn).
     public bool CanSeeAllSchedules { get; set; } = false;
+
+    // Lets a non-admin (typically a Lead or shift supervisor) record a
+    // write-up against another employee in their location from the
+    // schedule screen — create only (see WriteUpsController.Create). It
+    // grants no view of anyone's existing write-ups, and never a write-up
+    // about themselves. Admin/Sa can already write people up regardless.
+    public bool CanWriteUpOthers { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // 6-digit code an Employee types in at /{locationCode}/employee to log in.

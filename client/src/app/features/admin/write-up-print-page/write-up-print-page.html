@@ -1,0 +1,111 @@
+<div class="toolbar no-print">
+  <button mat-flat-button color="primary" type="button" (click)="print()" [disabled]="!writeUp()">
+    <mat-icon>print</mat-icon>
+    Print
+  </button>
+</div>
+
+@if (notFound()) {
+  <p class="missing">This write-up couldn't be found.</p>
+} @else if (writeUp(); as w) {
+  <article class="document">
+    <header class="doc-header">
+      <div>
+        @if (locationName) {
+          <p class="org">{{ locationName }}</p>
+        }
+        <h1>Employee Write-Up</h1>
+      </div>
+      <p class="printed">Printed {{ printedAt | date: 'MM/dd/yyyy h:mm a' }}</p>
+    </header>
+
+    @if (w.isVoided) {
+      <p class="voided">
+        <strong>VOIDED</strong> on {{ w.voidedAt | date: 'MM/dd/yyyy h:mm a' }}
+        @if (w.voidReason) {
+          — {{ w.voidReason }}
+        }
+      </p>
+    }
+
+    <dl class="fields">
+      <div>
+        <dt>Employee</dt>
+        <dd>{{ employeeName() }}</dd>
+      </div>
+      <div>
+        <dt>Date of incident</dt>
+        <dd>{{ w.date | date: 'MM/dd/yyyy' }}</dd>
+      </div>
+      <div>
+        <dt>Type</dt>
+        <dd>{{ typeLabel(w.type) }}</dd>
+      </div>
+      <div>
+        <dt>Severity</dt>
+        <dd>{{ w.severity }}</dd>
+      </div>
+      <div>
+        <dt>Recorded by</dt>
+        <dd>{{ w.createdByName }}</dd>
+      </div>
+      <div>
+        <dt>Recorded on</dt>
+        <dd>{{ w.createdAt | date: 'MM/dd/yyyy h:mm a' }}</dd>
+      </div>
+    </dl>
+
+    <section class="description">
+      <h2>Description</h2>
+      <p>{{ w.description }}</p>
+    </section>
+
+    <p class="statement">
+      By signing, the employee acknowledges receiving this write-up. Signing does not mean the employee agrees with it.
+      @if (w.acknowledgmentStatus === 'Declined') {
+        <strong>The employee declined to acknowledge this write-up</strong>
+        @if (w.acknowledgmentAt) {
+          ({{ w.acknowledgmentAt | date: 'MM/dd/yyyy h:mm a' }}).
+        }
+      }
+    </p>
+
+    <section class="signatures">
+      <div class="signature-block">
+        <div class="signature-area">
+          @if (w.acknowledgmentSignatureId) {
+            <app-signature-image class="large" [accountId]="w.accountId" [writeUpId]="w.id" [signatureId]="w.acknowledgmentSignatureId" />
+          }
+        </div>
+        <p class="signer-role">Employee signature</p>
+        <p class="signer-name">{{ w.acknowledgmentSignedName ?? employeeName() }}</p>
+        <p class="signer-date">
+          Date/Time:
+          @if (w.acknowledgmentSignatureId && w.acknowledgmentAt) {
+            {{ w.acknowledgmentAt | date: 'MM/dd/yyyy h:mm a' }}
+          } @else {
+            <span class="blank"></span>
+          }
+        </p>
+      </div>
+
+      <div class="signature-block">
+        <div class="signature-area">
+          @if (w.authorSignatureId) {
+            <app-signature-image class="large" [accountId]="w.accountId" [writeUpId]="w.id" [signatureId]="w.authorSignatureId" />
+          }
+        </div>
+        <p class="signer-role">Recorded by signature</p>
+        <p class="signer-name">{{ w.createdByName }}</p>
+        <p class="signer-date">
+          Date/Time:
+          @if (w.authorSignatureId) {
+            {{ w.createdAt | date: 'MM/dd/yyyy h:mm a' }}
+          } @else {
+            <span class="blank"></span>
+          }
+        </p>
+      </div>
+    </section>
+  </article>
+}

@@ -21,12 +21,13 @@ import { WriteUpsApi } from '../../../core/write-ups-api';
     }
 
     // White like the paper it was signed on, so it reads the same in dark mode.
+    // Sizable from outside (the print page shows it larger, unboxed).
     .signature {
       display: block;
-      max-width: 200px;
-      max-height: 64px;
+      max-width: var(--signature-max-width, 200px);
+      max-height: var(--signature-max-height, 64px);
       background: #fff;
-      border: 1px solid var(--mat-sys-outline-variant);
+      border: var(--signature-border, 1px solid var(--mat-sys-outline-variant));
     }
 
     .unavailable {

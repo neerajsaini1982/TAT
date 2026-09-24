@@ -1,6 +1,8 @@
 import { Component, Input, OnChanges, ViewChild, computed, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -27,6 +29,8 @@ import {
 import { formatDate } from '../../../core/week-utils';
 import { SignatureImage } from '../signature-image/signature-image';
 import { SignaturePad } from '../signature-pad/signature-pad';
+import { WriteUpDialog, WriteUpDialogData } from '../write-up-dialog/write-up-dialog';
+import { Auth } from '../../../core/auth';
 
 const EVENT_LABELS: Record<WriteUpEventAction, string> = {
   Created: 'Created',
@@ -53,6 +57,7 @@ const STATUS_LABELS: Record<WriteUpAcknowledgment, string> = {
   imports: [
     DatePipe,
     FormsModule,
+    RouterLink,
     MatTableModule,
     MatButtonModule,
     MatIconModule,
@@ -76,7 +81,12 @@ export class WriteUpsManager implements OnChanges {
   // button wait until it looks right.
   @Input() signerName = '';
 
+  // Shown on the Add popup's employee signature pad (canManage only).
+  @Input() employeeName = '';
+
   private readonly api = inject(WriteUpsApi);
+  private readonly dialog = inject(MatDialog);
+  protected readonly locationCode = inject(Auth).locationCode();
 
   protected readonly writeUps = signal<WriteUpDto[]>([]);
   protected readonly loaded = signal(false);
@@ -140,11 +150,20 @@ export class WriteUpsManager implements OnChanges {
     return STATUS_LABELS[status];
   }
 
+  // Adding goes through the same popup as the schedule screen, which carries
+  // the optional in-person signature pads; editing stays inline below.
   startAdd(): void {
     this.closePanels();
-    this.form = this.blankForm();
-    this.editingId.set(null);
-    this.showForm.set(true);
+    this.dialog
+      .open<WriteUpDialog, WriteUpDialogData>(WriteUpDialog, {
+        data: { accountId: this.accountId, employeeName: this.employeeName },
+      })
+      .afterClosed()
+      .subscribe((created) => {
+        if (created) {
+          this.load();
+        }
+      });
   }
 
   startEdit(writeUp: WriteUpDto): void {
@@ -182,14 +201,13 @@ export class WriteUpsManager implements OnChanges {
       type: this.form.type,
     };
     const editingId = this.editingId();
-    const call =
-      editingId === null
-        ? this.api.create(this.accountId, request)
-        : this.api.update(this.accountId, editingId, request);
+    if (editingId === null) {
+      return;
+    }
 
     this.saving.set(true);
     this.error.set(null);
-    call.subscribe({
+    this.api.update(this.accountId, editingId, request).subscribe({
       next: () => {
         this.saving.set(false);
         this.cancelForm();

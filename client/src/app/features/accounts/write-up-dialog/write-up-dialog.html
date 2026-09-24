@@ -1,0 +1,79 @@
+<h2 mat-dialog-title>Write Up — {{ data.employeeName }}</h2>
+<form (ngSubmit)="save()" autocomplete="off">
+  <mat-dialog-content class="content">
+    <div class="form-row">
+      <mat-form-field appearance="outline">
+        <mat-label>Date</mat-label>
+        <input matInput type="date" name="date" [(ngModel)]="form.date" required />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Type</mat-label>
+        <mat-select name="type" [(ngModel)]="form.type" required>
+          @for (t of types; track t.value) {
+            <mat-option [value]="t.value">{{ t.label }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Severity</mat-label>
+        <mat-select name="severity" [(ngModel)]="form.severity" required>
+          @for (s of severities; track s) {
+            <mat-option [value]="s">{{ s }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
+    <mat-form-field appearance="outline" class="description-field">
+      <mat-label>Description</mat-label>
+      <textarea
+        matInput
+        name="description"
+        rows="4"
+        [maxlength]="maxDescriptionLength"
+        [(ngModel)]="form.description"
+        placeholder="What happened, and any action taken"
+        required
+      ></textarea>
+      <mat-hint align="end">{{ form.description.length }} / {{ maxDescriptionLength }}</mat-hint>
+    </mat-form-field>
+    <div class="signatures">
+      <section class="signature-block">
+        <p class="signer">
+          <span class="signer-role">Employee</span>
+          <span class="signer-name">{{ data.employeeName }}</span>
+        </p>
+        <app-signature-pad #employeePad />
+        <p class="stamp">
+          @if (employeePad.hasInk()) {
+            {{ now() | date: 'MM/dd/yyyy h:mm a' }}
+          } @else {
+            Date and time are stamped when signed
+          }
+        </p>
+        <p class="hint">Signing confirms the employee received this write-up, not that they agree with it.</p>
+      </section>
+      <section class="signature-block">
+        <p class="signer">
+          <span class="signer-role">Recorded by</span>
+          <span class="signer-name">{{ authorName }}</span>
+        </p>
+        <app-signature-pad #authorPad />
+        <p class="stamp">
+          @if (authorPad.hasInk()) {
+            {{ now() | date: 'MM/dd/yyyy h:mm a' }}
+          } @else {
+            Date and time are stamped when signed
+          }
+        </p>
+      </section>
+    </div>
+
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button type="button" mat-dialog-close>Cancel</button>
+    <button mat-flat-button color="primary" type="submit" [disabled]="saving()">Add</button>
+  </mat-dialog-actions>
+</form>
