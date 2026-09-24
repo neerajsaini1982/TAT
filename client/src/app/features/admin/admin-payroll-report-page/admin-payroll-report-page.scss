@@ -173,6 +173,9 @@
 
 .hours-report-table {
   width: 100%;
+  // Fixed columns (52 + 200 + 5×118 = 842px) plus room for Notes. Below this
+  // the container scrolls sideways instead of crushing Notes to a sliver.
+  min-width: 1020px;
   table-layout: fixed;
   border-collapse: collapse;
   background: transparent;
@@ -236,12 +239,10 @@
   white-space: nowrap;
 }
 
-// Notes absorbs the leftover width. min-width keeps a fixed-layout table
-// from squeezing it to nothing on a narrow window; the tags inside wrap
-// rather than running past the table's right edge.
+// Notes absorbs the leftover width; the table's min-width guarantees it
+// enough room (min-width on a fixed-layout column is ignored).
 .mat-column-notes {
   width: auto;
-  min-width: 150px;
 }
 
 // Decimal-first: the big figure is the decimal-hours number that goes into
@@ -377,13 +378,12 @@ th.mat-column-totalTime,
 }
 
 .notes-cell {
-  min-width: 0;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  align-items: center;
   text-align: left;
   white-space: normal;
+
+  .tag {
+    margin: 3px 6px 3px 0;
+  }
 }
 
 // Notes read as small squared labels rather than loose red sentences, so a
@@ -397,9 +397,7 @@ th.mat-column-totalTime,
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--mat-sys-on-surface-variant);
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .tag-flag {
@@ -471,6 +469,7 @@ th.mat-column-totalTime,
   }
 
   .hours-report-table {
+    min-width: 0;
     table-layout: auto;
     display: block;
 
