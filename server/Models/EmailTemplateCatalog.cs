@@ -27,7 +27,8 @@ public static class EmailTemplateCatalog
         {
             Key = key,
             Subject = "Submit your availability for {{weekRange}}",
-            BodyHtml = "<p>Hi {{employeeName}},</p><p>Please submit your availability for {{weekRange}} at {{locationName}} by Saturday.</p>",
+            BodyHtml = "<p>Hi {{employeeName}},</p><p>Please submit your availability for {{weekRange}} at {{locationName}} by Saturday.</p>"
+                + "<p><a href=\"{{availabilityLink}}\">Submit your availability</a></p>",
         },
         EmailTemplateKeys.LoginCredentials => new EmailTemplate
         {

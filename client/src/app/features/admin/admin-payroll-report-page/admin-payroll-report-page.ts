@@ -34,6 +34,8 @@ import { PayrollHoursChart } from '../payroll-hours-chart/payroll-hours-chart';
   ],
   templateUrl: './admin-payroll-report-page.html',
   styleUrl: './admin-payroll-report-page.scss',
+  // Wide table — opts out of the shell's 960px column (styles.scss).
+  host: { class: 'full-width-page' },
 })
 export class AdminPayrollReportPage implements OnInit {
   private readonly reportsApi = inject(ReportsApi);

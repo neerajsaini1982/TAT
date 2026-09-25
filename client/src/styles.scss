@@ -496,6 +496,18 @@ body {
 // and table treatment without being edited individually.
 // -----------------------------------------------------------------------------
 
+// The shell centers every route in a 960px .content column (app.scss). A
+// page built around a wide table opts out by putting .full-width-page on its
+// host (e.g. admin-availability-page), and the column simply stops capping
+// it — no 100vw/translateX breakout, so no stray horizontal scroll from the
+// vertical scrollbar's width. Lives here rather than in app.scss because a
+// routed component's host doesn't carry the shell's encapsulation attribute.
+// The `body` prefix outweighs app.scss's `.content[_ngcontent-…]`, which
+// would otherwise tie on specificity and win by loading later.
+body .content:has(> .full-width-page) {
+  max-width: none;
+}
+
 // A page's title row (the `.header` that contains the page's `<h2>`) becomes
 // a ruled band. `:has()` separates it from the *filter* rows that reuse the
 // same class for selects and action buttons (see accounts-manager,

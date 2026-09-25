@@ -148,6 +148,7 @@ public class EmailTemplatesController(AppDbContext db, IEmailSender emailSender)
             ["{{schedule}}"] = ShiftAssignmentsController.BuildScheduleHtml(sampleAssignments, settings.TimeFormat),
             ["{{userCode}}"] = "123456",
             ["{{loginLink}}"] = $"{Request.Scheme}://{Request.Host}/",
+            ["{{availabilityLink}}"] = $"{Request.Scheme}://{Request.Host}/{location.LocationCode}/employee/availability",
         };
     }
 

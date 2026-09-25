@@ -5,7 +5,12 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDialog } from '@angular/material/dialog';
 
-import { AvailabilityApi, AvailabilityDayDto, AvailabilityDto } from '../../../core/availability-api';
+import {
+  AvailabilityApi,
+  AvailabilityDayDto,
+  AvailabilityDto,
+  AvailabilityReminderResult,
+} from '../../../core/availability-api';
 import {
   DAY_LABELS,
   addDays,
@@ -26,6 +31,9 @@ import {
   imports: [RouterLink, MatCardModule, MatButtonModule, MatIconModule],
   templateUrl: './admin-availability-page.html',
   styleUrl: './admin-availability-page.scss',
+  // Seven day columns plus name and status don't fit the shell's 960px
+  // column — see .full-width-page in styles.scss.
+  host: { class: 'full-width-page' },
 })
 export class AdminAvailabilityPage implements OnInit {
   private readonly api = inject(AvailabilityApi);
@@ -40,12 +48,16 @@ export class AdminAvailabilityPage implements OnInit {
   protected readonly roster = signal<AvailabilityDto[]>([]);
   protected readonly copyingPreviousWeek = signal(false);
   protected readonly copyResultMessage = signal<string | null>(null);
+  protected readonly sendingReminder = signal(false);
+  protected readonly reminderResult = signal<AvailabilityReminderResult | null>(null);
+  protected readonly notSubmittedCount = () => this.roster().filter((p) => !p.isSubmitted).length;
 
   ngOnInit(): void {
     this.load();
   }
 
   load(): void {
+    this.reminderResult.set(null);
     this.api.getForLocation(formatDate(this.weekStart()), this.locationCode).subscribe((roster) => this.roster.set(roster));
   }
 
@@ -112,6 +124,30 @@ export class AdminAvailabilityPage implements OnInit {
       error: (err) => {
         this.error.set(err?.error ?? 'Failed to copy previous week.');
         this.copyingPreviousWeek.set(false);
+      },
+    });
+  }
+
+  // Emails everyone who hasn't submitted for the viewed week, using the
+  // Availability Reminder template (Settings → Email Templates). The link
+  // points at the employee's own availability page on this same site.
+  sendReminder(): void {
+    const count = this.notSubmittedCount();
+    if (!confirm(`Email ${count} employee${count === 1 ? '' : 's'} who haven't submitted availability for ${this.weekRangeLabel()}?`)) {
+      return;
+    }
+    this.sendingReminder.set(true);
+    this.error.set(null);
+    this.reminderResult.set(null);
+    const link = `${window.location.origin}/${this.locationCode}/employee/availability`;
+    this.api.sendReminder(formatDate(this.weekStart()), link, this.locationCode).subscribe({
+      next: (result) => {
+        this.reminderResult.set(result);
+        this.sendingReminder.set(false);
+      },
+      error: (err) => {
+        this.error.set(err?.error ?? 'Failed to send reminders.');
+        this.sendingReminder.set(false);
       },
     });
   }
