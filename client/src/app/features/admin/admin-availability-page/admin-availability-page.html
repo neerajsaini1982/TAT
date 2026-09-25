@@ -3,10 +3,21 @@
     <mat-icon>arrow_back</mat-icon>
   </a>
   <h2>Availability — {{ locationCode }}</h2>
-  <button mat-stroked-button (click)="copyPreviousWeekForAll()" [disabled]="copyingPreviousWeek()">
-    <mat-icon>content_copy</mat-icon>
-    Copy Previous Week for All
-  </button>
+  <div class="header-actions">
+    <button
+      mat-stroked-button
+      (click)="sendReminder()"
+      [disabled]="sendingReminder() || notSubmittedCount() === 0"
+      [title]="notSubmittedCount() === 0 ? 'Everyone has submitted for this week' : ''"
+    >
+      <mat-icon>mail</mat-icon>
+      {{ sendingReminder() ? 'Sending…' : 'Email Reminder (' + notSubmittedCount() + ' not submitted)' }}
+    </button>
+    <button mat-stroked-button (click)="copyPreviousWeekForAll()" [disabled]="copyingPreviousWeek()">
+      <mat-icon>content_copy</mat-icon>
+      Copy Previous Week for All
+    </button>
+  </div>
 </div>
 
 <div class="week-nav">
@@ -25,6 +36,18 @@
 
 @if (copyResultMessage()) {
   <p class="copy-result">{{ copyResultMessage() }}</p>
+}
+
+@if (reminderResult(); as r) {
+  <p class="copy-result">
+    Reminder sent to {{ r.sent.length }} employee{{ r.sent.length === 1 ? '' : 's' }}.
+  </p>
+  @if (r.skippedNoEmail.length > 0) {
+    <p class="error">Skipped (no email on file): {{ r.skippedNoEmail.join(', ') }}</p>
+  }
+  @if (r.failed.length > 0) {
+    <p class="error">Failed to send: {{ r.failed.join(', ') }}</p>
+  }
 }
 
 <div class="table-scroll">

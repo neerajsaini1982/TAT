@@ -1,4 +1,4 @@
-import { Component, Input, OnInit, inject, signal } from '@angular/core';
+import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
@@ -69,6 +69,23 @@ const scheduledBreaksLabel = (breaks: ScheduledBreakDto[]): string =>
     ? 'None'
     : breaks.map((b) => `${b.kind} ${toInputTime(b.startTime)}–${toInputTime(b.endTime)}`).join(', ');
 
+// Colour class for a break tag in the shifts table: lunch has its own, and
+// plain breaks are told apart by when they fall in the shift — the first
+// break vs. any later one. Ordered by minutes after the shift's start so an
+// overnight shift's after-midnight break still counts as the later one.
+const breakTagClass = (shift: ShiftDto, b: ScheduledBreakDto): string => {
+  if (b.kind === 'Lunch') {
+    return 'tag-lunch';
+  }
+  const toMinutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const shiftStart = toMinutes(shift.startTime);
+  const offset = (t: string) => (toMinutes(t) - shiftStart + 24 * 60) % (24 * 60);
+  const isFirst = shift.scheduledBreaks
+    .filter((other) => other.kind !== 'Lunch' && other !== b)
+    .every((other) => offset(other.startTime) >= offset(b.startTime));
+  return isFirst ? 'tag-break-first' : 'tag-break-later';
+};
+
 // Used both at /sa/shifts (lockedLocationCode = null, shows a location
 // picker and every location's shifts) and at /:locationCode/admin/shifts
 // (lockedLocationCode set, server auto-scopes everything to that location).
@@ -94,6 +111,13 @@ export class ShiftsManager implements OnInit {
   private readonly locationsApi = inject(LocationsApi);
 
   protected readonly shifts = signal<ShiftDto[]>([]);
+  // Retired shifts stay in the list for history but are hidden unless the
+  // admin asks for them — day to day, only active shifts matter.
+  protected readonly showInactive = signal(false);
+  protected readonly inactiveCount = computed(() => this.shifts().filter((s) => !s.isActive).length);
+  protected readonly visibleShifts = computed(() =>
+    this.showInactive() ? this.shifts() : this.shifts().filter((s) => s.isActive),
+  );
   protected readonly locations = signal<LocationDto[]>([]);
   protected readonly selectedLocation = signal<LocationDto | null>(null);
   protected readonly editingId = signal<number | null>(null);
@@ -103,6 +127,7 @@ export class ShiftsManager implements OnInit {
 
   protected readonly toInputTime = toInputTime;
   protected readonly scheduledBreaksLabel = scheduledBreaksLabel;
+  protected readonly breakTagClass = breakTagClass;
 
   protected durationLabel(shift: ShiftDto): string {
     return durationLabel(shift.startTime, shift.endTime);

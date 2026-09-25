@@ -10,6 +10,8 @@ import { ShiftsManager } from '../../shifts/shifts-manager/shifts-manager';
   imports: [RouterLink, MatIconModule, MatButtonModule, ShiftsManager],
   templateUrl: './admin-shifts-page.html',
   styleUrl: './admin-shifts-page.scss',
+  // Wide table — opts out of the shell's 960px column (styles.scss).
+  host: { class: 'full-width-page' },
 })
 export class AdminShiftsPage {
   private readonly route = inject(ActivatedRoute);

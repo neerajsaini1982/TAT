@@ -19,3 +19,12 @@ public record SaveAvailabilityRequest(
     bool Submit);
 
 public record CopyPreviousWeekResult(int Copied, int Skipped);
+
+// See AvailabilityController.SendReminder. AvailabilityLink fills the
+// template's {{availabilityLink}} — the client knows its own origin, same as
+// SendCredentialsRequest.LoginLink.
+public record SendAvailabilityReminderRequest(string? LocationCode, DateOnly WeekStartDate, string AvailabilityLink);
+
+// Full names in each bucket; AlreadySubmitted is just a count, since those
+// people were never going to be emailed.
+public record AvailabilityReminderResult(List<string> Sent, List<string> SkippedNoEmail, List<string> Failed, int AlreadySubmitted);

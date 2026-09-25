@@ -11,6 +11,7 @@ public static class EmailTemplateCatalog
         EmailTemplateKeys.SchedulePublished => "Schedule Published",
         EmailTemplateKeys.AvailabilityReminder => "Availability Reminder",
         EmailTemplateKeys.LoginCredentials => "Login Credentials",
+        EmailTemplateKeys.PayrollHours => "Payroll Hours",
         _ => key,
     };
 
@@ -26,7 +27,8 @@ public static class EmailTemplateCatalog
         {
             Key = key,
             Subject = "Submit your availability for {{weekRange}}",
-            BodyHtml = "<p>Hi {{employeeName}},</p><p>Please submit your availability for {{weekRange}} at {{locationName}} by Saturday.</p>",
+            BodyHtml = "<p>Hi {{employeeName}},</p><p>Please submit your availability for {{weekRange}} at {{locationName}} by Saturday.</p>"
+                + "<p><a href=\"{{availabilityLink}}\">Submit your availability</a></p>",
         },
         EmailTemplateKeys.LoginCredentials => new EmailTemplate
         {
@@ -35,6 +37,13 @@ public static class EmailTemplateCatalog
             BodyHtml = "<p>Hi {{employeeName}},</p><p>Here are your login details for {{locationName}}:</p>"
                 + "<p>Login link: <a href=\"{{loginLink}}\">{{loginLink}}</a><br/>Your code: <strong>{{userCode}}</strong></p>"
                 + "<p>Enter this 6-digit code at the login link above to clock in and view your schedule.</p>",
+        },
+        EmailTemplateKeys.PayrollHours => new EmailTemplate
+        {
+            Key = key,
+            Subject = "Your hours for {{dateRange}}",
+            BodyHtml = "<p>Hi {{employeeName}},</p><p>Here are your recorded hours at {{locationName}} for {{dateRange}}. "
+                + "If anything looks wrong, please let your manager know before payroll is submitted.</p>{{hours}}",
         },
         _ => new EmailTemplate { Key = key, Subject = string.Empty, BodyHtml = string.Empty },
     };

@@ -30,4 +30,11 @@ export class EmailTemplatesApi {
     const params = locationCode ? `?locationCode=${encodeURIComponent(locationCode)}` : '';
     return this.http.put<EmailTemplateDto>(`${this.base}/${key}${params}`, request);
   }
+
+  // Sends a [TEST] copy of the saved template to toAddress — see
+  // EmailTemplatesController.SendTest.
+  sendTest(key: string, toAddress: string, locationCode?: string) {
+    const params = locationCode ? `?locationCode=${encodeURIComponent(locationCode)}` : '';
+    return this.http.post<void>(`${this.base}/${key}/test${params}`, { toAddress });
+  }
 }

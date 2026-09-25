@@ -29,11 +29,18 @@ const COMMON_PLACEHOLDER_FIELDS: PlaceholderField[] = [
   { label: 'Week Range', token: '{{weekRange}}' },
 ];
 
-// Only SchedulePublished has shift data to expand into — see
-// ShiftAssignmentsController.BuildScheduleHtml, which is the only sender
-// that ever fills in {{schedule}}.
+// Fields only one sender fills in: {{schedule}} comes from
+// ShiftAssignmentsController.BuildScheduleHtml, {{availabilityLink}} from
+// AvailabilityController.SendReminder, and the PayrollHours ones
+// from PayrollHoursEmail (server) — {{hours}} is the per-day table plus totals.
 const TEMPLATE_ONLY_PLACEHOLDER_FIELDS: Record<string, PlaceholderField[]> = {
   SchedulePublished: [{ label: 'Shift Schedule', token: '{{schedule}}' }],
+  AvailabilityReminder: [{ label: 'Availability Link', token: '{{availabilityLink}}' }],
+  PayrollHours: [
+    { label: 'Date Range', token: '{{dateRange}}' },
+    { label: 'Hours Table', token: '{{hours}}' },
+    { label: 'Total Hours', token: '{{totalHours}}' },
+  ],
 };
 
 // Lightweight, dependency-free WYSIWYG using contenteditable + execCommand

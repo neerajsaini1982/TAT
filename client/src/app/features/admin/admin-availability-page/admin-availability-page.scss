@@ -1,5 +1,6 @@
 .header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
@@ -7,10 +8,13 @@
   h2 {
     margin: 0;
   }
+}
 
-  button {
-    margin-left: auto;
-  }
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .week-nav {
@@ -56,6 +60,12 @@ td {
 
 th {
   padding: 8px 12px;
+}
+
+// Day columns split the remaining width evenly instead of each sizing to
+// its own content, so the grid reads as a week rather than ragged columns.
+th:not(:first-child):not(:last-child) {
+  width: calc(100% / 9);
 }
 
 td:first-child {

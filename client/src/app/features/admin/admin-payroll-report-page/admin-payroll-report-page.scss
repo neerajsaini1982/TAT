@@ -1,16 +1,8 @@
-// The app shell centers every route in a 960px .content column (see
-// app.scss) — fine for forms, but it squeezes this table into a box
-// narrower than most screens for no reason. Break out to the full viewport
-// width instead, same technique as admin-schedule-page.scss.
+// Full width via .full-width-page on the host (see styles.scss) — the
+// shell's .content padding supplies the side gutters.
 :host {
   display: block;
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100vw;
-  max-width: 100%;
-  box-sizing: border-box;
-  padding: 24px 24px 64px;
+  padding-bottom: 40px;
 }
 
 // Title band: kicker over title, closed by a 2px rule — the page furniture
@@ -61,7 +53,8 @@
   padding: 0 24px;
 }
 
-.add-sick-hours-btn {
+.add-sick-hours-btn,
+.email-hours-btn {
   height: 48px;
   padding: 0 20px;
 
@@ -357,17 +350,6 @@ th.mat-column-totalTime,
   font-weight: 700;
 }
 
-.day-sick-col {
-  width: 118px;
-  text-align: right;
-}
-
-.manual-sick-value {
-  display: inline-block;
-  padding: 6px 8px;
-  font-variant-numeric: tabular-nums;
-}
-
 .day-absent-col {
   text-align: left;
   white-space: normal;
@@ -418,7 +400,7 @@ th.mat-column-totalTime,
 // ---------------------------------------------------------------------------
 @media (max-width: 860px) {
   :host {
-    padding: 16px 16px 48px;
+    padding-bottom: 24px;
   }
 
   .controls {
@@ -430,7 +412,8 @@ th.mat-column-totalTime,
   }
 
   .run-btn,
-  .add-sick-hours-btn {
+  .add-sick-hours-btn,
+  .email-hours-btn {
     width: 100%;
   }
 

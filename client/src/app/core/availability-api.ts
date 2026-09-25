@@ -33,6 +33,15 @@ export interface CopyPreviousWeekResult {
   skipped: number;
 }
 
+// See AvailabilityController.SendReminder — only employees who haven't
+// submitted for the week are emailed.
+export interface AvailabilityReminderResult {
+  sent: string[];
+  skippedNoEmail: string[];
+  failed: string[];
+  alreadySubmitted: number;
+}
+
 @Service()
 export class AvailabilityApi {
   private readonly http = inject(HttpClient);
@@ -77,5 +86,13 @@ export class AvailabilityApi {
       params.set('locationCode', locationCode);
     }
     return this.http.post<CopyPreviousWeekResult>(`${this.base}/copy-previous-week?${params.toString()}`, {});
+  }
+
+  sendReminder(weekStartDate: string, availabilityLink: string, locationCode?: string) {
+    return this.http.post<AvailabilityReminderResult>(`${this.base}/send-reminder`, {
+      locationCode: locationCode ?? null,
+      weekStartDate,
+      availabilityLink,
+    });
   }
 }

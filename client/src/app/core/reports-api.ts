@@ -48,6 +48,22 @@ export interface EmployeeHoursReportDto {
   days: DailyHoursDto[];
 }
 
+// See ReportsController.EmailHoursReport. employeeIds null = everyone in the
+// report; testToAddress set = send one [TEST] copy there instead.
+export interface EmailHoursReportRequest {
+  locationCode: string;
+  startDate: string;
+  endDate: string;
+  employeeIds: number[] | null;
+  testToAddress: string | null;
+}
+
+export interface EmailHoursReportResultDto {
+  sent: string[];
+  skippedNoEmail: string[];
+  failed: string[];
+}
+
 @Service()
 export class ReportsApi {
   private readonly http = inject(HttpClient);
@@ -59,5 +75,11 @@ export class ReportsApi {
   getHoursReport(locationCode: string, startDate: string, endDate: string) {
     const params = new URLSearchParams({ locationCode, startDate, endDate });
     return this.http.get<EmployeeHoursReportDto[]>(`${this.base}/hours?${params.toString()}`);
+  }
+
+  // Admin/Sa only — emails each employee their own hours for the range using
+  // the PayrollHours template.
+  emailHoursReport(request: EmailHoursReportRequest) {
+    return this.http.post<EmailHoursReportResultDto>(`${this.base}/hours/email`, request);
   }
 }

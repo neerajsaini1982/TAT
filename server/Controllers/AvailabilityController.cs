@@ -6,13 +6,14 @@ using Server.Data;
 using Server.Dtos;
 using Server.Models;
 using Server.Security;
+using Server.Services;
 
 namespace Server.Controllers;
 
 [ApiController]
 [Route("api/availability")]
 [Authorize]
-public class AvailabilityController(AppDbContext db) : ControllerBase
+public class AvailabilityController(AppDbContext db, IEmailSender emailSender) : ControllerBase
 {
     // Every authenticated account (Employee, Lead, Admin, Sa) manages only
     // its own availability through these two endpoints.
@@ -248,6 +249,85 @@ public class AvailabilityController(AppDbContext db) : ControllerBase
         db.SaveChanges();
 
         return Ok(new CopyPreviousWeekResult(copied, skipped));
+    }
+
+    // Emails everyone on the location's availability roster (same people
+    // GetForLocation lists) who hasn't submitted availability for
+    // weekStartDate yet, using the AvailabilityReminder template. Anyone
+    // already submitted is left alone; anyone without an email is reported
+    // back so the admin can chase them another way. Best-effort per
+    // employee, like ReportsController.EmailHoursReport.
+    [HttpPost("send-reminder")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public async Task<ActionResult<AvailabilityReminderResult>> SendReminder(SendAvailabilityReminderRequest request)
+    {
+        var location = User.IsInRole(nameof(AccountRole.Sa))
+            ? db.Locations.SingleOrDefault(l => l.LocationCode == request.LocationCode)
+            : db.Locations.SingleOrDefault(l => l.LocationCode == CallerLocationCode());
+        if (location is null)
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == location.Id);
+        if (settings is null || string.IsNullOrWhiteSpace(settings.SmtpHost))
+        {
+            return BadRequest("SMTP is not configured for this location. Set it up under Settings first.");
+        }
+
+        var accounts = db.Accounts
+            .Where(a => a.LocationId == location.Id && a.IsActive)
+            .Where(a => a.Role == AccountRole.Employee || a.Role == AccountRole.Lead || a.Role == AccountRole.Admin)
+            .OrderBy(a => a.FirstName).ThenBy(a => a.LastName)
+            .ToList();
+        var accountIds = accounts.Select(a => a.Id).ToList();
+        var submittedIds = db.Availabilities
+            .Where(a => accountIds.Contains(a.AccountId) && a.WeekStartDate == request.WeekStartDate && a.IsSubmitted)
+            .Select(a => a.AccountId)
+            .ToHashSet();
+
+        var template = db.EmailTemplates.SingleOrDefault(
+            t => t.LocationId == location.Id && t.Key == EmailTemplateKeys.AvailabilityReminder)
+            ?? EmailTemplateCatalog.Default(EmailTemplateKeys.AvailabilityReminder);
+        var weekRange = $"{request.WeekStartDate.ToString("MMM d")} – {request.WeekStartDate.AddDays(6).ToString("MMM d")}";
+
+        var sent = new List<string>();
+        var skippedNoEmail = new List<string>();
+        var failed = new List<string>();
+        foreach (var account in accounts.Where(a => !submittedIds.Contains(a.Id)))
+        {
+            var fullName = $"{account.FirstName} {account.LastName}";
+            if (string.IsNullOrWhiteSpace(account.Email))
+            {
+                skippedNoEmail.Add(fullName);
+                continue;
+            }
+
+            var placeholders = new Dictionary<string, string>
+            {
+                ["{{employeeName}}"] = fullName,
+                ["{{locationName}}"] = location.Name,
+                ["{{weekRange}}"] = weekRange,
+                ["{{availabilityLink}}"] = request.AvailabilityLink,
+            };
+
+            try
+            {
+                await emailSender.SendAsync(
+                    settings,
+                    account.Email,
+                    EmailTemplateCatalog.Render(template.Subject, placeholders),
+                    EmailTemplateCatalog.Render(template.BodyHtml, placeholders));
+                sent.Add(fullName);
+            }
+            catch
+            {
+                // Best-effort — one bad address shouldn't stop the rest.
+                failed.Add(fullName);
+            }
+        }
+
+        return Ok(new AvailabilityReminderResult(sent, skippedNoEmail, failed, submittedIds.Count));
     }
 
     private static Availability NewAvailability(int accountId, DateOnly weekStartDate) =>
