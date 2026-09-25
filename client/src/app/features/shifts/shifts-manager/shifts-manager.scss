@@ -232,11 +232,11 @@
   min-width: 220px;
 }
 
-.breaks-cell {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
+// One break/lunch per line, in order. inline-grid stretches every tag to
+// the widest one, so the times line up down the column.
+.breaks-list {
+  display: inline-grid;
+  gap: 4px;
 }
 
 // Breaks read as small squared labels instead of one comma-run sentence, so
@@ -254,9 +254,26 @@
   font-variant-numeric: tabular-nums;
 }
 
+// Fixed hues rather than theme tokens: the theme's primary and tertiary are
+// the same palette (and admin-selectable), so they can't give three
+// distinguishable colours. light-dark() keeps them readable in dark mode,
+// same as the overrides in styles.scss.
+.tag-break-first {
+  border-color: light-dark(#1d5fb8, #8ab4f8);
+  background: light-dark(#e8f0fe, #1c2b41);
+  color: light-dark(#1d5fb8, #8ab4f8);
+}
+
 .tag-lunch {
-  border-color: var(--mat-sys-on-surface);
-  color: var(--mat-sys-on-surface);
+  border-color: light-dark(#a35200, #f6b26b);
+  background: light-dark(#fff1e0, #3a2a12);
+  color: light-dark(#a35200, #f6b26b);
+}
+
+.tag-break-later {
+  border-color: light-dark(#1e7a45, #81c995);
+  background: light-dark(#e6f4ea, #1b3324);
+  color: light-dark(#1e7a45, #81c995);
 }
 
 .none {
@@ -402,13 +419,6 @@
     font-size: 18px;
   }
 
-  .breaks-cell {
-    display: block;
-
-    .tag {
-      margin: 0 6px 6px 0;
-    }
-  }
 
   .actions-cell {
     position: absolute;
