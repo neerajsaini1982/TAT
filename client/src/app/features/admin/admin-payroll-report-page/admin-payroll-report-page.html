@@ -37,6 +37,18 @@
       Add Sick Hours Manually
     </button>
   }
+  @if (canEmailHours) {
+    <button
+      mat-stroked-button
+      type="button"
+      class="email-hours-btn"
+      (click)="openEmailHours()"
+      [disabled]="loading() || filteredReport().length === 0"
+    >
+      <mat-icon>mail</mat-icon>
+      Email Hours to Employees
+    </button>
+  }
 </div>
 
 @if (error()) {
@@ -257,9 +269,7 @@
                     <td class="day-numeric-col" data-label="Overtime" [class.flag]="day.overtimeMinutes > 0">{{ formatDuration(day.overtimeMinutes) }}</td>
                     <td class="day-numeric-col" data-label="Double Time" [class.flag]="day.doubleTimeMinutes > 0">{{ formatDuration(day.doubleTimeMinutes) }}</td>
                   }
-                  <td class="day-sick-col" data-label="Sick hrs">
-                    <span class="manual-sick-value">{{ (day.sickMinutes / 60).toFixed(2) }}</span>
-                  </td>
+                  <td class="day-numeric-col" data-label="Sick">{{ formatDuration(day.sickMinutes) }}</td>
                   <td class="day-numeric-col day-total-col" data-label="Total">{{ formatDuration((day.netWorkedMinutes ?? 0) + day.sickMinutes) }}</td>
                   <td class="notes-cell">
                     @if (day.leftEarly) {

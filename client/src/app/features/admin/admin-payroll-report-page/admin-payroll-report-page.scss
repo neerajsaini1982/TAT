@@ -1,16 +1,8 @@
-// The app shell centers every route in a 960px .content column (see
-// app.scss) — fine for forms, but it squeezes this table into a box
-// narrower than most screens for no reason. Break out to the full viewport
-// width instead, same technique as admin-schedule-page.scss.
+// Full width via .full-width-page on the host (see styles.scss) — the
+// shell's .content padding supplies the side gutters.
 :host {
   display: block;
-  position: relative;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100vw;
-  max-width: 100%;
-  box-sizing: border-box;
-  padding: 24px 24px 64px;
+  padding-bottom: 40px;
 }
 
 // Title band: kicker over title, closed by a 2px rule — the page furniture
@@ -61,7 +53,8 @@
   padding: 0 24px;
 }
 
-.add-sick-hours-btn {
+.add-sick-hours-btn,
+.email-hours-btn {
   height: 48px;
   padding: 0 20px;
 
@@ -173,6 +166,9 @@
 
 .hours-report-table {
   width: 100%;
+  // Fixed columns (52 + 200 + 5×118 = 842px) plus room for Notes. Below this
+  // the container scrolls sideways instead of crushing Notes to a sliver.
+  min-width: 1020px;
   table-layout: fixed;
   border-collapse: collapse;
   background: transparent;
@@ -236,12 +232,10 @@
   white-space: nowrap;
 }
 
-// Notes absorbs the leftover width. min-width keeps a fixed-layout table
-// from squeezing it to nothing on a narrow window; the tags inside wrap
-// rather than running past the table's right edge.
+// Notes absorbs the leftover width; the table's min-width guarantees it
+// enough room (min-width on a fixed-layout column is ignored).
 .mat-column-notes {
   width: auto;
-  min-width: 150px;
 }
 
 // Decimal-first: the big figure is the decimal-hours number that goes into
@@ -356,17 +350,6 @@ th.mat-column-totalTime,
   font-weight: 700;
 }
 
-.day-sick-col {
-  width: 118px;
-  text-align: right;
-}
-
-.manual-sick-value {
-  display: inline-block;
-  padding: 6px 8px;
-  font-variant-numeric: tabular-nums;
-}
-
 .day-absent-col {
   text-align: left;
   white-space: normal;
@@ -377,13 +360,12 @@ th.mat-column-totalTime,
 }
 
 .notes-cell {
-  min-width: 0;
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  align-items: center;
   text-align: left;
   white-space: normal;
+
+  .tag {
+    margin: 3px 6px 3px 0;
+  }
 }
 
 // Notes read as small squared labels rather than loose red sentences, so a
@@ -397,9 +379,7 @@ th.mat-column-totalTime,
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--mat-sys-on-surface-variant);
-  max-width: 100%;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .tag-flag {
@@ -420,7 +400,7 @@ th.mat-column-totalTime,
 // ---------------------------------------------------------------------------
 @media (max-width: 860px) {
   :host {
-    padding: 16px 16px 48px;
+    padding-bottom: 24px;
   }
 
   .controls {
@@ -432,7 +412,8 @@ th.mat-column-totalTime,
   }
 
   .run-btn,
-  .add-sick-hours-btn {
+  .add-sick-hours-btn,
+  .email-hours-btn {
     width: 100%;
   }
 
@@ -471,6 +452,7 @@ th.mat-column-totalTime,
   }
 
   .hours-report-table {
+    min-width: 0;
     table-layout: auto;
     display: block;
 

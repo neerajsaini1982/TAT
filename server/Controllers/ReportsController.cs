@@ -20,7 +20,7 @@ namespace Server.Controllers;
 [ApiController]
 [Route("api/reports")]
 [Authorize]
-public class ReportsController(AppDbContext db) : ControllerBase
+public class ReportsController(AppDbContext db, IEmailSender emailSender) : ControllerBase
 {
     // Top level: one row per employee with totals across the range. Days is
     // the drill-down — one row per date the employee had a published shift
@@ -48,6 +48,124 @@ public class ReportsController(AppDbContext db) : ControllerBase
             return BadRequest("A valid locationCode is required.");
         }
 
+        // Sa/Admin see the whole location; anyone else (Lead, Employee) only
+        // ever gets their own row back, regardless of what locationCode was
+        // requested — this is what makes GetHoursReport safe to expose to
+        // every role instead of gating it behind AdminOrAbove.
+        var canSeeEveryone = User.IsInRole(nameof(AccountRole.Sa)) || User.IsInRole(nameof(AccountRole.Admin));
+        return Ok(BuildHoursReport(db, location, startDate, endDate, canSeeEveryone ? null : CallerAccountId()));
+    }
+
+    // Emails each employee in the report their own hours for the range, using
+    // the location's PayrollHours template — one email per employee, and only
+    // to those with an email on file. EmployeeIds narrows it to the rows the
+    // admin is looking at (the page's employee filter); null means everyone.
+    // TestToAddress sends just the first matching employee's email to that
+    // address instead (subject prefixed [TEST]) so the admin can check the
+    // real data before it goes out. Sending is best-effort per employee, like
+    // ShiftAssignmentsController.SendScheduleEmails, but unlike there the
+    // admin gets back exactly who was sent, skipped, and failed.
+    [HttpPost("hours/email")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public async Task<ActionResult<EmailHoursReportResultDto>> EmailHoursReport(EmailHoursReportRequest request)
+    {
+        if (request.EndDate < request.StartDate)
+        {
+            return BadRequest("endDate can't be before startDate.");
+        }
+
+        var location = ResolveLocation(request.LocationCode);
+        if (location is null)
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == location.Id);
+        if (settings is null || string.IsNullOrWhiteSpace(settings.SmtpHost))
+        {
+            return BadRequest("SMTP is not configured for this location. Set it up under Settings first.");
+        }
+
+        var report = BuildHoursReport(db, location, request.StartDate, request.EndDate, onlyAccountId: null);
+        if (request.EmployeeIds is not null)
+        {
+            report = report.Where(r => request.EmployeeIds.Contains(r.EmployeeId)).ToList();
+        }
+
+        if (report.Count == 0)
+        {
+            return BadRequest("No employees have hours in this date range.");
+        }
+
+        var template = db.EmailTemplates.SingleOrDefault(
+            t => t.LocationId == location.Id && t.Key == EmailTemplateKeys.PayrollHours)
+            ?? EmailTemplateCatalog.Default(EmailTemplateKeys.PayrollHours);
+
+        (string Subject, string Body) Render(EmployeeHoursReportDto row)
+        {
+            var placeholders = PayrollHoursEmail.Placeholders(row, location.Name, request.StartDate, request.EndDate, settings.DateFormat);
+            return (EmailTemplateCatalog.Render(template.Subject, placeholders), EmailTemplateCatalog.Render(template.BodyHtml, placeholders));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.TestToAddress))
+        {
+            var sample = report[0];
+            var (subject, body) = Render(sample);
+            try
+            {
+                await emailSender.SendAsync(settings, request.TestToAddress, $"[TEST] {subject}", body);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+            catch (Exception)
+            {
+                return StatusCode(StatusCodes.Status502BadGateway, "Failed to send email. Check the SMTP settings and try again.");
+            }
+
+            return Ok(new EmailHoursReportResultDto([sample.FullName], [], []));
+        }
+
+        var employeeIds = report.Select(r => r.EmployeeId).ToList();
+        var emailsById = db.Accounts
+            .Where(a => employeeIds.Contains(a.Id))
+            .ToDictionary(a => a.Id, a => a.Email);
+
+        var sent = new List<string>();
+        var skippedNoEmail = new List<string>();
+        var failed = new List<string>();
+        foreach (var row in report)
+        {
+            var email = emailsById.GetValueOrDefault(row.EmployeeId);
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                skippedNoEmail.Add(row.FullName);
+                continue;
+            }
+
+            var (subject, body) = Render(row);
+            try
+            {
+                await emailSender.SendAsync(settings, email, subject, body);
+                sent.Add(row.FullName);
+            }
+            catch
+            {
+                // Best-effort — one bad address shouldn't stop the rest.
+                failed.Add(row.FullName);
+            }
+        }
+
+        return Ok(new EmailHoursReportResultDto(sent, skippedNoEmail, failed));
+    }
+
+    // The whole report for a location, or just onlyAccountId's row. Shared
+    // with EmailHoursReport and EmailTemplatesController.SendTest so an
+    // emailed report can never disagree with what the page shows.
+    internal static List<EmployeeHoursReportDto> BuildHoursReport(
+        AppDbContext db, Location location, DateOnly startDate, DateOnly endDate, int? onlyAccountId)
+    {
         var settings = db.LocationSettings.SingleOrDefault(s => s.LocationId == location.Id);
         var breakLimitMinutes = settings?.BreakLimitMinutes ?? 15;
         var lunchLimitMinutes = settings?.LunchLimitMinutes ?? 30;
@@ -55,20 +173,13 @@ public class ReportsController(AppDbContext db) : ControllerBase
         var overtimePolicy = (settings ?? new LocationSettings()).GetOvertimePolicy();
         var (loadStart, loadEnd) = OvertimeCalculator.WorkweekSpan(startDate, endDate, overtimePolicy.WorkweekStartDay);
 
-        // Sa/Admin see the whole location; anyone else (Lead, Employee) only
-        // ever gets their own row back, regardless of what locationCode was
-        // requested — this is what makes GetHoursReport safe to expose to
-        // every role instead of gating it behind AdminOrAbove.
-        var canSeeEveryone = User.IsInRole(nameof(AccountRole.Sa)) || User.IsInRole(nameof(AccountRole.Admin));
-        var callerAccountId = CallerAccountId();
-
         var assignmentsQuery = db.ShiftAssignments
             .Include(a => a.Account)
             .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
             .Where(a => a.Shift!.LocationId == location.Id && a.Date >= loadStart && a.Date <= loadEnd && a.IsPublished);
-        if (!canSeeEveryone)
+        if (onlyAccountId is not null)
         {
-            assignmentsQuery = assignmentsQuery.Where(a => a.AccountId == callerAccountId);
+            assignmentsQuery = assignmentsQuery.Where(a => a.AccountId == onlyAccountId);
         }
 
         var assignments = assignmentsQuery.ToList();
@@ -79,9 +190,9 @@ public class ReportsController(AppDbContext db) : ControllerBase
         var sickEntriesQuery = db.SickTimeEntries
             .Include(s => s.Account)
             .Where(s => s.Account!.LocationId == location.Id && s.Date >= startDate && s.Date <= endDate);
-        if (!canSeeEveryone)
+        if (onlyAccountId is not null)
         {
-            sickEntriesQuery = sickEntriesQuery.Where(s => s.AccountId == callerAccountId);
+            sickEntriesQuery = sickEntriesQuery.Where(s => s.AccountId == onlyAccountId);
         }
 
         var sickEntries = sickEntriesQuery.ToList();
@@ -105,7 +216,7 @@ public class ReportsController(AppDbContext db) : ControllerBase
         // not any time has accrued yet, or clocked in and not yet clocked
         // out), or have sick hours recorded, since those are still worth an
         // admin's attention/payroll entry even at 0 worked minutes.
-        var report = accountsById.Keys
+        return accountsById.Keys
             .Select(accountId => BuildEmployeeReport(
                 accountsById[accountId],
                 assignmentsByAccountId[accountId].ToList(),
@@ -119,8 +230,6 @@ public class ReportsController(AppDbContext db) : ControllerBase
             .Where(e => e.TotalNetWorkedMinutes > 0 || e.OpenEntryDays > 0 || e.TotalSickMinutes > 0)
             .OrderBy(e => e.FullName)
             .ToList();
-
-        return Ok(report);
     }
 
     private static EmployeeHoursReportDto BuildEmployeeReport(

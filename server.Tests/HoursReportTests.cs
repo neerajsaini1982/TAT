@@ -89,7 +89,7 @@ public sealed class HoursReportTests : IDisposable
 
     private List<EmployeeHoursReportDto> RunReport(DateOnly start, DateOnly end)
     {
-        var controller = new ReportsController(db)
+        var controller = new ReportsController(db, new RecordingEmailSender())
         {
             ControllerContext = new ControllerContext
             {

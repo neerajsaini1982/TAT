@@ -156,7 +156,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     // Renders one employee's shifts for the week as an inline HTML table
     // (email clients don't run CSS files, so styling is inline) — this is
     // what the {{schedule}} placeholder expands to in SendScheduleEmails.
-    private static string BuildScheduleHtml(IEnumerable<ShiftAssignment> employeeAssignments, TimeFormat timeFormat)
+    internal static string BuildScheduleHtml(IEnumerable<ShiftAssignment> employeeAssignments, TimeFormat timeFormat)
     {
         const string cell = "padding:4px 12px;border:1px solid #ddd;text-align:left;";
 
