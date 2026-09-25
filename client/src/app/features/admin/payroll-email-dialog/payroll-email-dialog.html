@@ -1,0 +1,92 @@
+<div mat-dialog-title class="form-head">
+  <div class="form-head-text">
+    <span class="form-kicker">Payroll</span>
+    <h3>Email Hours to Employees</h3>
+  </div>
+  <button mat-icon-button type="button" class="form-close" (click)="close()" aria-label="Close">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content class="form-body">
+  <section class="form-section">
+    <p class="intro">
+      Each employee gets a separate email with only their own hours for
+      <strong>{{ dateLabel(data.startDate) }} – {{ dateLabel(data.endDate) }}</strong>, using the
+      <strong>Payroll Hours</strong> template (edit it under Settings → Email Templates).
+    </p>
+
+    @if (loading()) {
+      <p class="status">Loading employees…</p>
+    } @else if (result(); as res) {
+      <p class="result-line ok">
+        <mat-icon>check_circle</mat-icon>
+        Sent to {{ res.sent.length }} employee{{ res.sent.length === 1 ? '' : 's' }}.
+      </p>
+      @if (res.skippedNoEmail.length > 0) {
+        <p class="result-line warn">
+          <mat-icon>warning</mat-icon>
+          Skipped (no email): {{ res.skippedNoEmail.join(', ') }}
+        </p>
+      }
+      @if (res.failed.length > 0) {
+        <p class="result-line bad">
+          <mat-icon>error</mat-icon>
+          Failed to send: {{ res.failed.join(', ') }}
+        </p>
+      }
+    } @else {
+      <p class="count">
+        <strong>{{ withEmail().length }}</strong> of {{ data.employees.length }} employee{{ data.employees.length === 1 ? '' : 's' }}
+        will receive an email.
+      </p>
+      <ul class="recipient-list">
+        @for (r of withEmail(); track r.employeeId) {
+          <li><span class="name">{{ r.fullName }}</span><span class="email">{{ r.email }}</span></li>
+        }
+        @for (r of withoutEmail(); track r.employeeId) {
+          <li class="missing"><span class="name">{{ r.fullName }}</span><span class="email">No email on file — skipped</span></li>
+        }
+      </ul>
+    }
+  </section>
+
+  @if (!loading() && !result()) {
+    <section class="form-section test-section">
+      <p class="section-label">Send a test to yourself first</p>
+      <div class="test-row">
+        <mat-form-field appearance="outline" subscriptSizing="dynamic">
+          <mat-label>Test address</mat-label>
+          <input matInput type="email" [(ngModel)]="testToAddress" />
+        </mat-form-field>
+        <button mat-stroked-button type="button" (click)="sendTest()" [disabled]="testing() || sending() || !testToAddress.trim()">
+          {{ testing() ? 'Sending…' : 'Send Test' }}
+        </button>
+      </div>
+      @if (testResult()) {
+        <p class="result-line ok"><mat-icon>check_circle</mat-icon>{{ testResult() }}</p>
+      }
+    </section>
+  }
+
+  @if (error()) {
+    <p class="error form-error">{{ error() }}</p>
+  }
+</mat-dialog-content>
+
+<div class="form-actions">
+  @if (result()) {
+    <button mat-flat-button color="primary" type="button" (click)="close()">Done</button>
+  } @else {
+    <button
+      mat-flat-button
+      color="primary"
+      type="button"
+      (click)="send()"
+      [disabled]="loading() || sending() || testing() || withEmail().length === 0"
+    >
+      {{ sending() ? 'Sending…' : 'Send to ' + withEmail().length + ' Employee' + (withEmail().length === 1 ? '' : 's') }}
+    </button>
+    <button mat-stroked-button type="button" (click)="close()">Cancel</button>
+  }
+</div>

@@ -8,8 +8,9 @@ public static class EmailTemplateKeys
     public const string SchedulePublished = "SchedulePublished";
     public const string AvailabilityReminder = "AvailabilityReminder";
     public const string LoginCredentials = "LoginCredentials";
+    public const string PayrollHours = "PayrollHours";
 
-    public static readonly IReadOnlyList<string> All = [SchedulePublished, AvailabilityReminder, LoginCredentials];
+    public static readonly IReadOnlyList<string> All = [SchedulePublished, AvailabilityReminder, LoginCredentials, PayrollHours];
 }
 
 public class EmailTemplate

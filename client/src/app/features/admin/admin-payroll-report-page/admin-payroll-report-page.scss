@@ -61,7 +61,8 @@
   padding: 0 24px;
 }
 
-.add-sick-hours-btn {
+.add-sick-hours-btn,
+.email-hours-btn {
   height: 48px;
   padding: 0 20px;
 
@@ -357,17 +358,6 @@ th.mat-column-totalTime,
   font-weight: 700;
 }
 
-.day-sick-col {
-  width: 118px;
-  text-align: right;
-}
-
-.manual-sick-value {
-  display: inline-block;
-  padding: 6px 8px;
-  font-variant-numeric: tabular-nums;
-}
-
 .day-absent-col {
   text-align: left;
   white-space: normal;
@@ -430,7 +420,8 @@ th.mat-column-totalTime,
   }
 
   .run-btn,
-  .add-sick-hours-btn {
+  .add-sick-hours-btn,
+  .email-hours-btn {
     width: 100%;
   }
 

@@ -74,3 +74,15 @@ public record EmployeeHoursReportDto(
     int OpenEntryDays,
     int TotalSickMinutes,
     List<DailyHoursDto> Days);
+
+// See ReportsController.EmailHoursReport. EmployeeIds null = everyone in the
+// report; TestToAddress set = send one [TEST] copy there instead.
+public record EmailHoursReportRequest(
+    string? LocationCode,
+    DateOnly StartDate,
+    DateOnly EndDate,
+    List<int>? EmployeeIds,
+    string? TestToAddress);
+
+// Full names in each bucket, so the admin sees exactly who didn't get one.
+public record EmailHoursReportResultDto(List<string> Sent, List<string> SkippedNoEmail, List<string> Failed);

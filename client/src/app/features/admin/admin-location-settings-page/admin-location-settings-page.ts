@@ -224,6 +224,9 @@ export class AdminLocationSettingsPage implements OnInit {
   protected readonly testEmailResult = signal<'success' | 'error' | null>(null);
   protected readonly testEmailError = signal<string | null>(null);
   protected testEmailAddress = '';
+  // Per-template Test button state, keyed by template key.
+  protected readonly testingTemplateKey = signal<string | null>(null);
+  protected readonly templateTestResult = signal<{ key: string; ok: boolean; message: string } | null>(null);
   protected readonly allowedDevices = signal<AllowedPunchDeviceDto[]>([]);
   protected readonly addingDevice = signal(false);
   protected readonly deviceError = signal<string | null>(null);
@@ -454,6 +457,30 @@ export class AdminLocationSettingsPage implements OnInit {
           this.saveTemplate(template.key, result);
         }
       });
+  }
+
+  // Sends a [TEST] copy of the saved template to the same address as the SMTP
+  // test above (defaults to the signed-in admin's email). Payroll Hours uses
+  // real hours from the last 7 days — see EmailTemplatesController.SendTest.
+  testTemplate(template: EmailTemplateDto): void {
+    const toAddress = this.testEmailAddress.trim();
+    if (!toAddress) {
+      this.templateTestResult.set({ key: template.key, ok: false, message: 'Enter a test address under SMTP (Outgoing Email) first.' });
+      return;
+    }
+
+    this.testingTemplateKey.set(template.key);
+    this.templateTestResult.set(null);
+    this.templatesApi.sendTest(template.key, toAddress, this.locationCode).subscribe({
+      next: () => {
+        this.testingTemplateKey.set(null);
+        this.templateTestResult.set({ key: template.key, ok: true, message: `Test sent to ${toAddress}.` });
+      },
+      error: (err) => {
+        this.testingTemplateKey.set(null);
+        this.templateTestResult.set({ key: template.key, ok: false, message: err?.error ?? 'Failed to send test email.' });
+      },
+    });
   }
 
   private saveTemplate(key: string, result: EmailTemplateEditorResult): void {

@@ -48,6 +48,8 @@ export class AdminPayrollReportPage implements OnInit {
   // Lead/Employee open a dialog that can only 403 on save. Sick hours are
   // read-only everywhere else on this page.
   protected readonly canAddSickHours = this.auth.role() === 'Admin' || this.auth.role() === 'Sa';
+  // Same Admin/Sa-only rule for emailing hours (POST /api/reports/hours/email).
+  protected readonly canEmailHours = this.canAddSickHours;
 
   // CdkTable only re-evaluates matRowDef's `when` predicate when it
   // re-renders rows, which a plain signal update elsewhere doesn't trigger
@@ -68,6 +70,10 @@ export class AdminPayrollReportPage implements OnInit {
   // Defaults to the trailing week, same as the report is most often run.
   protected startDate = formatDate(addDays(new Date(), -6));
   protected endDate = formatDate(new Date());
+  // The range the loaded report actually covers — startDate/endDate are the
+  // inputs, which the admin can change without re-running.
+  private ranStartDate = this.startDate;
+  private ranEndDate = this.endDate;
 
   protected readonly loading = signal(false);
   protected readonly error = signal<string | null>(null);
@@ -140,8 +146,12 @@ export class AdminPayrollReportPage implements OnInit {
 
     this.loading.set(true);
     this.error.set(null);
-    this.reportsApi.getHoursReport(this.locationCode, this.startDate, this.endDate).subscribe({
+    const startDate = this.startDate;
+    const endDate = this.endDate;
+    this.reportsApi.getHoursReport(this.locationCode, startDate, endDate).subscribe({
       next: (report) => {
+        this.ranStartDate = startDate;
+        this.ranEndDate = endDate;
         this.report.set(report);
         this.expandedIds.set(new Set());
         this.loading.set(false);
@@ -162,6 +172,23 @@ export class AdminPayrollReportPage implements OnInit {
           this.run();
         }
       });
+  }
+
+  // Sends exactly what's on screen: the dates the report was last run for
+  // (not whatever is sitting unapplied in the date inputs) and the employees
+  // the filter currently shows. Loaded on demand — the initial bundle sits
+  // right at its size budget, and only Admin/Sa ever open this.
+  async openEmailHours(): Promise<void> {
+    const { PayrollEmailDialog } = await import('../payroll-email-dialog/payroll-email-dialog');
+    this.dialog.open(PayrollEmailDialog, {
+      data: {
+        locationCode: this.locationCode,
+        startDate: this.ranStartDate,
+        endDate: this.ranEndDate,
+        employees: this.filteredReport().map((r) => ({ employeeId: r.employeeId, fullName: r.fullName })),
+      },
+      autoFocus: 'dialog',
+    });
   }
 
   toggle(employeeId: number): void {

@@ -422,8 +422,24 @@
                 <div class="template-info">
                   <span class="template-name">{{ template.displayName }}</span>
                   <span class="template-subject">{{ template.subject }}</span>
+                  @if (templateTestResult(); as r) {
+                    @if (r.key === template.key) {
+                      <span class="template-test-result" [class.error]="!r.ok">{{ r.message }}</span>
+                    }
+                  }
                 </div>
-                <button mat-stroked-button type="button" (click)="editTemplate(template)">Edit</button>
+                <div class="template-actions">
+                  <button
+                    mat-stroked-button
+                    type="button"
+                    (click)="testTemplate(template)"
+                    [disabled]="testingTemplateKey() !== null"
+                    [attr.aria-label]="'Send test ' + template.displayName + ' email'"
+                  >
+                    {{ testingTemplateKey() === template.key ? 'Sending…' : 'Test' }}
+                  </button>
+                  <button mat-stroked-button type="button" (click)="editTemplate(template)">Edit</button>
+                </div>
               </div>
             }
           </div>
