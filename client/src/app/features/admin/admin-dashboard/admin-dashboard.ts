@@ -147,7 +147,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
   selector: 'app-admin-dashboard',
   imports: [RouterLink, MatButtonModule, MatIconModule],
   templateUrl: './admin-dashboard.html',
-  styleUrl: './admin-dashboard.scss',
+  styleUrls: ['./admin-dashboard.scss', './admin-dashboard-charts.scss'],
 })
 export class AdminDashboard implements OnInit {
   @Input({ required: true }) locationCode!: string;

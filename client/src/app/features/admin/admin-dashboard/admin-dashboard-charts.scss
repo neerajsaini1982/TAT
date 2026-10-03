@@ -1,0 +1,618 @@
+// The dashboard's chart styles — split from admin-dashboard.scss to keep
+// each stylesheet inside the per-component size budget (angular.json).
+
+$mobile: 767.98px;
+
+// ---------------------------------------------------------------------------
+// Charts. Plain CSS/SVG like PayrollHoursChart, and the same colour roles:
+// outline = scheduled, primary = worked, error = over / needs attention.
+// ---------------------------------------------------------------------------
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  display: inline-block;
+  flex: none;
+  width: 10px;
+  height: 10px;
+}
+
+.swatch-scheduled,
+.bar-scheduled,
+.dot-scheduled {
+  background: var(--viz-scheduled);
+}
+
+.swatch-worked,
+.bar-worked,
+.seg-worked,
+.dot-worked {
+  background: var(--viz-logged);
+}
+
+.swatch-remaining,
+.seg-remaining {
+  background: color-mix(in srgb, var(--viz-logged) 35%, var(--mat-sys-surface));
+}
+
+.swatch-on-time {
+  background: var(--viz-good);
+}
+
+.swatch-late {
+  background: var(--viz-warning);
+}
+
+.swatch-left-early {
+  background: var(--viz-serious);
+}
+
+.swatch-absent,
+.swatch-over,
+.seg-over {
+  background: var(--viz-critical);
+}
+
+.swatch-no-punch {
+  background: var(--viz-neutral);
+}
+
+// Hover / keyboard-focus card shared by the charts — same dark card as
+// PayrollHoursChart's.
+.has-tip {
+  position: relative;
+  outline: none;
+}
+
+.tip {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  padding: 10px 12px;
+  background: var(--mat-sys-inverse-surface);
+  color: var(--mat-sys-inverse-on-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  font-size: 13px;
+  text-align: left;
+  pointer-events: none;
+
+  p {
+    margin: 0;
+  }
+}
+
+.has-tip:hover .tip,
+.has-tip:focus-visible .tip {
+  display: block;
+}
+
+// Keep the first and last columns' cards inside the gadget.
+.has-tip:first-child .tip {
+  left: 0;
+  transform: none;
+}
+
+.has-tip:last-child .tip {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.tip-title {
+  padding-bottom: 6px;
+  font-weight: 700;
+}
+
+.tip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 2px;
+
+  strong {
+    margin-left: auto;
+    padding-left: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.gadget-lede {
+  margin: 0;
+  padding: 16px 16px 0;
+  font-size: 15px;
+  font-weight: 500;
+
+  strong {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+// Scheduled vs. logged: a pair of columns per day on one shared scale.
+.week-chart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 16px;
+  list-style: none;
+}
+
+.week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.week-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  height: 160px;
+  border-bottom: 2px solid var(--mat-sys-outline-variant);
+}
+
+.week-bar {
+  flex: 0 1 22px;
+  min-height: 0;
+}
+
+.week-day.future .bar-scheduled {
+  background: color-mix(in srgb, var(--viz-scheduled) 40%, var(--mat-sys-surface));
+}
+
+.week-day:hover .week-bars,
+.week-day:focus-visible .week-bars {
+  background: var(--mat-sys-surface-container-low);
+}
+
+.week-day.today .week-bars {
+  border-bottom-color: var(--mat-sys-primary);
+}
+
+.week-day-label {
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.week-day.today .week-day-label {
+  padding: 1px 6px;
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+}
+
+.week-day-value {
+  font-size: 12px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+
+  strong {
+    color: var(--mat-sys-on-surface);
+    font-weight: 700;
+  }
+
+  // Seven columns of "31h 30m / 36h 0m" don't fit a phone; the lede above
+  // and each column's tooltip still carry the figures.
+  @media (max-width: $mobile) {
+    display: none;
+  }
+}
+
+.count-badge {
+  min-width: 22px;
+  padding: 2px 6px;
+  box-sizing: border-box;
+  background: var(--mat-sys-error);
+  color: var(--mat-sys-on-error);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.all-clear {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 20px 16px;
+  font-size: 15px;
+  font-weight: 500;
+
+  mat-icon {
+    flex: none;
+    color: var(--mat-sys-primary);
+  }
+}
+
+.attention-list,
+.overtime-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attention-item {
+  display: flex;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  > mat-icon {
+    flex: none;
+    color: var(--mat-sys-error);
+  }
+}
+
+.attention-body {
+  min-width: 0;
+}
+
+.attention-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.attention-detail {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.attention-link {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+// Attendance donut: one stroked circle per outcome on a ring whose
+// circumference is 100, so dash lengths are plain percentages.
+.attendance {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+}
+
+.donut {
+  position: relative;
+  flex: none;
+  width: 132px;
+  height: 132px;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+.donut-slice {
+  fill: none;
+  stroke-width: 5;
+}
+
+.slice-on-time {
+  stroke: var(--viz-good);
+}
+
+.slice-late {
+  stroke: var(--viz-warning);
+}
+
+.slice-left-early {
+  stroke: var(--viz-serious);
+}
+
+.slice-absent {
+  stroke: var(--viz-critical);
+}
+
+.slice-no-punch {
+  stroke: var(--viz-neutral);
+}
+
+.donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.donut-value {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.donut-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.attendance-legend {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+.attendance-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 14px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  dt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  dd {
+    margin: 0;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &.total {
+    border-bottom: none;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+// Overtime watch: worked + still-scheduled against the weekly limit.
+.overtime-row {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.overtime-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.overtime-name {
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overtime-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.overtime-track {
+  position: relative;
+  display: flex;
+  height: 10px;
+  margin: 6px 0;
+  background: var(--mat-sys-surface-container-high);
+}
+
+.overtime-seg {
+  height: 100%;
+}
+
+.overtime-row.over .seg-worked {
+  background: var(--viz-critical);
+}
+
+.overtime-value.flag,
+.overtime-row.over .overtime-value {
+  color: var(--mat-sys-error);
+}
+
+.overtime-mark {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--mat-sys-on-surface);
+}
+
+.overtime-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+
+  .flag {
+    color: var(--mat-sys-error);
+    font-weight: 700;
+  }
+}
+
+.overtime-legend {
+  padding: 10px 16px;
+}
+
+.swatch-mark {
+  display: inline-block;
+  width: 2px;
+  height: 12px;
+  background: var(--mat-sys-on-surface);
+}
+
+// Labor hours trend: the lines and fill are an SVG stretched to the plot
+// box (non-scaling strokes keep them crisp), the dots and hover columns are
+// HTML laid over it so they stay round at any width.
+.trend {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 8px;
+  padding: 20px 16px 16px;
+}
+
+.trend-axis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 180px;
+  font-size: 11px;
+  text-align: right;
+  color: var(--mat-sys-on-surface-variant);
+  font-variant-numeric: tabular-nums;
+
+  span {
+    line-height: 1;
+    transform: translateY(-50%);
+
+    &:last-child {
+      transform: translateY(50%);
+    }
+  }
+}
+
+.trend-plot {
+  position: relative;
+  height: 180px;
+  border-bottom: 2px solid var(--mat-sys-outline-variant);
+
+  svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+}
+
+.trend-grid {
+  stroke: var(--mat-sys-outline-variant);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.trend-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.line-scheduled {
+  stroke: var(--viz-scheduled);
+}
+
+.line-worked {
+  stroke: var(--viz-logged);
+}
+
+.trend-fill-top {
+  stop-color: var(--viz-logged);
+  stop-opacity: 0.28;
+}
+
+.trend-fill-bottom {
+  stop-color: var(--viz-logged);
+  stop-opacity: 0.02;
+}
+
+.trend-weeks,
+.trend-labels {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trend-weeks {
+  position: absolute;
+  inset: 0;
+}
+
+.trend-week:hover,
+.trend-week:focus-visible {
+  background: color-mix(in srgb, var(--mat-sys-on-surface) 6%, transparent);
+}
+
+.trend-dot {
+  position: absolute;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transform: translate(-50%, 50%);
+  box-shadow: 0 0 0 2px var(--mat-sys-surface);
+}
+
+.trend-labels {
+  grid-column: 2;
+  margin-top: 8px;
+
+  li {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-align: center;
+    text-transform: uppercase;
+    white-space: nowrap;
+    color: var(--mat-sys-on-surface-variant);
+
+    &.current {
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  // Eight date labels don't fit a phone; keep every other one.
+  @media (max-width: $mobile) {
+    li:nth-child(odd) {
+      visibility: hidden;
+    }
+  }
+}
