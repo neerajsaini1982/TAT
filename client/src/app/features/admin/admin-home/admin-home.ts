@@ -17,6 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { Auth } from '../../../core/auth';
 import { DEV_DEFAULTS } from '../../../core/dev-defaults';
 import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/current-week-schedule';
+import { AdminDashboard } from '../admin-dashboard/admin-dashboard';
 import { PayDayBanner } from '../../schedule/pay-day-banner/pay-day-banner';
 
 @Component({
@@ -29,11 +30,16 @@ import { PayDayBanner } from '../../schedule/pay-day-banner/pay-day-banner';
     MatInputModule,
     MatButtonModule,
     MatIconModule,
+    AdminDashboard,
     CurrentWeekSchedule,
     PayDayBanner,
   ],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.scss',
+  // The Admin dashboard is a gadget grid that wants the whole window — opts
+  // out of the shell's 960px column (styles.scss) once it's showing; the
+  // login and the Lead week view keep their existing layout.
+  host: { '[class.full-width-page]': 'showsDashboard' },
 })
 export class AdminHome {
   protected readonly auth = inject(Auth);
@@ -52,6 +58,10 @@ export class AdminHome {
       (role === 'Admin' || role === 'Lead') &&
       this.auth.locationCode() === this.locationCode
     );
+  }
+
+  protected get showsDashboard(): boolean {
+    return this.isSignedIn && this.auth.role() === 'Admin';
   }
 
   async login(): Promise<void> {

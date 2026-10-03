@@ -1,0 +1,397 @@
+<div class="page-head">
+  <div class="page-head-text">
+    <p class="kicker">{{ locationCode }} · Administration</p>
+    <h2>Dashboard</h2>
+  </div>
+  <div class="page-actions">
+    @if (lastRefreshed()) {
+      <span class="refreshed">
+        <mat-icon aria-hidden="true">history</mat-icon>
+        Last refreshed {{ lastRefreshed() }}
+      </span>
+    }
+    <button type="button" mat-stroked-button (click)="load()">
+      <mat-icon>refresh</mat-icon>
+      Refresh
+    </button>
+  </div>
+</div>
+
+@if (error()) {
+  <p class="error page-error">{{ error() }}</p>
+}
+
+<div class="gadgets">
+  <div class="gadget-col">
+  <section class="gadget" aria-labelledby="today-schedule-title">
+    <div class="gadget-head">
+      <div class="gadget-title">
+        <h3 id="today-schedule-title">Today's Schedule</h3>
+        <span class="gadget-date">{{ todayLabel() }}</span>
+      </div>
+    </div>
+
+    @if (!loading() && !error()) {
+      <dl class="stats">
+        <div class="stat stat-scheduled">
+          <mat-icon class="stat-icon" aria-hidden="true">groups</mat-icon>
+          <dt>Scheduled</dt>
+          <dd>{{ scheduledCount() }}</dd>
+        </div>
+        <div class="stat stat-on">
+          <mat-icon class="stat-icon" aria-hidden="true">timer</mat-icon>
+          <dt>On the clock</dt>
+          <dd>{{ onTheClockCount() }}</dd>
+        </div>
+        <div class="stat stat-late" [class.alert]="notInCount() > 0">
+          <mat-icon class="stat-icon" aria-hidden="true">schedule</mat-icon>
+          <dt>Not clocked in</dt>
+          <dd>{{ notInCount() }}</dd>
+        </div>
+        <div class="stat stat-absent" [class.alert]="absentCount() > 0">
+          <mat-icon class="stat-icon" aria-hidden="true">person_off</mat-icon>
+          <dt>Absent</dt>
+          <dd>{{ absentCount() }}</dd>
+        </div>
+        <div class="stat stat-hours">
+          <mat-icon class="stat-icon" aria-hidden="true">hourglass_top</mat-icon>
+          <dt>Hours scheduled</dt>
+          <dd>{{ hoursLabel(scheduledHours()) }}</dd>
+        </div>
+      </dl>
+
+      @if (shifts().length === 0) {
+        <p class="empty">Nobody is scheduled today.</p>
+      } @else {
+        <table class="today-table">
+          <thead>
+            <tr>
+              <th>Employee</th>
+              <th>Shift</th>
+              <th>Scheduled</th>
+              <th>Clocked</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (shift of shifts(); track shift.assignment.id) {
+              <tr [class.absent-row]="shift.status === 'absent'">
+                <td class="employee-cell" data-label="Employee">
+                  <span class="employee-dot" [style.--employee-color]="employeeColor(shift.assignment.accountId)"></span>
+                  {{ shift.employeeName }}
+                </td>
+                <td data-label="Shift">{{ shift.assignment.shiftName }}</td>
+                <td class="num" data-label="Scheduled">{{ shift.timeLabel }}</td>
+                <td class="num" data-label="Clocked">{{ shift.clockLabel }}</td>
+                <td class="status-cell" data-label="Status">
+                  <span [class]="'status-badge ' + shift.status" [title]="shift.assignment.absenceNote ?? ''">
+                    {{ shift.statusLabel }}
+                  </span>
+                  @if (shift.isLate) {
+                    <span class="status-badge warn">Late</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    }
+
+    <div class="gadget-foot">
+      <a mat-button [routerLink]="['/', locationCode, 'admin', 'view-schedule']">
+        <span>View full schedule</span>
+        <mat-icon iconPositionEnd>arrow_forward</mat-icon>
+      </a>
+    </div>
+  </section>
+
+  <section class="gadget" aria-labelledby="week-hours-title">
+    <div class="gadget-head">
+      <div class="gadget-title">
+        <h3 id="week-hours-title">Scheduled vs. Logged</h3>
+        <span class="gadget-date">{{ weekRangeLabel() }}</span>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="legend-item"><span class="swatch swatch-scheduled"></span>Scheduled</span>
+        <span class="legend-item"><span class="swatch swatch-worked"></span>Logged</span>
+      </div>
+    </div>
+
+    @if (!loading() && !error()) {
+      <p class="gadget-lede">
+        <strong>{{ duration(weekWorkedMinutes()) }}</strong> logged of
+        <strong>{{ duration(weekScheduledMinutes()) }}</strong> scheduled this week
+      </p>
+      <ol class="week-chart">
+        @for (day of weekDays(); track day.date) {
+          <li
+            class="week-day has-tip"
+            tabindex="0"
+            [class.today]="day.isToday"
+            [class.future]="day.isFuture"
+            [attr.aria-label]="day.label + ': ' + duration(day.scheduled) + ' scheduled, ' + duration(day.worked) + ' logged'"
+          >
+            <div class="tip" role="tooltip">
+              <p class="tip-title">{{ day.label }} · {{ toMmDdYyyy(day.date) }}</p>
+              <p class="tip-row"><span class="swatch swatch-scheduled"></span>Scheduled<strong>{{ duration(day.scheduled) }}</strong></p>
+              @if (!day.isFuture) {
+                <p class="tip-row"><span class="swatch swatch-worked"></span>Logged<strong>{{ duration(day.worked) }}</strong></p>
+              }
+            </div>
+            <div class="week-bars" aria-hidden="true">
+              <span class="week-bar bar-scheduled" [style.height.%]="dayBarPct(day.scheduled)"></span>
+              <span class="week-bar bar-worked" [style.height.%]="dayBarPct(day.worked)"></span>
+            </div>
+            <span class="week-day-label">{{ day.label }}</span>
+            <span class="week-day-value" aria-hidden="true">
+              @if (day.isFuture) {
+                {{ day.scheduled > 0 ? duration(day.scheduled) : '–' }}
+              } @else {
+                <strong>{{ duration(day.worked) }}</strong> / {{ duration(day.scheduled) }}
+              }
+            </span>
+          </li>
+        }
+      </ol>
+    }
+  </section>
+
+  <section class="gadget" aria-labelledby="trend-title">
+    <div class="gadget-head">
+      <div class="gadget-title">
+        <h3 id="trend-title">Labor Hours Trend</h3>
+        <span class="gadget-date">Last 8 weeks</span>
+      </div>
+      <div class="legend" aria-hidden="true">
+        <span class="legend-item"><span class="swatch swatch-scheduled"></span>Scheduled</span>
+        <span class="legend-item"><span class="swatch swatch-worked"></span>Logged</span>
+      </div>
+    </div>
+
+    @if (!loading() && !error()) {
+      <div class="trend">
+        <div class="trend-axis" aria-hidden="true">
+          @for (label of trendAxisLabels(); track $index) {
+            <span>{{ label }}</span>
+          }
+        </div>
+        <div class="trend-plot">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="trend-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0" class="trend-fill-top" />
+                <stop offset="1" class="trend-fill-bottom" />
+              </linearGradient>
+            </defs>
+            <line class="trend-grid" x1="0" x2="100" y1="0" y2="0" />
+            <line class="trend-grid" x1="0" x2="100" y1="50" y2="50" />
+            <polygon class="trend-area" [attr.points]="trendWorkedArea()" fill="url(#trend-fill)" />
+            <polyline class="trend-line line-scheduled" [attr.points]="trendScheduledPoints()" />
+            <polyline class="trend-line line-worked" [attr.points]="trendWorkedPoints()" />
+          </svg>
+          <ol class="trend-weeks">
+            @for (week of trendWeeks(); track week.start) {
+              <li
+                class="trend-week has-tip"
+                tabindex="0"
+                [class.current]="week.isCurrent"
+                [attr.aria-label]="week.label + ': ' + duration(week.scheduled) + ' scheduled, ' + duration(week.worked) + ' logged'"
+              >
+                <span class="trend-dot dot-scheduled" [style.bottom.%]="week.scheduledY"></span>
+                <span class="trend-dot dot-worked" [style.bottom.%]="week.workedY"></span>
+                <div class="tip" role="tooltip">
+                  <p class="tip-title">{{ week.label }}{{ week.isCurrent ? ' · so far' : '' }}</p>
+                  <p class="tip-row"><span class="swatch swatch-scheduled"></span>Scheduled<strong>{{ duration(week.scheduled) }}</strong></p>
+                  <p class="tip-row"><span class="swatch swatch-worked"></span>Logged<strong>{{ duration(week.worked) }}</strong></p>
+                </div>
+              </li>
+            }
+          </ol>
+        </div>
+        <ol class="trend-labels" aria-hidden="true">
+          @for (week of trendWeeks(); track week.start) {
+            <li [class.current]="week.isCurrent">{{ week.isCurrent ? 'This week' : week.label.split(' – ')[0] }}</li>
+          }
+        </ol>
+      </div>
+    }
+  </section>
+  </div>
+
+  <div class="gadget-col">
+  <section class="gadget" aria-labelledby="attention-title">
+    <div class="gadget-head">
+      <div class="gadget-title">
+        <h3 id="attention-title">Needs Attention</h3>
+      </div>
+      @if (attentionItems().length > 0) {
+        <span class="count-badge">{{ attentionItems().length }}</span>
+      }
+    </div>
+
+    @if (!loading() && !error()) {
+      @if (attentionItems().length === 0) {
+        <p class="all-clear">
+          <mat-icon aria-hidden="true">check_circle</mat-icon>
+          Nothing needs your attention.
+        </p>
+      } @else {
+        <ul class="attention-list">
+          @for (item of attentionItems(); track item.text) {
+            <li class="attention-item">
+              <mat-icon aria-hidden="true">{{ item.icon }}</mat-icon>
+              <div class="attention-body">
+                <p class="attention-text">{{ item.text }}</p>
+                @if (item.detail) {
+                  <p class="attention-detail">{{ item.detail }}</p>
+                }
+                <a class="attention-link" [routerLink]="item.link">{{ item.linkLabel }}</a>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+    }
+  </section>
+
+  <section class="gadget" aria-labelledby="attendance-title">
+    <div class="gadget-head">
+      <div class="gadget-title">
+        <h3 id="attendance-title">Attendance</h3>
+        <span class="gadget-date">This week</span>
+      </div>
+    </div>
+
+    @if (!loading() && !error()) {
+      @if (attendanceTotal() === 0) {
+        <p class="empty">No shifts have happened yet this week.</p>
+      } @else {
+        <div class="attendance">
+          <div class="donut">
+            <svg viewBox="0 0 42 42" aria-hidden="true">
+              @for (slice of attendance(); track slice.kind) {
+                <circle
+                  [attr.class]="'donut-slice slice-' + slice.kind"
+                  cx="21"
+                  cy="21"
+                  r="15.9155"
+                  [attr.stroke-dasharray]="slice.dash"
+                  [attr.stroke-dashoffset]="slice.offset"
+                />
+              }
+            </svg>
+            <div class="donut-center">
+              <span class="donut-value">{{ onTimePercent() }}%</span>
+              <span class="donut-label">On time</span>
+            </div>
+          </div>
+          <dl class="attendance-legend">
+            @for (slice of attendance(); track slice.kind) {
+              <div class="attendance-row">
+                <dt><span [class]="'swatch swatch-' + slice.kind"></span>{{ slice.label }}</dt>
+                <dd>{{ slice.count }}</dd>
+              </div>
+            }
+            <div class="attendance-row total">
+              <dt>Shifts</dt>
+              <dd>{{ attendanceTotal() }}</dd>
+            </div>
+          </dl>
+        </div>
+      }
+    }
+  </section>
+
+  <section class="gadget" aria-labelledby="overtime-title">
+    <div class="gadget-head">
+      <div class="gadget-title">
+        <h3 id="overtime-title">Overtime Watch</h3>
+        @if (overtimeThreshold(); as threshold) {
+          <span class="gadget-date">Weekly limit {{ duration(threshold) }}</span>
+        } @else if (dailyOvertimeThreshold(); as threshold) {
+          <span class="gadget-date">Daily limit {{ duration(threshold) }}</span>
+        }
+      </div>
+    </div>
+
+    @if (!loading() && !error()) {
+      @if (overtimeRows().length === 0) {
+        <p class="all-clear">
+          <mat-icon aria-hidden="true">check_circle</mat-icon>
+          {{ overtimeThreshold() === null ? 'No overtime logged this week.' : 'Nobody is close to overtime this week.' }}
+        </p>
+      } @else if (overtimeThreshold() === null) {
+        <ul class="overtime-list">
+          @for (row of overtimeRows(); track row.employeeId) {
+            <li class="overtime-row">
+              <div class="overtime-line">
+                <span class="overtime-name">{{ row.name }}</span>
+                <span class="overtime-value flag">{{ duration(row.overtimeSoFar) }}</span>
+              </div>
+              <div class="overtime-track" aria-hidden="true">
+                <span class="overtime-seg seg-worked" [style.width.%]="overtimePct(row.worked - row.overtimeSoFar)"></span>
+                <span class="overtime-seg seg-over" [style.width.%]="overtimePct(row.overtimeSoFar)"></span>
+              </div>
+              <p class="overtime-note">overtime of {{ duration(row.worked) }} worked this week</p>
+            </li>
+          }
+        </ul>
+        <div class="legend overtime-legend" aria-hidden="true">
+          <span class="legend-item"><span class="swatch swatch-worked"></span>Regular</span>
+          <span class="legend-item"><span class="swatch swatch-over"></span>Overtime</span>
+        </div>
+      } @else {
+        <ul class="overtime-list">
+          @for (row of overtimeRows(); track row.employeeId) {
+            <li class="overtime-row" [class.over]="isOverThreshold(row)">
+              <div class="overtime-line">
+                <span class="overtime-name">{{ row.name }}</span>
+                <span class="overtime-value">{{ duration(row.worked) }}</span>
+              </div>
+              <div class="overtime-track" aria-hidden="true">
+                <span class="overtime-seg seg-worked" [style.width.%]="overtimePct(row.worked)"></span>
+                <span class="overtime-seg seg-remaining" [style.width.%]="overtimePct(row.remaining)"></span>
+                <span class="overtime-mark" [style.left.%]="overtimePct(overtimeThreshold()!)"></span>
+              </div>
+              <p class="overtime-note">
+                {{ overtimeNote(row) }}
+                @if (row.remaining > 0) {
+                  · {{ duration(row.remaining) }} still scheduled
+                }
+                @if (row.overtimeSoFar > 0) {
+                  · <span class="flag">{{ duration(row.overtimeSoFar) }} overtime so far</span>
+                }
+              </p>
+            </li>
+          }
+        </ul>
+        <div class="legend overtime-legend" aria-hidden="true">
+          <span class="legend-item"><span class="swatch swatch-worked"></span>Worked</span>
+          <span class="legend-item"><span class="swatch swatch-remaining"></span>Still scheduled</span>
+          <span class="legend-item"><span class="swatch-mark"></span>Limit</span>
+        </div>
+      }
+    }
+  </section>
+
+  @if (nextPayDate()) {
+    <section class="gadget" aria-labelledby="pay-day-title">
+      <div class="gadget-head">
+        <div class="gadget-title">
+          <h3 id="pay-day-title">Next Pay Day</h3>
+        </div>
+      </div>
+      <div class="pay-day">
+        <mat-icon aria-hidden="true">paid</mat-icon>
+        <div class="pay-day-text">
+          <span class="pay-day-value">{{ payDayIsToday() ? 'Today' : toMmDdYyyy(nextPayDate()!) }}</span>
+          @if (payDayCountdown()) {
+            <span class="pay-day-countdown">{{ payDayCountdown() }}</span>
+          }
+        </div>
+      </div>
+    </section>
+  }
+  </div>
+</div>
