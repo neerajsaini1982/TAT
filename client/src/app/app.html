@@ -23,6 +23,8 @@
       </button>
       <mat-divider />
       @if (auth.role() === 'Admin') {
+        <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin']">Dashboard</a>
+        <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'view-schedule']">View Schedule</a>
         <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'accounts']">Manage Accounts</a>
       }
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'shifts']">Manage Shifts</a>

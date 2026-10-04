@@ -65,7 +65,11 @@
       </div>
     </div>
   </div>
+} @else if (showsDashboard) {
+  <app-admin-dashboard [locationCode]="locationCode" />
 } @else {
+  <!-- Lead: the location-wide data the dashboard reads is Admin-only
+       server-side, so a Lead keeps the week view as their home. -->
   <app-pay-day-banner />
 
   <div class="schedule-section">

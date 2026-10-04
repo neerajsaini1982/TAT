@@ -1,0 +1,11 @@
+<div class="page-head">
+  <a class="back-link" mat-icon-button [routerLink]="['/', locationCode, 'admin']" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <div class="page-head-text">
+    <p class="kicker">{{ locationCode }} · Administration</p>
+    <h2>View Schedule</h2>
+  </div>
+</div>
+
+<app-current-week-schedule scope="location" [locationCode]="locationCode" />
