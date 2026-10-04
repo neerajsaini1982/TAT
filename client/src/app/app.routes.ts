@@ -15,6 +15,7 @@ import { WriteUpPrintPage } from './features/admin/write-up-print-page/write-up-
 import { AdminShiftsPage } from './features/admin/admin-shifts-page/admin-shifts-page';
 import { AdminAvailabilityPage } from './features/admin/admin-availability-page/admin-availability-page';
 import { AdminSchedulePage } from './features/admin/admin-schedule-page/admin-schedule-page';
+import { AdminViewSchedulePage } from './features/admin/admin-view-schedule-page/admin-view-schedule-page';
 import { AdminScheduleAssignPage } from './features/admin/admin-schedule-assign-page/admin-schedule-assign-page';
 import { AdminLocationSettingsPage } from './features/admin/admin-location-settings-page/admin-location-settings-page';
 import { AdminPayrollReportPage } from './features/admin/admin-payroll-report-page/admin-payroll-report-page';
@@ -48,6 +49,7 @@ export const routes: Routes = [
   { path: ':locationCode/admin/shifts', component: AdminShiftsPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/availability', component: AdminAvailabilityPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/schedule', component: AdminSchedulePage, canActivate: [adminGuard] },
+  { path: ':locationCode/admin/view-schedule', component: AdminViewSchedulePage, canActivate: [adminOnlyGuard] },
   { path: ':locationCode/admin/schedule-assign', component: AdminScheduleAssignPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/settings', component: AdminLocationSettingsPage, canActivate: [adminOnlyGuard] },
   { path: ':locationCode/admin/payroll-report', component: AdminPayrollReportPage, canActivate: [adminGuard] },
