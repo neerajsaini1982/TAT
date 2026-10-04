@@ -447,6 +447,18 @@ $mobile: 767.98px;
   height: 100%;
 }
 
+// Regular hours read as "fine" here, so they take the status green rather
+// than the logged-hours orange the other charts use.
+.overtime-track .seg-worked,
+.overtime-legend .swatch-worked {
+  background: var(--viz-good);
+}
+
+.overtime-track .seg-remaining,
+.overtime-legend .swatch-remaining {
+  background: color-mix(in srgb, var(--viz-good) 35%, var(--mat-sys-surface));
+}
+
 .overtime-row.over .seg-worked {
   background: var(--viz-critical);
 }

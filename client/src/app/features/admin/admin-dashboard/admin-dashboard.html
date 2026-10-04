@@ -67,9 +67,8 @@
           <thead>
             <tr>
               <th>Employee</th>
-              <th>Shift</th>
               <th>Scheduled</th>
-              <th>Clocked</th>
+              <th>Logged</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -80,9 +79,8 @@
                   <span class="employee-dot" [style.--employee-color]="employeeColor(shift.assignment.accountId)"></span>
                   {{ shift.employeeName }}
                 </td>
-                <td data-label="Shift">{{ shift.assignment.shiftName }}</td>
                 <td class="num" data-label="Scheduled">{{ shift.timeLabel }}</td>
-                <td class="num" data-label="Clocked">{{ shift.clockLabel }}</td>
+                <td class="num" data-label="Logged">{{ shift.clockLabel }}</td>
                 <td class="status-cell" data-label="Status">
                   <span [class]="'status-badge ' + shift.status" [title]="shift.assignment.absenceNote ?? ''">
                     {{ shift.statusLabel }}
