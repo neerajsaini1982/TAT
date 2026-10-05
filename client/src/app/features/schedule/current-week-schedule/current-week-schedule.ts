@@ -16,7 +16,7 @@ import { AccountsApi } from '../../../core/accounts-api';
 import { employeeColor } from '../../../core/employee-colors';
 import { formatInstant, formatTimeOnly } from '../../../core/location-time';
 import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-flags';
-import { addDays, combineDateAndTime, dayOfWeekLabel, formatDate, formatWeekRange, hoursMinutesLabel, mondayOf, toMmDdYyyy } from '../../../core/week-utils';
+import { addDays, combineDateAndTime, dayOfWeekLabel, formatDate, formatWeekRange, hoursMinutesLabel, mondayOf, parseDate, toMmDdYyyy } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../../admin/note-dialog/note-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../../admin/edit-time-entry-dialog/edit-time-entry-dialog';
 import { WriteUpDialog, WriteUpDialogData } from '../../accounts/write-up-dialog/write-up-dialog';
@@ -101,6 +101,12 @@ function workedMinutes(entry: TimeEntryDto): number {
 export class CurrentWeekSchedule implements OnInit {
   @Input() scope: 'mine' | 'location' = 'mine';
   @Input() locationCode: string | null = null;
+  // Deep link from the admin dashboard's Punches to Fix (location scope
+  // only): open on focusDate's week with that day visible even if it is
+  // already past, scroll to focusShiftId's row and open its Edit Times
+  // dialog.
+  @Input() focusDate: string | null = null;
+  @Input() focusShiftId: number | null = null;
 
   private readonly api = inject(ShiftAssignmentsApi);
   private readonly timeEntriesApi = inject(TimeEntriesApi);
@@ -159,6 +165,12 @@ export class CurrentWeekSchedule implements OnInit {
   // to "today onward" (see ShiftAssignmentsController.GetMine), so there's
   // nothing earlier to fetch for scope 'mine' without a server change.
   // Location scope already has getForWeek, which takes any week.
+  protected readonly focusedShiftId = signal<number | null>(null);
+  // The current week normally hides the days already gone; a deep link to
+  // one of them shows the whole week until the admin browses away.
+  private showEarlierDays = false;
+  private focusPending = false;
+
   protected readonly canBrowseWeeks = computed(() => this.scope === 'location');
   protected readonly weekStart = signal(mondayOf(new Date()));
   protected readonly weekRangeLabel = computed(() => formatWeekRange(this.weekStart()));
@@ -176,6 +188,11 @@ export class CurrentWeekSchedule implements OnInit {
   private lunchLimitMinutes = DEFAULT_SETTINGS.lunchLimitMinutes;
 
   ngOnInit(): void {
+    if (this.scope === 'location' && this.focusDate && /^\d{4}-\d{2}-\d{2}$/.test(this.focusDate)) {
+      this.weekStart.set(mondayOf(parseDate(this.focusDate)));
+      this.showEarlierDays = true;
+      this.focusPending = this.focusShiftId !== null;
+    }
     this.load();
 
     const role = this.auth.role();
@@ -195,16 +212,19 @@ export class CurrentWeekSchedule implements OnInit {
   }
 
   previousWeek(): void {
+    this.showEarlierDays = false;
     this.weekStart.set(addDays(this.weekStart(), -7));
     this.load();
   }
 
   nextWeek(): void {
+    this.showEarlierDays = false;
     this.weekStart.set(addDays(this.weekStart(), 7));
     this.load();
   }
 
   backToThisWeek(): void {
+    this.showEarlierDays = false;
     this.weekStart.set(mondayOf(new Date()));
     this.load();
   }
@@ -228,7 +248,7 @@ export class CurrentWeekSchedule implements OnInit {
           const visibleDates = [
             ...new Set(
               assignments
-                .filter((a) => a.date >= weekStart && a.date <= weekEnd && (!isCurrentWeek || a.date >= today))
+                .filter((a) => a.date >= weekStart && a.date <= weekEnd && (!isCurrentWeek || this.showEarlierDays || a.date >= today))
                 .map((a) => a.date),
             ),
           ];
@@ -333,9 +353,32 @@ export class CurrentWeekSchedule implements OnInit {
               }),
           );
           this.loading.set(false);
+          this.applyFocus();
         },
         error: () => this.loading.set(false),
       });
+  }
+
+  // Once, after the first load that contains the deep-linked shift.
+  private applyFocus(): void {
+    if (!this.focusPending) {
+      return;
+    }
+    const shift = this.days()
+      .flatMap((d) => d.shifts)
+      .find((s) => s.assignment.id === this.focusShiftId);
+    if (!shift) {
+      return;
+    }
+    this.focusPending = false;
+    this.focusedShiftId.set(shift.assignment.id);
+    // After the row has rendered.
+    setTimeout(() => {
+      document.getElementById(`shift-${shift.assignment.id}`)?.scrollIntoView({ block: 'center' });
+      if (this.canManageOthers() && !shift.assignment.isAbsent) {
+        this.editTimes(shift);
+      }
+    });
   }
 
   scheduledTime(shift: ShiftAssignmentDto): string {

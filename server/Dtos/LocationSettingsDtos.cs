@@ -36,8 +36,12 @@ public record LocationSettingsDto(
     bool HasSmtpPassword,
     DateOnly? PayDayStartDate,
     int? PayPeriodDays,
+    DateOnly? PayPeriodStartDate,
     // Computed from PayDayStartDate/PayPeriodDays (see LocationSettings.GetNextPayDate) — not stored.
     DateOnly? NextPayDate,
+    // The pay period NextPayDate pays for (see LocationSettings.GetPayPeriodFor) — not stored.
+    DateOnly? NextPayPeriodStart,
+    DateOnly? NextPayPeriodEnd,
     // Never round-trips the stored passcode; true only tells the UI a kiosk
     // device can log in for this location, same HasSmtpPassword pattern.
     bool HasKioskPasscode);
@@ -74,6 +78,7 @@ public record UpdateLocationSettingsRequest(
     string? SmtpFromName,
     DateOnly? PayDayStartDate,
     int? PayPeriodDays,
+    DateOnly? PayPeriodStartDate,
     // Blank/omitted leaves the existing stored passcode untouched, same
     // "blank means unchanged" rule SmtpPassword uses.
     string? KioskPasscode,
@@ -110,7 +115,10 @@ public record EmployeeLocationSettingsDto(
     int BreakLimitMinutes,
     int LunchLimitMinutes,
     // Computed from LocationSettings.GetNextPayDate; null when pay day tracking isn't configured.
-    DateOnly? NextPayDate);
+    DateOnly? NextPayDate,
+    // The pay period NextPayDate pays for; null when the pay period isn't configured.
+    DateOnly? NextPayPeriodStart,
+    DateOnly? NextPayPeriodEnd);
 
 // One selectable overtime preset with the rule values it fills in (see
 // OvertimePolicy.ForPreset). The workweek start day isn't part of a preset —

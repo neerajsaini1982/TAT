@@ -73,7 +73,11 @@
             </thead>
             <tbody>
               @for (shift of day.shifts; track shift.assignment.id) {
-                <tr [class.absent-row]="shift.assignment.isAbsent">
+                <tr
+                  [attr.id]="'shift-' + shift.assignment.id"
+                  [class.absent-row]="shift.assignment.isAbsent"
+                  [class.focus-row]="focusedShiftId() === shift.assignment.id"
+                >
                   @if (showEmployeeNames()) {
                     <td class="employee-cell" data-label="Employee">
                       <span class="employee-dot" [style.--employee-color]="employeeColor(shift.assignment.accountId)"></span>

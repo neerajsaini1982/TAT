@@ -49,7 +49,11 @@ export interface LocationSettingsDto {
   hasSmtpPassword: boolean;
   payDayStartDate: string | null;
   payPeriodDays: number | null;
+  payPeriodStartDate: string | null;
   nextPayDate: string | null;
+  // The pay period nextPayDate pays for; null when it isn't configured.
+  nextPayPeriodStart: string | null;
+  nextPayPeriodEnd: string | null;
   // Never round-trips the stored passcode; true only tells the UI a kiosk
   // device can log in for this location.
   hasKioskPasscode: boolean;
@@ -85,6 +89,7 @@ export interface UpdateLocationSettingsRequest {
   smtpFromName: string | null;
   payDayStartDate: string | null;
   payPeriodDays: number | null;
+  payPeriodStartDate: string | null;
   // Blank leaves the existing stored passcode untouched, same "blank means
   // unchanged" rule smtpPassword uses.
   kioskPasscode: string | null;
@@ -112,6 +117,8 @@ export interface EmployeeLocationSettingsDto {
   breakLimitMinutes: number;
   lunchLimitMinutes: number;
   nextPayDate: string | null;
+  nextPayPeriodStart: string | null;
+  nextPayPeriodEnd: string | null;
 }
 
 @Service()

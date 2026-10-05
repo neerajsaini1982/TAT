@@ -283,6 +283,11 @@ $mobile: 767.98px;
     border-bottom: none;
   }
 
+  // The shift a dashboard deep link pointed at (see applyFocus()).
+  tr.focus-row td {
+    background: var(--mat-sys-secondary-container);
+  }
+
   // Absent rows stay legible — the Absent badge already carries the
   // message, so the row doesn't need to be faded into unreadability.
   tr.absent-row td {
