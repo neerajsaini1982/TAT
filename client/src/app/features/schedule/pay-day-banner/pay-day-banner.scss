@@ -17,7 +17,8 @@
   mat-card-content {
     display: flex;
     align-items: center;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 4px 12px;
     padding: 16px 20px !important;
     font-size: 20px;
     font-weight: 600;
@@ -26,6 +27,15 @@
 
   strong {
     font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  // Secondary to the date itself; pushed to the far edge, wrapping under
+  // it when the band is too narrow for both.
+  .pay-period {
+    margin-left: auto;
+    font-size: 14px;
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
   }
 

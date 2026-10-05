@@ -218,6 +218,51 @@
   </div>
 
   <div class="gadget-col">
+  <section class="gadget" aria-labelledby="punches-title">
+    <div class="gadget-head">
+      <div class="gadget-title">
+        <h3 id="punches-title">Punches to Fix</h3>
+        <span class="gadget-date">Last 7 days</span>
+      </div>
+      @if (punchIssues().length > 0) {
+        <span class="count-badge">{{ punchIssues().length }}</span>
+      }
+    </div>
+
+    @if (!loading() && !error()) {
+      @if (punchIssues().length === 0) {
+        <p class="all-clear">
+          <mat-icon aria-hidden="true">check_circle</mat-icon>
+          No missing or open punches.
+        </p>
+      } @else {
+        <ul class="attention-list">
+          @for (issue of punchIssues(); track issue.assignmentId) {
+            <li>
+              <!-- Opens that day in View Schedule, on this shift's Edit Times dialog. -->
+              <a
+                class="attention-item punch-item"
+                [routerLink]="['/', locationCode, 'admin', 'view-schedule']"
+                [queryParams]="{ date: issue.date, shift: issue.assignmentId }"
+              >
+                <mat-icon aria-hidden="true">{{ issue.icon }}</mat-icon>
+                <div class="attention-body">
+                  <p class="attention-text">
+                    <span class="employee-dot" [style.--employee-color]="employeeColor(issue.accountId)"></span>
+                    {{ issue.employeeName }}
+                    <span class="punch-problem">{{ issue.problem }}</span>
+                  </p>
+                  <p class="attention-detail">{{ issue.detail }}</p>
+                </div>
+                <mat-icon class="punch-go" aria-hidden="true">chevron_right</mat-icon>
+              </a>
+            </li>
+          }
+        </ul>
+      }
+    }
+  </section>
+
   <section class="gadget" aria-labelledby="attention-title">
     <div class="gadget-head">
       <div class="gadget-title">
@@ -386,6 +431,9 @@
           <span class="pay-day-value">{{ payDayIsToday() ? 'Today' : toMmDdYyyy(nextPayDate()!) }}</span>
           @if (payDayCountdown()) {
             <span class="pay-day-countdown">{{ payDayCountdown() }}</span>
+          }
+          @if (payPeriodLabel()) {
+            <span class="pay-period">Pay period {{ payPeriodLabel() }}</span>
           }
         </div>
       </div>
