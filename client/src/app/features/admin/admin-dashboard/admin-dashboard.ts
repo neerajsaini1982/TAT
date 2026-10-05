@@ -104,6 +104,25 @@ interface OvertimeRow {
   overtimeSoFar: number;
 }
 
+// A punch an admin probably has to correct by hand: someone who looks to
+// have forgotten to clock out, or to end a break/lunch, or who never
+// punched at all on a past shift.
+interface PunchIssue {
+  assignmentId: number;
+  accountId: number;
+  date: string;
+  employeeName: string;
+  icon: string;
+  problem: string;
+  detail: string;
+}
+
+// How far back Punches to Fix looks, today included.
+const PUNCH_LOOKBACK_DAYS = 7;
+// Leeway after the scheduled end before a still-open shift counts as a
+// forgotten clock-out.
+const CLOCK_OUT_GRACE_MINUTES = 15;
+
 interface AttentionItem {
   icon: string;
   text: string;
@@ -116,7 +135,11 @@ const DEFAULT_SETTINGS = {
   timeFormat: 'TwelveHour' as TimeFormat,
   timeZone: 'America/Los_Angeles',
   lateClockInGraceMinutes: 5,
+  breakLimitMinutes: 15,
+  lunchLimitMinutes: 30,
   nextPayDate: null as string | null,
+  nextPayPeriodStart: null as string | null,
+  nextPayPeriodEnd: null as string | null,
   weeklyOvertimeAfterMinutes: null as number | null,
   overtimeDailyThresholdMinutes: null as number | null,
   workweekStartDay: 'Monday' as WorkweekDay,
@@ -167,6 +190,7 @@ export class AdminDashboard implements OnInit {
   protected readonly lastRefreshed = signal('');
   protected readonly nextPayDate = signal<string | null>(null);
   protected readonly payDayIsToday = signal(false);
+  protected readonly payPeriodLabel = signal('');
 
   protected readonly weekRangeLabel = signal('');
   protected readonly weekDays = signal<WeekDayHours[]>([]);
@@ -181,6 +205,7 @@ export class AdminDashboard implements OnInit {
   protected readonly dailyOvertimeThreshold = signal<number | null>(null);
   protected readonly overtimeRows = signal<OvertimeRow[]>([]);
   protected readonly attentionItems = signal<AttentionItem[]>([]);
+  protected readonly punchIssues = signal<PunchIssue[]>([]);
 
   protected readonly toMmDdYyyy = toMmDdYyyy;
   protected readonly duration = formatDurationMinutes;
@@ -283,9 +308,11 @@ export class AdminDashboard implements OnInit {
     this.weekRangeLabel.set(formatWeekRange(monday));
 
     // Punches are fetched a day at a time (the endpoint is per-date), for
-    // the days of this week that have happened so far.
+    // the last seven days — which always covers the days of this week that
+    // have happened so far, plus the tail of last week for Punches to Fix.
+    const lookbackStart = addDays(now, -(PUNCH_LOOKBACK_DAYS - 1));
     const elapsedDates: string[] = [];
-    for (let d = monday; formatDate(d) <= today; d = addDays(d, 1)) {
+    for (let d = lookbackStart; formatDate(d) <= today; d = addDays(d, 1)) {
       elapsedDates.push(formatDate(d));
     }
 
@@ -311,6 +338,9 @@ export class AdminDashboard implements OnInit {
                 this.timeEntriesApi.getForLocation(this.locationCode, date).pipe(catchError(() => of([]))),
               ),
             ),
+            lastWeekAssignments: this.assignmentsApi
+              .getForWeek(formatDate(addDays(monday, -7)), this.locationCode)
+              .pipe(catchError(() => of([] as ShiftAssignmentDto[]))),
             report: this.reportsApi
               .getHoursReport(this.locationCode, reportStart, reportEnd)
               .pipe(catchError(() => of([] as EmployeeHoursReportDto[]))),
@@ -326,7 +356,7 @@ export class AdminDashboard implements OnInit {
         }),
       )
       .subscribe({
-        next: ({ assignments, entries, report, nextWeekAssignments, availability, settings, workweek }) => {
+        next: ({ assignments, lastWeekAssignments, entries, report, nextWeekAssignments, availability, settings, workweek }) => {
           const entryByShiftId = new Map(entries.flat().map((e) => [e.shiftAssignmentId, e]));
           const grace = settings.lateClockInGraceMinutes;
 
@@ -364,12 +394,26 @@ export class AdminDashboard implements OnInit {
           this.overtimeRows.set(
             this.buildOvertimeRows(report, workweek.start, workweek.end, today, settings.weeklyOvertimeAfterMinutes),
           );
+          this.punchIssues.set(
+            this.buildPunchIssues(
+              [...lastWeekAssignments, ...assignments].filter((a) => a.date >= elapsedDates[0] && a.date <= today),
+              entryByShiftId,
+              today,
+              now,
+              settings,
+            ),
+          );
           this.attentionItems.set(
-            this.buildAttentionItems(today, yesterday, weekStart, nextMonday, assignments, nextWeekAssignments, availability, report),
+            this.buildAttentionItems(today, weekStart, nextMonday, assignments, nextWeekAssignments, availability),
           );
 
           this.nextPayDate.set(settings.nextPayDate);
           this.payDayIsToday.set(settings.nextPayDate === today);
+          this.payPeriodLabel.set(
+            settings.nextPayPeriodStart && settings.nextPayPeriodEnd
+              ? `${toMmDdYyyy(settings.nextPayPeriodStart)} – ${toMmDdYyyy(settings.nextPayPeriodEnd)}`
+              : '',
+          );
           this.payDayCountdown.set(this.countdownTo(settings.nextPayDate, today));
           this.lastRefreshed.set(formatInstant(now.toISOString(), settings.timeZone, settings.timeFormat));
           this.error.set(null);
@@ -530,34 +574,89 @@ export class AdminDashboard implements OnInit {
       .slice(0, OVERTIME_WATCH_MAX_ROWS);
   }
 
+  // Newest day first. Each shift yields at most one issue, the most
+  // specific one: an open break/lunch that has run past its limit hides the
+  // missing clock-out behind it, since ending it is the first thing to fix.
+  private buildPunchIssues(
+    assignments: ShiftAssignmentDto[],
+    entryByShiftId: Map<number, TimeEntryDto>,
+    today: string,
+    now: Date,
+    settings: { timeZone: string; timeFormat: TimeFormat; breakLimitMinutes: number; lunchLimitMinutes: number },
+  ): PunchIssue[] {
+    const time = (iso: string) => formatInstant(iso, settings.timeZone, settings.timeFormat);
+    const dayPrefix = (date: string) => (date === today ? '' : `${dayOfWeekLabel(date)} ${toMmDdYyyy(date)} · `);
+    const issues: PunchIssue[] = [];
+
+    for (const a of assignments) {
+      if (a.isAbsent) {
+        continue;
+      }
+      const entry = entryByShiftId.get(a.id);
+      const base = {
+        assignmentId: a.id,
+        accountId: a.accountId,
+        date: a.date,
+        employeeName: `${a.accountFirstName} ${a.accountLastName}`,
+      };
+      const scheduled = `${formatTimeOnly(a.shiftStartTime, settings.timeFormat)} – ${formatTimeOnly(a.shiftEndTime, settings.timeFormat)}`;
+
+      if (!entry) {
+        // Today's un-punched shifts are Today's Schedule's "Not clocked in".
+        if (a.date < today) {
+          issues.push({ ...base, icon: 'help_outline', problem: 'No punches', detail: `${dayPrefix(a.date)}Scheduled ${scheduled}` });
+        }
+        continue;
+      }
+      if (entry.clockOutAt) {
+        continue;
+      }
+
+      const open = entry.segments.find((s) => !s.endAt);
+      if (open) {
+        const limit = open.kind === 'Lunch' ? settings.lunchLimitMinutes : settings.breakLimitMinutes;
+        const openMinutes = Math.round((now.getTime() - new Date(open.startAt).getTime()) / 60_000);
+        if (openMinutes > limit) {
+          issues.push({
+            ...base,
+            icon: open.kind === 'Lunch' ? 'restaurant' : 'free_breakfast',
+            problem: `${open.kind} not ended`,
+            detail: `${dayPrefix(a.date)}Started ${time(open.startAt)} · ${formatDurationMinutes(openMinutes - limit)} over the ${limit}m limit`,
+          });
+          continue;
+        }
+      }
+
+      const shiftStart = combineDateAndTime(a.date, a.shiftStartTime);
+      const shiftEnd = combineDateAndTime(a.date, a.shiftEndTime);
+      if (shiftEnd <= shiftStart) {
+        shiftEnd.setDate(shiftEnd.getDate() + 1); // overnight shift
+      }
+      const overMinutes = Math.round((now.getTime() - shiftEnd.getTime()) / 60_000);
+      if (overMinutes > CLOCK_OUT_GRACE_MINUTES) {
+        issues.push({
+          ...base,
+          icon: 'timer_off',
+          problem: 'No clock-out',
+          detail: `${dayPrefix(a.date)}Shift ended ${formatTimeOnly(a.shiftEndTime, settings.timeFormat)} · clocked in ${time(entry.clockInAt)}`,
+        });
+      }
+    }
+
+    return issues.sort((x, y) => y.date.localeCompare(x.date) || x.employeeName.localeCompare(y.employeeName));
+  }
+
   private buildAttentionItems(
     today: string,
-    yesterday: string,
     weekStart: string,
     nextMonday: Date,
     assignments: ShiftAssignmentDto[],
     nextWeekAssignments: ShiftAssignmentDto[] | null,
     availability: AvailabilityDto[],
-    report: EmployeeHoursReportDto[],
   ): AttentionItem[] {
     const items: AttentionItem[] = [];
     const admin = ['/', this.locationCode, 'admin'];
     const nextWeekLabel = formatWeekRange(nextMonday);
-
-    const openPunches = report.flatMap((e) =>
-      e.days
-        .filter((d) => d.stillClockedIn && d.date < today && (d.date >= weekStart || d.date === yesterday))
-        .map(() => e.fullName),
-    );
-    if (openPunches.length > 0) {
-      items.push({
-        icon: 'timer_off',
-        text: `${plural(openPunches.length, 'shift')} from earlier never clocked out`,
-        detail: [...new Set(openPunches)].join(', '),
-        linkLabel: 'Fix punches',
-        link: [...admin, 'view-schedule'],
-      });
-    }
 
     const draftsThisWeek = assignments.filter((a) => a.date >= today && a.date >= weekStart && !a.isPublished).length;
     if (draftsThisWeek > 0) {

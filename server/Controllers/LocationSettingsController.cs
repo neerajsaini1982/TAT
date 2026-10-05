@@ -55,6 +55,8 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         }
 
         var settings = GetOrCreateSettings(location.Id);
+        var nextPayDate = settings.GetNextPayDate(DateOnly.FromDateTime(DateTime.Now));
+        var payPeriod = settings.GetPayPeriodFor(nextPayDate);
         return Ok(new EmployeeLocationSettingsDto(
             settings.TimeFormat,
             settings.TimeZone,
@@ -62,7 +64,9 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
             settings.LateClockInGraceMinutes,
             settings.BreakLimitMinutes,
             settings.LunchLimitMinutes,
-            settings.GetNextPayDate(DateOnly.FromDateTime(DateTime.Now))));
+            nextPayDate,
+            payPeriod?.Start,
+            payPeriod?.End));
     }
 
     [HttpPut]
@@ -114,6 +118,7 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
         settings.SmtpFromName = request.SmtpFromName;
         settings.PayDayStartDate = request.PayDayStartDate;
         settings.PayPeriodDays = request.PayPeriodDays;
+        settings.PayPeriodStartDate = request.PayPeriodStartDate;
 
         // GET never sends the real password back down, so a blank field
         // here means "unchanged", not "clear it".
@@ -255,36 +260,44 @@ public class LocationSettingsController(AppDbContext db, IEmailSender emailSende
     private string? CallerLocationCode() =>
         User.FindFirst(TokenService.LocationCodeClaimType)?.Value;
 
-    private static LocationSettingsDto ToDto(LocationSettings s) => new(
-        s.TimeFormat,
-        s.DateFormat,
-        s.TimeZone,
-        s.AvailabilityDays,
-        s.ClockInWindowMinutes,
-        s.LateClockInGraceMinutes,
-        s.BreakLimitMinutes,
-        s.LunchLimitMinutes,
-        s.OvertimePreset,
-        s.OvertimeDailyThresholdMinutes,
-        s.DailyDoubleTimeAfterMinutes,
-        s.WeeklyOvertimeAfterMinutes,
-        s.SeventhDayDoubleTimeAfterMinutes,
-        s.WorkweekStartDay,
-        s.DevelopmentMode,
-        s.ScheduleVisibilityEnabled,
-        s.AdminSeesAllSchedules,
-        s.LeadSeesAllSchedules,
-        s.EmployeeSeesAllSchedules,
-        s.ClockInAnywhere,
-        s.SmtpHost,
-        s.SmtpPort,
-        s.SmtpUsername,
-        s.SmtpUseSsl,
-        s.SmtpFromAddress,
-        s.SmtpFromName,
-        !string.IsNullOrEmpty(s.SmtpPassword),
-        s.PayDayStartDate,
-        s.PayPeriodDays,
-        s.GetNextPayDate(DateOnly.FromDateTime(DateTime.Now)),
-        !string.IsNullOrEmpty(s.KioskPasscodeHash));
+    private static LocationSettingsDto ToDto(LocationSettings s)
+    {
+        var nextPayDate = s.GetNextPayDate(DateOnly.FromDateTime(DateTime.Now));
+        var payPeriod = s.GetPayPeriodFor(nextPayDate);
+        return new(
+            s.TimeFormat,
+            s.DateFormat,
+            s.TimeZone,
+            s.AvailabilityDays,
+            s.ClockInWindowMinutes,
+            s.LateClockInGraceMinutes,
+            s.BreakLimitMinutes,
+            s.LunchLimitMinutes,
+            s.OvertimePreset,
+            s.OvertimeDailyThresholdMinutes,
+            s.DailyDoubleTimeAfterMinutes,
+            s.WeeklyOvertimeAfterMinutes,
+            s.SeventhDayDoubleTimeAfterMinutes,
+            s.WorkweekStartDay,
+            s.DevelopmentMode,
+            s.ScheduleVisibilityEnabled,
+            s.AdminSeesAllSchedules,
+            s.LeadSeesAllSchedules,
+            s.EmployeeSeesAllSchedules,
+            s.ClockInAnywhere,
+            s.SmtpHost,
+            s.SmtpPort,
+            s.SmtpUsername,
+            s.SmtpUseSsl,
+            s.SmtpFromAddress,
+            s.SmtpFromName,
+            !string.IsNullOrEmpty(s.SmtpPassword),
+            s.PayDayStartDate,
+            s.PayPeriodDays,
+            s.PayPeriodStartDate,
+            nextPayDate,
+            payPeriod?.Start,
+            payPeriod?.End,
+            !string.IsNullOrEmpty(s.KioskPasscodeHash));
+    }
 }

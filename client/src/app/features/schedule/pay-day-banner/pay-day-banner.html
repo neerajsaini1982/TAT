@@ -7,6 +7,9 @@
       } @else {
         <span>Next pay day: <strong>{{ toMmDdYyyy(nextPayDate()!) }}</strong></span>
       }
+      @if (payPeriod()) {
+        <span class="pay-period">Pay period: {{ payPeriod() }}</span>
+      }
     </mat-card-content>
   </mat-card>
 }

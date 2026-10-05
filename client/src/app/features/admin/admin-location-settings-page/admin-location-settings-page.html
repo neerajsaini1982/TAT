@@ -206,7 +206,8 @@
         <mat-card-title>Pay Day</mat-card-title>
         <mat-card-subtitle>
           Enter any past or future pay day and how many days between pay days (e.g. 14 for every 2 weeks). The system
-          always shows the next upcoming date on the home page — leave blank to disable the notification.
+          always shows the next upcoming date on the home page — leave blank to disable the notification. To also show
+          the pay period next to it, enter the first day of the pay period that pay day covers.
         </mat-card-subtitle>
       </mat-card-header>
       <mat-card-content class="section-content">
@@ -218,6 +219,11 @@
         <mat-form-field appearance="outline">
           <mat-label>Pay Period Length (days)</mat-label>
           <input matInput type="number" min="1" [(ngModel)]="form.payPeriodDays" name="payPeriodDays" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Pay Period Start (for that pay day)</mat-label>
+          <input matInput type="date" [(ngModel)]="form.payPeriodStartDate" name="payPeriodStartDate" />
         </mat-form-field>
       </mat-card-content>
     </mat-card>

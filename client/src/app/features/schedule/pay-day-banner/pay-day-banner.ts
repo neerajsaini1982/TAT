@@ -22,12 +22,19 @@ export class PayDayBanner implements OnInit {
 
   protected readonly nextPayDate = signal<string | null>(null);
   protected readonly isToday = signal(false);
+  // "09/20/2026 – 10/03/2026", or null when the pay period isn't configured.
+  protected readonly payPeriod = signal<string | null>(null);
 
   ngOnInit(): void {
     this.settingsApi.getMine().subscribe({
       next: (settings) => {
         this.nextPayDate.set(settings.nextPayDate);
         this.isToday.set(settings.nextPayDate === formatDate(new Date()));
+        this.payPeriod.set(
+          settings.nextPayPeriodStart && settings.nextPayPeriodEnd
+            ? `${toMmDdYyyy(settings.nextPayPeriodStart)} – ${toMmDdYyyy(settings.nextPayPeriodEnd)}`
+            : null,
+        );
       },
       error: () => this.nextPayDate.set(null),
     });

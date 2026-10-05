@@ -123,6 +123,7 @@ interface FormModel {
   smtpFromName: string;
   payDayStartDate: string;
   payPeriodDays: number | null;
+  payPeriodStartDate: string;
   kioskPasscode: string;
 }
 
@@ -156,6 +157,7 @@ const emptyForm = (): FormModel => ({
   smtpFromName: '',
   payDayStartDate: '',
   payPeriodDays: null,
+  payPeriodStartDate: '',
   kioskPasscode: '',
 });
 
@@ -297,6 +299,7 @@ export class AdminLocationSettingsPage implements OnInit {
       smtpFromName: settings.smtpFromName ?? '',
       payDayStartDate: settings.payDayStartDate ?? '',
       payPeriodDays: settings.payPeriodDays,
+      payPeriodStartDate: settings.payPeriodStartDate ?? '',
       kioskPasscode: '',
     };
   }
@@ -357,6 +360,7 @@ export class AdminLocationSettingsPage implements OnInit {
           smtpFromName: this.form.smtpFromName || null,
           payDayStartDate: this.form.payDayStartDate || null,
           payPeriodDays: this.form.payPeriodDays,
+          payPeriodStartDate: this.form.payPeriodStartDate || null,
           kioskPasscode: this.form.kioskPasscode || null,
           clearKioskPasscode,
         },

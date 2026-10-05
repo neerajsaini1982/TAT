@@ -108,6 +108,11 @@ public class LocationSettings
     // tracking isn't configured for this location.
     public DateOnly? PayDayStartDate { get; set; }
     public int? PayPeriodDays { get; set; }
+    // First day of the pay period that PayDayStartDate pays for — e.g. pay
+    // day 10/09 covering 09/20–10/03 stores 09/20. Every other pay day's
+    // period is that one shifted by the same number of days (see
+    // GetPayPeriodFor). Null means only the pay day itself is known.
+    public DateOnly? PayPeriodStartDate { get; set; }
 
     // Next pay date on/after `today`, walking forward from PayDayStartDate
     // in PayPeriodDays-sized steps. Returns `today` itself when today is a
@@ -125,5 +130,21 @@ public class LocationSettings
         var elapsedDays = today.DayNumber - start.DayNumber;
         var remainder = elapsedDays % period;
         return remainder == 0 ? today : today.AddDays(period - remainder);
+    }
+
+    // The pay period `payDate` pays for (both ends inclusive), or null when
+    // PayPeriodStartDate isn't configured.
+    public (DateOnly Start, DateOnly End)? GetPayPeriodFor(DateOnly? payDate)
+    {
+        if (payDate is not { } date
+            || PayDayStartDate is not { } payDayStart
+            || PayPeriodStartDate is not { } periodStart
+            || PayPeriodDays is not { } period
+            || period <= 0)
+        {
+            return null;
+        }
+        var start = periodStart.AddDays(date.DayNumber - payDayStart.DayNumber);
+        return (start, start.AddDays(period - 1));
     }
 }

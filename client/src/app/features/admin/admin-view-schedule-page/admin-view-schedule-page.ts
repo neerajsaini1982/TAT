@@ -19,4 +19,7 @@ import { CurrentWeekSchedule } from '../../schedule/current-week-schedule/curren
 export class AdminViewSchedulePage {
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
+  // Set by the dashboard's Punches to Fix links — see CurrentWeekSchedule.
+  protected readonly focusDate = this.route.snapshot.queryParamMap.get('date');
+  protected readonly focusShiftId = Number(this.route.snapshot.queryParamMap.get('shift')) || null;
 }
