@@ -160,6 +160,79 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
         return Ok(new EmailHoursReportResultDto(sent, skippedNoEmail, failed));
     }
 
+    // Who calls out and who steps in: per employee, the shifts they were
+    // marked absent for and the shifts they covered for someone else, over
+    // a date range. Built from what the call-out flow records on the
+    // assignments themselves (see ShiftAssignmentsController.CallOut), so a
+    // cover that was later removed isn't counted — only ones that stood.
+    // Admin/Sa only: unlike the hours report there is no self-service view.
+    [HttpGet("call-outs")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public ActionResult<IEnumerable<EmployeeCallOutReportDto>> GetCallOutReport(
+        [FromQuery] string? locationCode, [FromQuery] DateOnly startDate, [FromQuery] DateOnly endDate)
+    {
+        if (endDate < startDate)
+        {
+            return BadRequest("endDate can't be before startDate.");
+        }
+
+        var location = ResolveLocation(locationCode);
+        if (location is null)
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        var assignments = db.ShiftAssignments
+            .Include(a => a.Account)
+            .Include(a => a.Shift)
+            .Include(a => a.CoversAssignment).ThenInclude(c => c!.Account)
+            .Include(a => a.CoversAssignment).ThenInclude(c => c!.Shift)
+            .Include(a => a.CoveredByAssignment).ThenInclude(c => c!.Account)
+            .Where(a => a.Shift!.LocationId == location.Id && a.Date >= startDate && a.Date <= endDate && a.IsPublished)
+            .ToList();
+
+        static string FullName(Account account) => $"{account.FirstName} {account.LastName}";
+
+        var rows = assignments
+            .GroupBy(a => a.AccountId)
+            .Select(group =>
+            {
+                var callOuts = group.Where(a => a.IsAbsent).OrderBy(a => a.Date).ToList();
+                // Covering only counts if they then worked it — not if they
+                // were marked absent from the shift they'd agreed to cover.
+                var covers = group
+                    .Where(a => a.CoversAssignment is not null && !a.IsAbsent)
+                    .OrderBy(a => a.Date)
+                    .ToList();
+
+                return new EmployeeCallOutReportDto(
+                    group.Key,
+                    FullName(group.First().Account!),
+                    group.Count(),
+                    callOuts.Count,
+                    callOuts.Count(a => a.CoveredByAssignment is not null),
+                    covers.Count,
+                    callOuts.Select(a => new CallOutDetailDto(
+                        a.Date,
+                        a.Shift!.Name,
+                        a.Shift.StartTime,
+                        a.Shift.EndTime,
+                        a.AbsenceNote,
+                        a.CoveredByAssignment?.Account is { } coveredBy ? FullName(coveredBy) : null)).ToList(),
+                    covers.Select(a => new CoverDetailDto(
+                        a.Date,
+                        a.CoversAssignment!.Shift!.Name,
+                        a.CoversAssignment.Shift.StartTime,
+                        a.CoversAssignment.Shift.EndTime,
+                        FullName(a.CoversAssignment.Account!),
+                        a.OriginalShiftId is not null)).ToList());
+            })
+            .OrderBy(r => r.FullName)
+            .ToList();
+
+        return Ok(rows);
+    }
+
     // The whole report for a location, or just onlyAccountId's row. Shared
     // with EmailHoursReport and EmailTemplatesController.SendTest so an
     // emailed report can never disagree with what the page shows.
