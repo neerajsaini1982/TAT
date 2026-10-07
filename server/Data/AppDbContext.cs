@@ -124,6 +124,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(a => a.SickHoursRecordedByAccountId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            entity.HasOne(a => a.CoverAssignedByAccount)
+                .WithMany()
+                .HasForeignKey(a => a.CoverAssignedByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // One cover per absent assignment (one-to-one, so the foreign
+            // key gets a unique index). Deleting the absent assignment
+            // leaves the cover shift in place as an ordinary one.
+            entity.HasOne(a => a.CoversAssignment)
+                .WithOne(a => a.CoveredByAssignment)
+                .HasForeignKey<ShiftAssignment>(a => a.CoversAssignmentId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(a => a.OriginalShift)
+                .WithMany()
+                .HasForeignKey(a => a.OriginalShiftId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             // Same employee can't be assigned to the same shift twice on the same day.
             entity.HasIndex(a => new { a.ShiftId, a.AccountId, a.Date }).IsUnique();
         });

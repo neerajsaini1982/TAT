@@ -43,4 +43,28 @@ public class ShiftAssignment
     public int? SickHoursRecordedByAccountId { get; set; }
     public Account? SickHoursRecordedByAccount { get; set; }
     public DateTime? SickHoursRecordedAt { get; set; }
+
+    // Set on a cover assignment: the absent assignment this one stands in
+    // for — see ShiftAssignmentsController.CallOut. The absent assignment
+    // itself is left on its own employee, so the call-out stays on record.
+    // Null for an ordinary shift, and nulled if the absent assignment is
+    // deleted.
+    public int? CoversAssignmentId { get; set; }
+    public ShiftAssignment? CoversAssignment { get; set; }
+
+    // The other end of CoversAssignment — the assignment covering this one,
+    // if any. At most one.
+    public ShiftAssignment? CoveredByAssignment { get; set; }
+
+    public int? CoverAssignedByAccountId { get; set; }
+    public Account? CoverAssignedByAccount { get; set; }
+    public DateTime? CoverAssignedAt { get; set; }
+
+    // Set when the cover employee was already working that day: rather than
+    // a second assignment, their own one was switched to a single combined
+    // shift spanning both (so ShiftId now points at that), and this is the
+    // shift they had before — what they go back to if the cover is removed.
+    // Null on a cover assignment created for someone who had the day off.
+    public int? OriginalShiftId { get; set; }
+    public Shift? OriginalShift { get; set; }
 }

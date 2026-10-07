@@ -407,7 +407,7 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
 
     // Shift span less its scheduled lunch. A window whose end isn't after its
     // start runs past midnight, so a day is added.
-    private static int ScheduledMinutesFor(Shift shift)
+    internal static int ScheduledMinutesFor(Shift shift)
     {
         var lunchMinutes = shift.ScheduledBreaks
             .Where(b => b.Kind == BreakKind.Lunch)
@@ -415,7 +415,7 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
         return Math.Max(0, SpanMinutes(shift.StartTime, shift.EndTime) - lunchMinutes);
     }
 
-    private static int SpanMinutes(TimeOnly start, TimeOnly end)
+    internal static int SpanMinutes(TimeOnly start, TimeOnly end)
     {
         var minutes = (int)(end - start).TotalMinutes;
         return minutes > 0 ? minutes : minutes + 24 * 60;

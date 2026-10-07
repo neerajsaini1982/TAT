@@ -5,7 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
-import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
+import { ShiftAssignmentDto, ShiftAssignmentsApi, coverLabel } from '../../../core/shift-assignments-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { Auth } from '../../../core/auth';
 import { dayOfWeekLabel, hoursMinutesLabel, toMmDdYyyy } from '../../../core/week-utils';
@@ -102,6 +102,8 @@ export class EmployeeSchedulePage implements OnInit {
   shiftTime(shift: ShiftAssignmentDto): string {
     return `${shift.shiftStartTime.slice(0, 5)}–${shift.shiftEndTime.slice(0, 5)}`;
   }
+
+  protected readonly coverLabel = coverLabel;
 
   isMine(shift: ShiftAssignmentDto): boolean {
     return shift.accountId === this.myAccountId;

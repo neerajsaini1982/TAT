@@ -46,6 +46,9 @@
         <mat-menu #menu="matMenu">
           @if (laidOut.event.isAbsent) {
             <button type="button" mat-menu-item (click)="clearAbsent.emit(laidOut.event)">Clear Absent</button>
+            <button type="button" mat-menu-item (click)="cover.emit(laidOut.event)">
+              {{ laidOut.event.coveredByAssignmentId === null ? 'Find Cover' : 'Change Cover' }}
+            </button>
           } @else {
             <button type="button" mat-menu-item (click)="markAbsent.emit(laidOut.event)">Mark Absent</button>
           }
@@ -58,6 +61,9 @@
           <span class="event-badge">Absent</span>
         } @else if (!laidOut.event.isPublished) {
           <span class="event-badge">Draft</span>
+        }
+        @if (coverLabel(laidOut.event); as cover) {
+          <span class="event-cover">{{ cover }}</span>
         }
       </div>
     }

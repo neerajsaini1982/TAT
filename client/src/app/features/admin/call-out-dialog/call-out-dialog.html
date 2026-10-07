@@ -1,0 +1,142 @@
+<div mat-dialog-title class="form-head">
+  <div class="form-head-text">
+    <span class="form-kicker">{{ isCallOut ? 'Call-out' : 'Cover' }}</span>
+    <h3>{{ isCallOut ? 'Mark ' + employeeName + ' absent' : 'Cover for ' + employeeName }}</h3>
+    <p class="form-sub">{{ shiftLabel }}</p>
+  </div>
+  <button mat-icon-button type="button" class="form-close" (click)="cancel()" aria-label="Close">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+@if (savedNotice()) {
+  <mat-dialog-content class="form-body">
+    <p class="notice">{{ savedNotice() }}</p>
+  </mat-dialog-content>
+  <div class="form-actions">
+    <button mat-flat-button color="primary" type="button" (click)="cancel()">Done</button>
+  </div>
+} @else {
+  <form (ngSubmit)="save()" autocomplete="off">
+    <mat-dialog-content class="form-body">
+      @if (isCallOut) {
+        <section class="form-section">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Reason</mat-label>
+            <textarea matInput name="note" rows="2" [(ngModel)]="note" required placeholder="e.g. called in sick"></textarea>
+          </mat-form-field>
+          @if (canRecordSickHours) {
+            <mat-form-field appearance="outline" class="sick-field">
+              <mat-label>Sick hours (optional)</mat-label>
+              <input matInput type="number" min="0" step="0.25" name="sickHours" [(ngModel)]="sickHours" />
+            </mat-form-field>
+          }
+        </section>
+      }
+
+      <section class="form-section">
+        <h4 class="section-title">Who covers the shift?</h4>
+
+        @if (loading()) {
+          <p class="muted">Loading employees…</p>
+        } @else if (info()) {
+          <mat-radio-group class="picker" name="cover" [ngModel]="selectedId()" (ngModelChange)="select($event)">
+            @if (isCallOut) {
+              <mat-radio-button class="candidate" [value]="NO_COVER">
+                <span class="candidate-name">No cover yet</span>
+                <span class="candidate-meta">Mark absent now and find cover later.</span>
+              </mat-radio-button>
+            }
+            @for (group of groups(); track group.label) {
+              <p class="group-label">{{ group.label }}</p>
+              @for (c of group.candidates; track c.accountId) {
+                <mat-radio-button class="candidate" [value]="c.accountId" [disabled]="c.blockedReason !== null">
+                  <span class="candidate-name">{{ c.firstName }} {{ c.lastName }}</span>
+                  <span class="candidate-meta">
+                    @if (c.blockedReason) {
+                      Working {{ otherShiftLabel(c) }}. {{ c.blockedReason }}
+                    } @else {
+                      @if (c.ownShift) {
+                        Working {{ otherShiftLabel(c) }} ·
+                      }
+                      {{ weekHoursLabel(c) }} this week with this shift
+                      @if (overtimeLabel(c); as overtime) {
+                        <span class="overtime">· {{ overtime }}</span>
+                      }
+                    }
+                  </span>
+                </mat-radio-button>
+              }
+            }
+          </mat-radio-group>
+          @if (groups().length === 0) {
+            <p class="muted">Nobody else at this location can be scheduled.</p>
+          }
+        }
+      </section>
+
+      @if (selected(); as person) {
+        <section class="form-section">
+          @if (person.ownShift && person.combinedShift) {
+            <h4 class="section-title">
+              {{ person.firstName }} is already working {{ otherShiftLabel(person) }}
+            </h4>
+            <div class="shift-picker">
+              <label class="shift-picker-label" for="newShift">New shift</label>
+              <input
+                id="newShift"
+                type="text"
+                class="shift-input"
+                autocomplete="off"
+                placeholder="Type a start time or shift name"
+                [value]="shiftQuery()"
+                (input)="onShiftQueryInput($event)"
+                (keydown)="onShiftKeydown($event)"
+                (focus)="suggestionsOpen.set(true)"
+                (blur)="onShiftBlur()"
+              />
+              @if (suggestionsOpen() && shiftMatches().length > 0) {
+                <ul class="shift-suggestions">
+                  @for (option of shiftMatches(); track option.id; let i = $index) {
+                    <li [class.top-match]="i === 0" (mousedown)="onSuggestionPick($event, option)">
+                      <span class="suggestion-time">{{ shiftTime(option) }}</span>
+                      <span class="suggestion-name">{{ option.name }}</span>
+                    </li>
+                  }
+                </ul>
+              }
+              <p class="muted shift-hint">{{ combineHint() }}</p>
+            </div>
+          }
+
+          @if (warning(); as text) {
+            <mat-checkbox class="confirm" name="confirmed" [ngModel]="confirmed()" (ngModelChange)="confirmed.set($event)">
+              {{ text }}
+            </mat-checkbox>
+          }
+
+          <mat-checkbox name="sendEmail" [ngModel]="sendEmail()" (ngModelChange)="sendEmail.set($event)" [disabled]="!canEmail()">
+            Email {{ person.firstName }} about this shift
+          </mat-checkbox>
+          @if (emailHint(); as hint) {
+            <p class="muted hint">{{ hint }}</p>
+          }
+        </section>
+      }
+
+      @if (error()) {
+        <p class="error form-error">{{ error() }}</p>
+      }
+    </mat-dialog-content>
+
+    <div class="form-actions">
+      <button mat-flat-button color="primary" type="submit" [disabled]="!canSave()">
+        {{ isCallOut ? (selected() ? 'Mark Absent & Assign Cover' : 'Mark Absent') : 'Assign Cover' }}
+      </button>
+      <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
+      @if (!isCallOut && info()?.currentCoverAccountId) {
+        <button mat-button type="button" class="remove-cover" (click)="removeCover()" [disabled]="saving()">Remove Cover</button>
+      }
+    </div>
+  </form>
+}

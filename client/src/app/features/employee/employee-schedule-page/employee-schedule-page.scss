@@ -124,4 +124,9 @@
     background: var(--mat-sys-error-container);
     color: var(--mat-sys-on-error-container);
   }
+
+  &.cover {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+  }
 }

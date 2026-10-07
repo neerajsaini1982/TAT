@@ -88,6 +88,11 @@
                   @if (shift.isLate) {
                     <span class="status-badge warn">Late</span>
                   }
+                  @if (needsCover(shift.assignment)) {
+                    <span class="status-badge warn">No cover</span>
+                  } @else if (coverLabel(shift.assignment); as cover) {
+                    <span class="status-badge">{{ cover }}</span>
+                  }
                 </td>
               </tr>
             }

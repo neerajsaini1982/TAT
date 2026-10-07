@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { catchError, forkJoin, of, switchMap } from 'rxjs';
 
-import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
+import { ShiftAssignmentDto, ShiftAssignmentsApi, coverLabel, needsCover } from '../../../core/shift-assignments-api';
 import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
 import { LocationSettingsApi, TimeFormat, WorkweekDay } from '../../../core/location-settings-api';
 import { AvailabilityApi, AvailabilityDto } from '../../../core/availability-api';
@@ -211,6 +211,8 @@ export class AdminDashboard implements OnInit {
   protected readonly duration = formatDurationMinutes;
 
   protected readonly employeeColor = employeeColor;
+  protected readonly coverLabel = coverLabel;
+  protected readonly needsCover = needsCover;
   protected readonly hoursLabel = hoursMinutesLabel;
 
   protected readonly scheduledCount = computed(() => this.shifts().length);
@@ -656,6 +658,17 @@ export class AdminDashboard implements OnInit {
   ): AttentionItem[] {
     const items: AttentionItem[] = [];
     const admin = ['/', this.locationCode, 'admin'];
+
+    const uncovered = assignments.filter((a) => a.date === today && needsCover(a));
+    if (uncovered.length > 0) {
+      items.push({
+        icon: 'person_off',
+        text: `${plural(uncovered.length, 'absent shift')} today ${uncovered.length === 1 ? 'has' : 'have'} no cover`,
+        detail: uncovered.map((a) => `${a.accountFirstName} ${a.accountLastName}`).join(', '),
+        linkLabel: 'Find cover',
+        link: [...admin, 'view-schedule'],
+      });
+    }
     const nextWeekLabel = formatWeekRange(nextMonday);
 
     const draftsThisWeek = assignments.filter((a) => a.date >= today && a.date >= weekStart && !a.isPublished).length;
