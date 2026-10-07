@@ -1,0 +1,148 @@
+<div class="report-head">
+  <p class="kicker">Location {{ locationCode }}</p>
+  <h2>Call-Out Report</h2>
+</div>
+
+<div class="controls">
+  <mat-form-field appearance="outline">
+    <mat-label>Start Date</mat-label>
+    <input matInput type="date" [(ngModel)]="startDate" />
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>End Date</mat-label>
+    <input matInput type="date" [(ngModel)]="endDate" />
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="sort-field">
+    <mat-label>Sort by</mat-label>
+    <mat-select [value]="sortBy()" (selectionChange)="sortBy.set($event.value)">
+      <mat-option value="covers">Most shifts covered</mat-option>
+      <mat-option value="callOuts">Most call-outs</mat-option>
+      <mat-option value="name">Name</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <button mat-flat-button color="primary" class="run-btn" (click)="run()" [disabled]="loading()">Run Report</button>
+  <mat-checkbox [ngModel]="onlyWithActivity()" (ngModelChange)="onlyWithActivity.set($event)">
+    Only employees with call-outs or covers
+  </mat-checkbox>
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p class="status">Loading…</p>
+} @else if (report().length === 0) {
+  <p class="status">No posted shifts in this date range.</p>
+} @else {
+  <section class="summary" aria-label="Report totals">
+    <div class="summary-cell">
+      <p class="summary-label">Shifts scheduled</p>
+      <p class="summary-value">{{ totals().scheduled }}</p>
+    </div>
+    <div class="summary-cell">
+      <p class="summary-label">Call-outs</p>
+      <p class="summary-value">{{ totals().callOuts }}</p>
+    </div>
+    <div class="summary-cell">
+      <p class="summary-label">Covered</p>
+      <p class="summary-value">{{ totals().covered }}</p>
+    </div>
+    <div class="summary-cell">
+      <p class="summary-label">Left uncovered</p>
+      <p class="summary-value" [class.alert]="totals().uncovered > 0">{{ totals().uncovered }}</p>
+    </div>
+  </section>
+
+  @if (rows().length === 0) {
+    <p class="status">Nobody called out or covered a shift in this date range.</p>
+  } @else {
+    <div class="table-wrap">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="col-expand"></th>
+            <th>Employee</th>
+            <th class="num">Shifts scheduled</th>
+            <th class="num">Call-outs</th>
+            <th class="num">Call-out rate</th>
+            <th class="num">Shifts covered for others</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.employeeId) {
+            <tr class="employee-row" [class.expanded]="isExpanded(row)" (click)="toggle(row)">
+              <td class="col-expand">
+                <button
+                  type="button"
+                  mat-icon-button
+                  [attr.aria-expanded]="isExpanded(row)"
+                  [attr.aria-label]="(isExpanded(row) ? 'Hide' : 'Show') + ' details for ' + row.fullName"
+                  (click)="toggle(row); $event.stopPropagation()"
+                >
+                  <mat-icon>{{ isExpanded(row) ? 'expand_less' : 'expand_more' }}</mat-icon>
+                </button>
+              </td>
+              <td class="name-cell" data-label="Employee">{{ row.fullName }}</td>
+              <td class="num" data-label="Shifts scheduled">{{ row.scheduledShifts }}</td>
+              <td class="num" data-label="Call-outs" [class.alert]="row.callOuts > 0">{{ row.callOuts }}</td>
+              <td class="num" data-label="Call-out rate">{{ callOutRate(row) }}</td>
+              <td class="num" data-label="Shifts covered for others" [class.good]="row.shiftsCovered > 0">
+                {{ row.shiftsCovered }}
+              </td>
+            </tr>
+            @if (isExpanded(row)) {
+              <tr class="detail-row">
+                <td></td>
+                <td colspan="5">
+                  <div class="details">
+                    <div class="detail-block">
+                      <h4>Call-outs</h4>
+                      @if (row.callOutDetails.length === 0) {
+                        <p class="none">None.</p>
+                      } @else {
+                        <ul>
+                          @for (d of row.callOutDetails; track $index) {
+                            <li>
+                              <span class="detail-date">{{ dateLabel(d.date) }}</span>
+                              <span class="detail-shift">{{ shiftLabel(d) }}</span>
+                              <span class="detail-note">{{ d.note }}</span>
+                              @if (d.coveredByName) {
+                                <span class="tag">Covered by {{ d.coveredByName }}</span>
+                              } @else {
+                                <span class="tag warn">No cover</span>
+                              }
+                            </li>
+                          }
+                        </ul>
+                      }
+                    </div>
+                    <div class="detail-block">
+                      <h4>Shifts covered for others</h4>
+                      @if (row.coverDetails.length === 0) {
+                        <p class="none">None.</p>
+                      } @else {
+                        <ul>
+                          @for (d of row.coverDetails; track $index) {
+                            <li>
+                              <span class="detail-date">{{ dateLabel(d.date) }}</span>
+                              <span class="detail-shift">{{ shiftLabel(d) }}</span>
+                              <span class="detail-note">For {{ d.coveredForName }}</span>
+                              @if (d.wasAlreadyWorking) {
+                                <span class="tag">Stayed on after own shift</span>
+                              }
+                            </li>
+                          }
+                        </ul>
+                      }
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}
