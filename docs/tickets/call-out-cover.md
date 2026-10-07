@@ -33,9 +33,9 @@ for whom. The other shortcut — dragging the shift to the cover person
 2. The cover picker shows who can take the shift, each person's hours this
    week so I can avoid overtime, and a warning on anyone who said they were
    unavailable or who already has a shift that day.
-3. When I pick someone who already has a shift that day, I see their whole
-   day (both shifts and both lunches) and choose whether the cover shift
-   keeps its lunch.
+3. When I pick someone who already has a shift that day, their shift is
+   replaced by one combined shift covering both, and I see exactly what
+   that shift will be before I confirm.
 4. I can mark the employee absent now and assign cover later: an absent
    shift with no cover shows a "Find Cover" action.
 5. I can change or remove the cover person.
@@ -48,14 +48,19 @@ admin-only as it is today (`SetSickMinutes`).
 **Employee**
 8. As the cover employee, the shift shows on my schedule and the kiosk
    immediately, labelled "Covering for Sam R.", and I can clock into it.
+   If I was already working that day I still have one shift, just longer,
+   and any punches I've made carry over.
 9. As the absent employee, the shift stays on my schedule marked Absent.
 
 ## Rules
 
 - **The absent assignment is kept.** It stays on the original employee with
   `IsAbsent`, the note and any sick hours, exactly as `MarkAbsent` and
-  `SetSickMinutes` leave it today. Cover is a second, new assignment on the
-  same shift and date.
+  `SetSickMinutes` leave it today.
+- **One shift per person per day.** Someone with the day off gets a new
+  assignment on the absent shift. Someone already working that day keeps
+  their one assignment, switched to a combined shift — see "Combined
+  shifts" below. Nobody ends up with two assignments on a date.
 - **Cover is published on creation** (`IsPublished = true`,
   `PublishedAt = now`) when the absent assignment is published. If the absent
   assignment is still a draft, the cover assignment is a draft too and goes
@@ -64,8 +69,8 @@ admin-only as it is today (`SetSickMinutes`).
   active. Unlike `Create`, two things are warnings rather than blocks:
   - **Unavailable that day.** The picker lists them under the available
     people with an "Unavailable" label; choosing one asks for confirmation.
-  - **Already has a shift that day (a double).** Allowed, as long as the two
-    shifts' times don't overlap — see "Doubles and lunch" below.
+  - **Already has a shift that day.** Their shift is replaced by a combined
+    one — see "Combined shifts" below.
 
   The server re-checks everything and only accepts an unavailable or
   already-scheduled person when the request says the warning was confirmed.
@@ -77,8 +82,9 @@ admin-only as it is today (`SetSickMinutes`).
   workweek including this shift, flagged when they'd pass the overtime
   threshold `OvertimeCalculator` uses. It's a warning, not a block.
 - **One cover per absent assignment.** Assigning a new cover person replaces
-  the previous one; the previous cover assignment is deleted, which is
-  refused if they have already clocked in.
+  the previous one. A previous cover who had the day off loses the
+  assignment, which is refused if they have already clocked in; one whose
+  shift was combined goes back to the shift they had, punches and all.
 - **All or nothing.** Marking absent, saving sick hours and creating the
   cover assignment happen in one transaction. If the cover person fails a
   check, nothing is saved.
@@ -95,46 +101,48 @@ admin-only as it is today (`SetSickMinutes`).
 - Marking absent still wipes an existing `TimeEntry` on the absent
   assignment, as today.
 
-## Doubles and lunch
+## Combined shifts
 
-An employee covering on a day they already work ends up with two assignments
-that date. Punches, the hours report and the kiosk already work per
-assignment, so the cover shift is a second clock-in with its own
-`TimeEntry`: they clock out of their own shift and into the cover shift.
+When the cover employee already has a shift that day, they are not given a
+second one. Their existing assignment is switched, in the same save, to a
+single shift for the day. One assignment, one clock-in, one lunch.
 
-The problem is lunch. Every shift template carries its own scheduled lunch
-(`ScheduledBreak` with `Kind = Lunch`), so a double gets two. Working 7–3
-and then covering 3–11 is one 16-hour day with lunches at, say, 11:00 and
-7:00 — sometimes right, sometimes not what the admin wants. Lunch is unpaid
-(the report subtracts lunch punches from worked time), so it matters to the
-employee too.
+The assigner types that shift into the dialog's "New shift" box, which
+works like the schedule builder's Add Shift box (a start time, colon
+optional, or a shift name narrows the list; Enter takes the top match):
 
-- **The dialog shows the combined day** when the chosen person has another
-  shift: both shifts' times, total scheduled hours, the gap between them,
-  and where each lunch falls.
-- **The assigner chooses whether the cover shift keeps its lunch.** Default
-  is to keep it. Meal-break rules for long days differ by state, so the app
-  shows the facts and leaves the call to the admin or lead.
-- **"No lunch on the cover shift"** is saved on the cover assignment
-  (`SkipScheduledLunch`). When set:
-  - the cover shift's scheduled hours are the full span, with no lunch taken
-    off — in `ShiftAssignmentsController` hours, `ReportsController`
-    scheduled minutes, and the picker's weekly-hours figure;
-  - its lunch is left out of `ComputeBreakWindows`, so it isn't shown on the
-    schedule or kiosk and doesn't push anyone else's lunch;
-  - short breaks on the cover shift are unaffected.
-- **Pay still follows punches.** The flag changes what is scheduled, not
-  what is paid: a lunch is only deducted when one is punched. If the
-  employee punches a lunch on a no-lunch cover shift it is recorded and
-  deducted as normal.
-- **Overlapping times are refused.** If the person's own shift overlaps the
-  cover shift (own 9–5, cover 2–10) they can't be clocked into both, so the
-  picker greys them out with the reason. Back-to-back shifts (one ends as
-  the other starts) are fine.
-- **Daily overtime.** The hours report already totals every assignment on a
-  date before `OvertimeCalculator` runs, so a double counts towards daily
-  and weekly overtime with no change. The picker's overtime warning must
-  count the person's other shift that day.
+- **One of the location's active shifts** (`coverShiftId`). Nothing is
+  created; the assignment simply moves to that shift, with its own lunch
+  and breaks. The dialog preselects a location shift whose times exactly
+  match the two shifts end to end, when there is one.
+- **Left blank**, the fallback when no location shift fits: a shift is
+  built from the two, as described below.
+
+For a combined shift:
+
+- **Span:** from the earlier start to the later end. Back-to-back shifts
+  (7–3 and 3–11) become 7–11. Overlapping shifts (9–5 covering 2–10) become
+  9–10, which is how "stay late to cover the closer" is handled. A gap
+  between the two is taken in and worked through; the dialog says so.
+- **Lunch and breaks:** the combined shift keeps the cover employee's own
+  lunch (or the covered shift's, if theirs has none) and the short breaks
+  from both shifts.
+- **It is a real `Shift` row**, created on demand, named after both
+  ("Morning + Evening") and inactive, so it never appears in the schedule
+  builder's shift list. The same pair of shifts reuses the same row.
+- **Punches carry over.** The assignment keeps its id, so a `TimeEntry`
+  already on it (they clocked in this morning) stays where it is.
+- **The assignment remembers its original shift** (`OriginalShiftId`), which
+  is what Remove Cover and Change Cover put back.
+Either way:
+
+- **Blocked** when the person has already clocked out for the day, is
+  already covering another shift that day, or the two shifts together would
+  run 24 hours or more.
+- **The assigner has to tick a confirmation** that names the shift being
+  replaced and the new one.
+- **Overtime.** The picker's weekly hours and overtime warning use the
+  combined shift in place of the person's own.
 
 ## Data model (server)
 
@@ -145,7 +153,7 @@ New fields on `ShiftAssignment`:
 | CoversAssignmentId / CoversAssignment | int? | the absent assignment this one covers; null for ordinary shifts |
 | CoverAssignedByAccountId / CoverAssignedByAccount | int? | who assigned the cover |
 | CoverAssignedAt | DateTime? | |
-| SkipScheduledLunch | bool | default false; only settable on a cover assignment — see "Doubles and lunch" |
+| OriginalShiftId / OriginalShift | int? | the shift the cover employee had before it was combined; null when covering was their only shift that day |
 
 `CoversAssignmentId` is a self-reference with a unique index (one cover per
 absent assignment) and `OnDelete(SetNull)`.
@@ -158,11 +166,7 @@ relationship in `AppDbContext`.
   set on the cover assignment.
 - `CoveredByAssignmentId`, `CoveredByAccountFirstName`,
   `CoveredByAccountLastName` — set on the absent assignment.
-- `SkipScheduledLunch`; `ScheduledBreaks` and `Hours` already reflect it.
-
-Every place that looks up "the" assignment for an employee and date must
-cope with two (check `GetMine` consumers, `current-week-schedule`,
-`employee-schedule-page`, `kiosk-schedule`, `admin-dashboard`).
+- `OriginalShiftName` — set on a cover assignment that was combined.
 
 ## API (server)
 
@@ -170,10 +174,10 @@ In `ShiftAssignmentsController`:
 
 | Method | Route | Who | Purpose |
 |---|---|---|---|
-| GET | `/api/shift-assignments/{id}/cover-candidates` | LeadOrAbove | everyone at the location who could cover, each with: scheduled hours for the week, overtime flag, isAvailable, their other shift that day (times and lunch) if any, and a blocked reason when the shifts overlap |
-| PUT | `/api/shift-assignments/{id}/call-out` | LeadOrAbove | body: note (required), sickMinutes? (admins only), coverAccountId?, skipScheduledLunch, confirmUnavailable, confirmDouble, sendEmail — marks absent, records sick hours, creates the cover assignment |
-| PUT | `/api/shift-assignments/{id}/cover` | LeadOrAbove | body: coverAccountId, skipScheduledLunch, confirmUnavailable, confirmDouble, sendEmail — assign or replace cover on an assignment that is already absent |
-| DELETE | `/api/shift-assignments/{id}/cover` | LeadOrAbove | remove the cover assignment; 409 if the cover person has clocked in |
+| GET | `/api/shift-assignments/{id}/cover-candidates` | LeadOrAbove | everyone at the location who could cover, each with: scheduled hours for the week, overtime minutes, isAvailable, their own shift that day and the combined shift it would become, and a blocked reason when they can't be picked; also the location's active shifts for the "New shift" list. `?shiftId=` previews that shift as the replacement |
+| PUT | `/api/shift-assignments/{id}/call-out` | LeadOrAbove | body: note (required), sickMinutes? (admins only), coverAccountId?, confirmUnavailable, confirmCombine, coverShiftId?, sendEmail — marks absent, records sick hours, assigns cover |
+| PUT | `/api/shift-assignments/{id}/cover` | LeadOrAbove | body: coverAccountId, confirmUnavailable, confirmCombine, coverShiftId?, sendEmail — assign or replace cover on an assignment that is already absent |
+| DELETE | `/api/shift-assignments/{id}/cover` | LeadOrAbove | remove cover; 409 if a cover person who had the day off has clocked in |
 
 A lead sending `sickMinutes` gets 403.
 
@@ -201,32 +205,30 @@ Admin (`features/admin`):
   option, and the Send Email checkbox.
   - Picker order: available with no shift that day, then people already
     working that day, then unavailable people. Each row shows hours this
-    week and any overtime, "Unavailable" or "Already working 7:00–3:00"
-    label. People whose own shift overlaps are greyed out with the reason.
-  - Choosing someone already working shows the combined-day summary and the
-    "Cover shift lunch: Keep / No lunch" choice.
+    week and any overtime. People who can't be picked are greyed out with
+    the reason.
+  - Choosing someone already working shows the "New shift" type-ahead box.
   - Choosing someone unavailable or already working needs a confirm tick
     before Save.
+  - In cover mode the dialog also offers Remove Cover.
 - `schedule-day-view` gear menu and the `admin-schedule-assign-page` row
-  actions, for leads as well as admins wherever Mark Absent shows today: add "Mark Absent & Assign Cover" next to Mark Absent; on an absent
-  shift show "Find Cover", or "Change Cover" / "Remove Cover" once it has
-  one.
+  actions, for leads as well as admins wherever Mark Absent shows today:
+  Mark Absent opens the dialog (cover is optional in it); an absent shift
+  shows "Find Cover", or "Change Cover" once it has one.
 - `schedule-day-view`, `schedule-week-timeline`,
   `schedule-week-days-timeline`, `admin-schedule-assign-page`: the absent
   shift shows "Covered by Alex M."; the cover shift shows a "Covering for
-  Sam R." badge. These views must lay out two shifts for one employee on the
-  same day, and draw no lunch marker on a cover shift with no lunch.
+  Sam R." badge.
 - `admin-dashboard`: the Absent stat and Today's Schedule mark absences that
   have no cover; Needs Attention lists them with a link that opens the
   dialog.
 - `shift-assignments-api.ts`: the new calls and DTO fields.
 
 Employee: `employee-schedule-page` and `current-week-schedule` show
-"Covering for Sam R." on a cover shift, and both shifts on a double.
+"Covering for Sam R." on a cover shift.
 
 Kiosk: `kiosk-schedule` lists the cover shift like any other published
-shift. On a double the employee appears once per shift and clocks into each
-separately.
+shift; no change.
 
 ## Tests (`server.Tests`)
 
@@ -240,17 +242,21 @@ separately.
   role — and nothing is saved, including the absence.
 - Unavailable cover person: rejected without `confirmUnavailable`, accepted
   with it. `Create` still blocks unavailable employees.
-- Double: rejected without `confirmDouble`, accepted with it when the shifts
-  don't overlap (including back-to-back), rejected when they overlap.
-  `Create` still blocks a second assignment on the same date.
-- Double punches: the employee can clock out of their own shift and into the
-  cover shift the same day, with a separate `TimeEntry` for each.
-- `SkipScheduledLunch`: scheduled hours are the full span; the lunch is
-  absent from `ComputeBreakWindows` and doesn't shift other employees'
-  lunches; short breaks remain; a punched lunch is still deducted. Rejected
-  on a non-cover assignment.
-- `cover-candidates` returns correct weekly hours, overtime flag (counting
-  a same-day shift), availability, other-shift details and overlap block.
+- Already working: rejected without `confirmCombine`; with it, their one
+  assignment moves to a combined shift with the right span, name, lunch and
+  breaks, and remembers the original shift. `Create` still blocks a second
+  assignment on the same date.
+- A picked location shift is used as-is and no combined shift is created;
+  an inactive shift or another location's is rejected; the pick can be
+  changed for someone already covering.
+- Combined span for back-to-back, overlapping, gapped and overnight shifts.
+- Existing punches stay on the combined assignment.
+- Blocked when clocked out for the day or already covering.
+- The same pair of shifts reuses one combined `Shift` row.
+- Removing or changing cover restores the original shift, even after
+  clock-in.
+- `cover-candidates` returns correct weekly hours and overtime (using the
+  combined shift), availability, own and combined shift, and blocks.
 - Replacing cover deletes the old cover assignment; replacing or removing is
   refused once the cover person has clocked in.
 - Clearing the absence, and the original employee clocking in, both leave
@@ -259,8 +265,7 @@ separately.
 - Permissions: leads can call the new routes but not send sick minutes;
   employees can't call them; leads and admins are limited to their location.
 - `HoursReportTests`: cover hours count for the cover employee only; sick
-  hours stay with the absent employee; a double's two shifts total into one
-  day for daily overtime; scheduled minutes respect `SkipScheduledLunch`.
+  hours stay with the absent employee.
 - Migration test, like the existing `*MigrationTests`.
 
 ## Acceptance criteria
@@ -270,11 +275,9 @@ separately.
       hours there.
 - [ ] The cover picker shows weekly hours with an overtime warning, and
       allows unavailable people after a confirmation.
-- [ ] Someone already working that day can cover a non-overlapping shift,
-      clocks into each shift separately, and the assigner chooses whether
-      the cover shift keeps its lunch.
-- [ ] A cover shift with no lunch shows full scheduled hours and no lunch
-      window, and doesn't move anyone else's lunch.
+- [ ] Someone already working that day covers by having their shift
+      replaced with one combined shift — one assignment, one clock-in, one
+      lunch — previewed in the dialog and undone by Remove Cover.
 - [ ] A cover shift on a published shift is live immediately: visible to the
       cover employee and on the kiosk, and clockable, without reposting the
       week.
@@ -290,21 +293,17 @@ separately.
 
 ## Open questions
 
-1. Overlapping doubles — someone on 9–5 staying on to cover a 2–10. V1
-   refuses these. Supporting them means either trimming the cover shift to
-   start when their own ends, or one merged clock-in across both.
-2. Should "no lunch on the cover shift" only be offered below some combined
-   length (e.g. hide it when the day is over 12 hours), or always be the
-   assigner's call?
-3. Should a lead's cover assignment that pushes someone into overtime need
+1. Should a lead's cover assignment that pushes someone into overtime need
    an admin's approval, or is the warning enough?
+2. Should combined shifts be hidden from Manage Shifts altogether? Today
+   they are inactive rows, visible only with "show inactive".
 
 ## Decided
 
 - Leads can assign cover. Recording sick hours stays admin-only.
-- Someone who already has a shift that day can cover, as a second
-  assignment with its own clock-in; the assigner decides whether the cover
-  shift keeps its lunch (default: keep).
+- Someone who already has a shift that day covers through one combined
+  shift that replaces their own; there are no second assignments and no
+  lunch choice.
 - Availability can be overridden for cover, with a warning.
 - Cover is for the whole shift; partial cover is left to actual punches.
 

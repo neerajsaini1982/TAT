@@ -330,6 +330,11 @@
   font-weight: 600;
   line-height: 1.6;
 
+  &.cover {
+    background: var(--mat-sys-secondary-container);
+    color: var(--mat-sys-on-secondary-container);
+  }
+
   &.absent {
     background: var(--mat-sys-error-container);
     color: var(--mat-sys-on-error-container);

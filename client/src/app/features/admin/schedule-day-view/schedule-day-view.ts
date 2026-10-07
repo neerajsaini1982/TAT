@@ -3,7 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 
-import { ShiftAssignmentDto } from '../../../core/shift-assignments-api';
+import { ShiftAssignmentDto, coverLabel } from '../../../core/shift-assignments-api';
 import { BreakKind } from '../../../core/shifts-api';
 import { employeeColor } from '../../../core/employee-colors';
 import { LaidOutEvent, formatClockTime, hourLabel, layoutDayEvents, toMinutes } from '../../../core/day-view-layout';
@@ -45,9 +45,12 @@ export class ScheduleDayView {
   // into this presentational component.
   readonly markAbsent = output<ShiftAssignmentDto>();
   readonly clearAbsent = output<ShiftAssignmentDto>();
+  // Find/change/remove cover on a shift that's already absent.
+  readonly cover = output<ShiftAssignmentDto>();
   readonly editTimes = output<ShiftAssignmentDto>();
 
   protected readonly employeeColor = employeeColor;
+  protected readonly coverLabel = coverLabel;
 
   // Bounded to the day's actual earliest start / latest end (rounded out to
   // the hour for clean gridlines) — no padding before the first shift or

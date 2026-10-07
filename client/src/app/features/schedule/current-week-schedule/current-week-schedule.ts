@@ -6,7 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable, catchError, forkJoin, map, of, switchMap } from 'rxjs';
 
-import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
+import { ShiftAssignmentDto, ShiftAssignmentsApi, coverLabel } from '../../../core/shift-assignments-api';
 import { TimeEntriesApi, TimeEntryDto, TimeEntrySegmentDto } from '../../../core/time-entries-api';
 import { BreakKind, ScheduledBreakDto } from '../../../core/shifts-api';
 import { LocationSettingsApi, TimeFormat } from '../../../core/location-settings-api';
@@ -18,6 +18,7 @@ import { formatInstant, formatTimeOnly } from '../../../core/location-time';
 import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-flags';
 import { addDays, combineDateAndTime, dayOfWeekLabel, formatDate, formatWeekRange, hoursMinutesLabel, mondayOf, parseDate, toMmDdYyyy } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../../admin/note-dialog/note-dialog';
+import { CallOutActions } from '../../admin/call-out-dialog/call-out-actions';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../../admin/edit-time-entry-dialog/edit-time-entry-dialog';
 import { WriteUpDialog, WriteUpDialogData } from '../../accounts/write-up-dialog/write-up-dialog';
 
@@ -114,6 +115,7 @@ export class CurrentWeekSchedule implements OnInit {
   private readonly realtime = inject(ScheduleRealtime);
   private readonly destroyRef = inject(DestroyRef);
   private readonly dialog = inject(MatDialog);
+  private readonly callOutActions = inject(CallOutActions);
   private readonly auth = inject(Auth);
   private readonly accountsApi = inject(AccountsApi);
   private readonly myAccountId = this.auth.accountId();
@@ -153,6 +155,7 @@ export class CurrentWeekSchedule implements OnInit {
   // always totals everyone on purpose, so it's never qualified.
   protected readonly hoursAreJustMine = computed(() => this.scope === 'mine' && this.showEmployeeNames());
   protected readonly employeeColor = employeeColor;
+  protected readonly coverLabel = coverLabel;
   protected readonly totalWorkedHours = computed(() =>
     round2(this.days().reduce((sum, d) => sum + d.workedHours, 0)),
   );
@@ -502,38 +505,16 @@ export class CurrentWeekSchedule implements OnInit {
     );
   }
 
-  // Location-scope only (Admin/Lead home page) — lets an admin mark a
-  // teammate absent right from today's schedule instead of having to open
-  // the full weekly grid at admin/schedule. Reuses the same NoteDialog and
-  // ShiftAssignmentsApi.markAbsent() the grid already uses, so both screens
-  // stay backed by the same server rule (409 if a TimeEntry already exists).
+  // Lets a lead/admin mark a teammate absent — and, in the same dialog,
+  // put someone else on the shift — right from the schedule instead of
+  // having to open the full weekly grid at admin/schedule.
   markAbsent(shift: DayShift): void {
-    this.dialog
-      .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
-        data: {
-          title: `Mark ${shift.employeeName} absent`,
-          label: 'Reason',
-          noteRequired: true,
-          confirmLabel: 'Mark Absent',
-        },
-      })
-      .afterClosed()
-      .subscribe((note) => {
-        if (!note) {
-          return;
-        }
-        this.markingId.set(shift.assignment.id);
-        this.api.markAbsent(shift.assignment.id, { isAbsent: true, note }).subscribe({
-          next: () => {
-            this.markingId.set(null);
-            this.load();
-          },
-          error: (err) => {
-            this.markingId.set(null);
-            this.error.set(err?.error ?? 'Failed to mark absent.');
-          },
-        });
-      });
+    this.callOutActions.callOut(shift.assignment).subscribe((changed) => changed && this.load());
+  }
+
+  // Find, change or remove cover on a shift that's already absent.
+  cover(shift: DayShift): void {
+    this.callOutActions.cover(shift.assignment).subscribe((changed) => changed && this.load());
   }
 
   clearAbsent(shift: DayShift): void {

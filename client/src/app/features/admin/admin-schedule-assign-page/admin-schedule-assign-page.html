@@ -86,6 +86,7 @@
     [assignments]="selectedDayAssignments()"
     (markAbsent)="markAbsent($event)"
     (clearAbsent)="clearAbsent($event)"
+    (cover)="cover($event)"
     (editTimes)="editTimesForDay($event)"
   />
 } @else if (viewMode() === 'print') {
@@ -177,6 +178,9 @@
                     @if (a.isAbsent) {
                       <span class="attendance-badge absent" [title]="a.absenceNote ?? ''">Absent</span>
                     }
+                    @if (coverLabel(a); as cover) {
+                      <span class="attendance-badge cover">{{ cover }}</span>
+                    }
                     @if (isLeftEarly(a)) {
                       <span class="attendance-badge warn" [title]="entryFor(a)?.leftEarlyNote ?? ''">Left Early</span>
                     }
@@ -194,6 +198,14 @@
                       @if (a.isAbsent) {
                         <button type="button" mat-icon-button (click)="clearAbsent(a)" title="Clear absent">
                           <mat-icon>how_to_reg</mat-icon>
+                        </button>
+                        <button
+                          type="button"
+                          mat-icon-button
+                          (click)="cover(a)"
+                          [title]="a.coveredByAssignmentId === null ? 'Find cover' : 'Change cover'"
+                        >
+                          <mat-icon>{{ a.coveredByAssignmentId === null ? 'person_add' : 'swap_horiz' }}</mat-icon>
                         </button>
                       } @else {
                         <button type="button" mat-icon-button (click)="markAbsent(a)" title="Mark absent">

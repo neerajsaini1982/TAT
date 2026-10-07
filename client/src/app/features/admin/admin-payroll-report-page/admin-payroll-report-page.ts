@@ -178,10 +178,10 @@ export class AdminPayrollReportPage implements OnInit {
 
   // Sends exactly what's on screen: the dates the report was last run for
   // (not whatever is sitting unapplied in the date inputs) and the employees
-  // the filter currently shows. Loaded on demand — the initial bundle sits
-  // right at its size budget, and only Admin/Sa ever open this.
+  // the filter currently shows. Loaded on demand (see lazy-dialogs.ts) —
+  // only Admin/Sa ever open this.
   async openEmailHours(): Promise<void> {
-    const { PayrollEmailDialog } = await import('../payroll-email-dialog/payroll-email-dialog');
+    const { PayrollEmailDialog } = await import('../lazy-dialogs');
     this.dialog.open(PayrollEmailDialog, {
       data: {
         locationCode: this.locationCode,

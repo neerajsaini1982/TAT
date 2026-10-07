@@ -36,6 +36,12 @@ const COMMON_PLACEHOLDER_FIELDS: PlaceholderField[] = [
 const TEMPLATE_ONLY_PLACEHOLDER_FIELDS: Record<string, PlaceholderField[]> = {
   SchedulePublished: [{ label: 'Shift Schedule', token: '{{schedule}}' }],
   AvailabilityReminder: [{ label: 'Availability Link', token: '{{availabilityLink}}' }],
+  CoverShiftAssigned: [
+    { label: 'Covering For', token: '{{coveringFor}}' },
+    { label: 'Shift Date', token: '{{shiftDate}}' },
+    { label: 'Shift Name', token: '{{shiftName}}' },
+    { label: 'Shift Time', token: '{{shiftTime}}' },
+  ],
   PayrollHours: [
     { label: 'Date Range', token: '{{dateRange}}' },
     { label: 'Hours Table', token: '{{hours}}' },
