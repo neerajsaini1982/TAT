@@ -160,6 +160,70 @@
     }
   </section>
 
+  <section class="gadget" aria-labelledby="coverage-title">
+    <div class="gadget-head">
+      <div class="gadget-title">
+        <h3 id="coverage-title">Coverage by Hour</h3>
+        <span class="gadget-date">{{ weekRangeLabel() }}</span>
+      </div>
+      <div class="legend coverage-legend" aria-hidden="true">
+        <span>Fewer</span>
+        <span class="coverage-ramp"></span>
+        <span>More people</span>
+      </div>
+    </div>
+
+    @if (!loading() && !error()) {
+      @if (coveragePeak(); as peak) {
+        <p class="gadget-lede">
+          Most staffed: <strong>{{ peak.when }}</strong> averaging <strong>{{ peak.headcount }}</strong> people on shift
+        </p>
+        <div class="coverage-wrap">
+          <table class="coverage">
+            <thead>
+              <tr>
+                <td></td>
+                @for (day of coverageDays(); track day.date) {
+                  <th scope="col" [class.today]="day.isToday"><span>{{ day.label }}</span></th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of coverageRows(); track row.hourLabel) {
+                <tr>
+                  <th scope="row">{{ row.hourLabel }}</th>
+                  @for (cell of row.cells; track cell.date; let i = $index) {
+                    <td
+                      class="coverage-cell has-tip"
+                      tabindex="0"
+                      [class.strong]="cell.intensity > 0.5"
+                      [class.tip-left]="i < 2"
+                      [class.tip-right]="i > 4"
+                      [style.background]="coverageShade(cell)"
+                      [attr.aria-label]="cell.dayLabel + ' ' + row.rangeLabel + ': ' + cell.headcount + ' scheduled'"
+                    >
+                      <span aria-hidden="true">{{ cell.headcount || '' }}</span>
+                      <div class="tip" role="tooltip">
+                        <p class="tip-title">{{ cell.dayLabel }} · {{ row.rangeLabel }}</p>
+                        @for (person of cell.people; track $index) {
+                          <p class="tip-row">{{ person.name }}<strong>{{ person.timeLabel }}</strong></p>
+                        } @empty {
+                          <p class="tip-row">Nobody scheduled</p>
+                        }
+                      </div>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="all-clear">No shifts scheduled this week.</p>
+      }
+    }
+  </section>
+
   <section class="gadget" aria-labelledby="trend-title">
     <div class="gadget-head">
       <div class="gadget-title">

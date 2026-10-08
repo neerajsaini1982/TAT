@@ -20,6 +20,7 @@ import { AdminScheduleAssignPage } from './features/admin/admin-schedule-assign-
 import { AdminLocationSettingsPage } from './features/admin/admin-location-settings-page/admin-location-settings-page';
 import { AdminPayrollReportPage } from './features/admin/admin-payroll-report-page/admin-payroll-report-page';
 import { AdminCallOutReportPage } from './features/admin/admin-call-out-report-page/admin-call-out-report-page';
+import { AdminEmployeeScheduleReportPage } from './features/admin/admin-employee-schedule-report-page/admin-employee-schedule-report-page';
 import { EmployeeHome } from './features/employee/employee-home/employee-home';
 import { KioskHome } from './features/kiosk/kiosk-home/kiosk-home';
 import { AvailabilityPage } from './features/employee/availability-page/availability-page';
@@ -55,6 +56,7 @@ export const routes: Routes = [
   { path: ':locationCode/admin/settings', component: AdminLocationSettingsPage, canActivate: [adminOnlyGuard] },
   { path: ':locationCode/admin/payroll-report', component: AdminPayrollReportPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/call-out-report', component: AdminCallOutReportPage, canActivate: [adminOnlyGuard] },
+  { path: ':locationCode/admin/employee-schedule-report', component: AdminEmployeeScheduleReportPage, canActivate: [adminOnlyGuard] },
 
   { path: ':locationCode/employee', component: EmployeeHome },
   { path: ':locationCode/employee/availability', component: AvailabilityPage, canActivate: [employeeGuard] },
