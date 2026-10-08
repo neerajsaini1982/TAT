@@ -122,3 +122,12 @@ public record EmployeeCallOutReportDto(
     int ShiftsCovered,
     List<CallOutDetailDto> CallOutDetails,
     List<CoverDetailDto> CoverDetails);
+
+// One posted shift in the employee schedule report. ScheduledMinutes is the
+// shift span less scheduled lunch, as in DailyHoursDto.
+public record ScheduledShiftDto(
+    DateOnly Date,
+    string ShiftName,
+    TimeOnly ShiftStartTime,
+    TimeOnly ShiftEndTime,
+    int ScheduledMinutes);

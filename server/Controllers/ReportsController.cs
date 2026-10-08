@@ -233,6 +233,45 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
         return Ok(rows);
     }
 
+    // One employee's posted schedule over a date range: every shift they were
+    // put on, with its scheduled times. Purely the plan — a shift they called
+    // out of or were marked absent for is listed like any other, and nothing
+    // here comes from the clock. Admin/Sa only.
+    [HttpGet("employee-schedule")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public ActionResult<IEnumerable<ScheduledShiftDto>> GetEmployeeScheduleReport(
+        [FromQuery] string? locationCode, [FromQuery] int employeeId,
+        [FromQuery] DateOnly startDate, [FromQuery] DateOnly endDate)
+    {
+        if (endDate < startDate)
+        {
+            return BadRequest("endDate can't be before startDate.");
+        }
+
+        var location = ResolveLocation(locationCode);
+        if (location is null)
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        if (!db.Accounts.Any(a => a.Id == employeeId && a.LocationId == location.Id))
+        {
+            return BadRequest("A valid employeeId is required.");
+        }
+
+        var rows = db.ShiftAssignments
+            .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
+            .Where(a => a.AccountId == employeeId && a.Shift!.LocationId == location.Id
+                && a.Date >= startDate && a.Date <= endDate && a.IsPublished)
+            .ToList()
+            .OrderBy(a => a.Date).ThenBy(a => a.Shift!.StartTime)
+            .Select(a => new ScheduledShiftDto(
+                a.Date, a.Shift!.Name, a.Shift.StartTime, a.Shift.EndTime, ScheduledMinutesFor(a.Shift)))
+            .ToList();
+
+        return Ok(rows);
+    }
+
     // The whole report for a location, or just onlyAccountId's row. Shared
     // with EmailHoursReport and EmailTemplatesController.SendTest so an
     // emailed report can never disagree with what the page shows.

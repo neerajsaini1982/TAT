@@ -97,6 +97,16 @@ export interface EmployeeCallOutReportDto {
   coverDetails: CoverDetailDto[];
 }
 
+// One posted shift in the employee schedule report. scheduledMinutes is the
+// shift span less scheduled lunch.
+export interface ScheduledShiftDto {
+  date: string;
+  shiftName: string;
+  shiftStartTime: string;
+  shiftEndTime: string;
+  scheduledMinutes: number;
+}
+
 @Service()
 export class ReportsApi {
   private readonly http = inject(HttpClient);
@@ -116,6 +126,13 @@ export class ReportsApi {
   getCallOutReport(locationCode: string, startDate: string, endDate: string) {
     const params = new URLSearchParams({ locationCode, startDate, endDate });
     return this.http.get<EmployeeCallOutReportDto[]>(`${this.base}/call-outs?${params.toString()}`);
+  }
+
+  // Admin/Sa only — one employee's posted shifts over a date range, absent
+  // or not. See ReportsController.GetEmployeeScheduleReport.
+  getEmployeeScheduleReport(locationCode: string, employeeId: number, startDate: string, endDate: string) {
+    const params = new URLSearchParams({ locationCode, employeeId: String(employeeId), startDate, endDate });
+    return this.http.get<ScheduledShiftDto[]>(`${this.base}/employee-schedule?${params.toString()}`);
   }
 
   // Admin/Sa only — emails each employee their own hours for the range using
