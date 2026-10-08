@@ -1,0 +1,99 @@
+// Coverage by Hour — its own stylesheet for the same per-component size
+// budget reason as admin-dashboard-charts.scss.
+
+.coverage-legend {
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.coverage-ramp {
+  width: 72px;
+  height: 10px;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--viz-scheduled) 12%, var(--mat-sys-surface)),
+    var(--viz-scheduled)
+  );
+}
+
+.coverage-wrap {
+  padding: 16px;
+}
+
+// Days across, hours down; each cell shaded by how many people are on.
+.coverage {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 2px;
+
+  thead th {
+    padding-bottom: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  thead th.today span {
+    padding: 1px 6px;
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+  }
+
+  thead td,
+  tbody th {
+    width: 56px;
+  }
+
+  tbody th {
+    padding-right: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: right;
+    white-space: nowrap;
+    color: var(--mat-sys-on-surface-variant);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.coverage-cell {
+  height: 26px;
+  padding: 0;
+  background: var(--mat-sys-surface-container-low);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--mat-sys-on-surface);
+  font-variant-numeric: tabular-nums;
+
+  // Past the midpoint the shade is closer to the hue than to the surface, so
+  // the number flips to the surface colour to stay readable in both themes.
+  &.strong {
+    color: var(--mat-sys-surface);
+  }
+
+  &:hover,
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-on-surface);
+    outline-offset: -2px;
+  }
+
+  // Keep the outer columns' cards inside the gadget.
+  &.tip-left .tip {
+    left: 0;
+    transform: none;
+  }
+
+  &.tip-right .tip {
+    left: auto;
+    right: 0;
+    transform: none;
+  }
+
+  .tip {
+    font-weight: 400;
+    color: var(--mat-sys-inverse-on-surface);
+  }
+}

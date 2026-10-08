@@ -1,0 +1,91 @@
+<div class="report-head">
+  <p class="kicker">Location {{ locationCode }}</p>
+  <h2>Employee Schedule</h2>
+</div>
+
+<div class="controls">
+  <mat-form-field appearance="outline" class="employee-field">
+    <mat-label>Employee</mat-label>
+    <mat-select [(ngModel)]="employeeId">
+      @for (e of activeEmployees(); track e.id) {
+        <mat-option [value]="e.id">{{ fullName(e) }}</mat-option>
+      }
+      @if (inactiveEmployees().length > 0) {
+        <mat-optgroup label="Inactive">
+          @for (e of inactiveEmployees(); track e.id) {
+            <mat-option [value]="e.id">{{ fullName(e) }}</mat-option>
+          }
+        </mat-optgroup>
+      }
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>Start Date</mat-label>
+    <input matInput type="date" [(ngModel)]="startDate" />
+  </mat-form-field>
+  <mat-form-field appearance="outline">
+    <mat-label>End Date</mat-label>
+    <input matInput type="date" [(ngModel)]="endDate" />
+  </mat-form-field>
+  <button mat-flat-button color="primary" class="run-btn" (click)="run()" [disabled]="loading()">Run Report</button>
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p class="status">Loading…</p>
+} @else if (shifts() === null) {
+  <p class="status">Choose an employee and a date range, then run the report.</p>
+} @else {
+  <p class="ran-for">
+    <strong>{{ ranFor()!.name }}</strong>, {{ toMmDdYyyy(ranFor()!.startDate) }} – {{ toMmDdYyyy(ranFor()!.endDate) }}
+  </p>
+
+  @if (shifts()!.length === 0) {
+    <p class="status">No posted shifts for this employee in this date range.</p>
+  } @else {
+    <section class="summary" aria-label="Report totals">
+      <div class="summary-cell">
+        <p class="summary-label">Shifts scheduled</p>
+        <p class="summary-value">{{ shifts()!.length }}</p>
+      </div>
+      <div class="summary-cell">
+        <p class="summary-label">Days scheduled</p>
+        <p class="summary-value">{{ daysScheduled() }}</p>
+      </div>
+      <div class="summary-cell">
+        <p class="summary-label">Scheduled hours</p>
+        <p class="summary-value">{{ formatDurationMinutes(totalMinutes()) }}</p>
+      </div>
+    </section>
+
+    <div class="table-wrap">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Day</th>
+            <th>Shift</th>
+            <th>Start</th>
+            <th>End</th>
+            <th class="num">Scheduled hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of shifts(); track $index) {
+            <tr>
+              <td class="date-cell">{{ toMmDdYyyy(s.date) }}</td>
+              <td>{{ dayOfWeekLabel(s.date) }}</td>
+              <td>{{ s.shiftName }}</td>
+              <td class="time-cell">{{ formatClockTime(s.shiftStartTime) }}</td>
+              <td class="time-cell">{{ formatClockTime(s.shiftEndTime) }}</td>
+              <td class="num">{{ formatDurationMinutes(s.scheduledMinutes) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

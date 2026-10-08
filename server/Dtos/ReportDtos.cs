@@ -86,3 +86,48 @@ public record EmailHoursReportRequest(
 
 // Full names in each bucket, so the admin sees exactly who didn't get one.
 public record EmailHoursReportResultDto(List<string> Sent, List<string> SkippedNoEmail, List<string> Failed);
+
+// One absence in the call-out report. CoveredByName is null when nobody was
+// put on the shift.
+public record CallOutDetailDto(
+    DateOnly Date,
+    string ShiftName,
+    TimeOnly ShiftStartTime,
+    TimeOnly ShiftEndTime,
+    string? Note,
+    string? CoveredByName);
+
+// One shift an employee covered for someone else — described by the absent
+// employee's shift, not the longer combined one the cover employee may have
+// ended up on. WasAlreadyWorking is true when they had a shift of their own
+// that day and stayed on.
+public record CoverDetailDto(
+    DateOnly Date,
+    string ShiftName,
+    TimeOnly ShiftStartTime,
+    TimeOnly ShiftEndTime,
+    string CoveredForName,
+    bool WasAlreadyWorking);
+
+// One employee's reliability picture over a date range: how often they were
+// scheduled, how often they were marked absent (and whether cover was
+// found), and how often they stepped in for someone else. Only posted
+// shifts count, as in the hours report.
+public record EmployeeCallOutReportDto(
+    int EmployeeId,
+    string FullName,
+    int ScheduledShifts,
+    int CallOuts,
+    int CallOutsCovered,
+    int ShiftsCovered,
+    List<CallOutDetailDto> CallOutDetails,
+    List<CoverDetailDto> CoverDetails);
+
+// One posted shift in the employee schedule report. ScheduledMinutes is the
+// shift span less scheduled lunch, as in DailyHoursDto.
+public record ScheduledShiftDto(
+    DateOnly Date,
+    string ShiftName,
+    TimeOnly ShiftStartTime,
+    TimeOnly ShiftEndTime,
+    int ScheduledMinutes);

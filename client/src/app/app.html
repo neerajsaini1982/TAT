@@ -31,7 +31,11 @@
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'availability']">Availability</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'schedule']">Schedule</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'schedule-assign']">Schedule (Quick Assign)</a>
-      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'payroll-report']">Payroll Report</a>
+      @if (auth.role() === 'Admin') {
+        <button mat-menu-item [matMenuTriggerFor]="reportsMenu">Reports</button>
+      } @else {
+        <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'payroll-report']">Payroll Report</a>
+      }
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'write-ups']">My Write-Ups</a>
       @if (auth.role() === 'Admin') {
         <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'settings']">Settings</a>
@@ -39,6 +43,11 @@
       <button mat-menu-item (click)="openChangePasswordDialog()">Change Password</button>
       <mat-divider />
       <button mat-menu-item (click)="logout()">Log Out</button>
+    </mat-menu>
+    <mat-menu #reportsMenu="matMenu">
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'payroll-report']">Payroll Report</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'call-out-report']">Call-Out Report</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'employee-schedule-report']">Employee Schedule</a>
     </mat-menu>
     <mat-menu #themeMenu="matMenu">
       @for (option of themes; track option.name) {

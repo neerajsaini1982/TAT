@@ -550,6 +550,13 @@ $mobile: 767.98px;
     border-color: var(--mat-sys-error);
     color: var(--mat-sys-error);
   }
+
+  // "Covering for <name>" is the one label long enough to spill out of the
+  // narrow status column and under the action buttons, so it may wrap.
+  &.cover {
+    white-space: normal;
+    max-width: 100%;
+  }
 }
 
 .actions-cell {

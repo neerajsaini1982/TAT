@@ -12,6 +12,7 @@ public static class EmailTemplateCatalog
         EmailTemplateKeys.AvailabilityReminder => "Availability Reminder",
         EmailTemplateKeys.LoginCredentials => "Login Credentials",
         EmailTemplateKeys.PayrollHours => "Payroll Hours",
+        EmailTemplateKeys.CoverShiftAssigned => "Cover Shift Assigned",
         _ => key,
     };
 
@@ -44,6 +45,14 @@ public static class EmailTemplateCatalog
             Subject = "Your hours for {{dateRange}}",
             BodyHtml = "<p>Hi {{employeeName}},</p><p>Here are your recorded hours at {{locationName}} for {{dateRange}}. "
                 + "If anything looks wrong, please let your manager know before payroll is submitted.</p>{{hours}}",
+        },
+        EmailTemplateKeys.CoverShiftAssigned => new EmailTemplate
+        {
+            Key = key,
+            Subject = "You're covering a shift on {{shiftDate}}",
+            BodyHtml = "<p>Hi {{employeeName}},</p><p>You've been scheduled to cover {{coveringFor}}'s shift at {{locationName}}:</p>"
+                + "<p><strong>{{shiftDate}}</strong><br/>{{shiftName}}, {{shiftTime}}</p>"
+                + "<p>Please check your schedule on the app.</p>",
         },
         _ => new EmailTemplate { Key = key, Subject = string.Empty, BodyHtml = string.Empty },
     };

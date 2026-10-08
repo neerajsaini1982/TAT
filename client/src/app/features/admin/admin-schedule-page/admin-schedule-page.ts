@@ -14,7 +14,7 @@ import { catchError, forkJoin, of } from 'rxjs';
 
 import { AvailabilityApi } from '../../../core/availability-api';
 import { ShiftDto, ShiftsApi } from '../../../core/shifts-api';
-import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
+import { ShiftAssignmentDto, ShiftAssignmentsApi, coverLabel } from '../../../core/shift-assignments-api';
 import { LocationSettingsApi } from '../../../core/location-settings-api';
 import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
@@ -22,6 +22,7 @@ import { employeeColor } from '../../../core/employee-colors';
 import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-flags';
 import { addDays, combineDateAndTime, formatDate, formatWeekRange, hoursMinutesLabel, mondayOf } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
+import { CallOutActions } from '../call-out-dialog/call-out-actions';
 import { PublishScheduleDialog, PublishScheduleDialogData } from '../publish-schedule-dialog/publish-schedule-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
 import { ScheduleDayView } from '../schedule-day-view/schedule-day-view';
@@ -81,6 +82,7 @@ export class AdminSchedulePage implements OnInit {
   private readonly timeEntriesApi = inject(TimeEntriesApi);
   private readonly realtime = inject(ScheduleRealtime);
   private readonly dialog = inject(MatDialog);
+  private readonly callOutActions = inject(CallOutActions);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
@@ -111,6 +113,7 @@ export class AdminSchedulePage implements OnInit {
   // other days in the visible week.
   private readonly entriesByAssignmentId = signal<Map<number, TimeEntryDto>>(new Map());
   protected readonly employeeColor = employeeColor;
+  protected readonly coverLabel = coverLabel;
 
   // Shift templates grouped into rows by start time — shifts that all
   // start at the same time land on one line, the next-earliest start time
@@ -484,26 +487,14 @@ export class AdminSchedulePage implements OnInit {
     return this.entryFor(assignment)?.clockOutAt != null;
   }
 
+  // Mark absent and, optionally, assign cover in the same step.
   markAbsent(assignment: ShiftAssignmentDto): void {
-    this.dialog
-      .open<NoteDialog, NoteDialogData, string>(NoteDialog, {
-        data: {
-          title: `Mark ${assignment.accountFirstName} ${assignment.accountLastName} absent`,
-          label: 'Reason',
-          noteRequired: true,
-          confirmLabel: 'Mark Absent',
-        },
-      })
-      .afterClosed()
-      .subscribe((note) => {
-        if (!note) {
-          return;
-        }
-        this.assignmentsApi.markAbsent(assignment.id, { isAbsent: true, note }).subscribe({
-          next: () => this.load(),
-          error: (err) => this.error.set(err?.error ?? 'Failed to mark absent.'),
-        });
-      });
+    this.callOutActions.callOut(assignment).subscribe((changed) => changed && this.load());
+  }
+
+  // Find, change or remove cover on a shift that's already absent.
+  cover(assignment: ShiftAssignmentDto): void {
+    this.callOutActions.cover(assignment).subscribe((changed) => changed && this.load());
   }
 
   clearAbsent(assignment: ShiftAssignmentDto): void {

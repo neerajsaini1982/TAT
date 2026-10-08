@@ -1,0 +1,233 @@
+// Same page furniture as the payroll report (title band, flush-left
+// controls, ruled summary strip) — duplicated rather than shared since
+// Angular's view encapsulation scopes styles per component.
+:host {
+  display: block;
+  padding-bottom: 40px;
+}
+
+.report-head {
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    font: var(--mat-sys-headline-medium);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+}
+
+.kicker {
+  margin: 0 0 4px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mat-sys-primary);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.sort-field {
+  min-width: 220px;
+}
+
+.run-btn {
+  height: 48px;
+  padding: 0 24px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.status {
+  margin: 0;
+  padding: 64px 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 15px;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 2px solid var(--mat-sys-on-surface);
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+  margin-bottom: 12px;
+}
+
+.summary-cell {
+  padding: 16px 20px;
+  border-left: 1px solid var(--mat-sys-outline-variant);
+
+  &:first-child {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
+.summary-label {
+  margin: 0 0 6px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.summary-value {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.alert {
+  color: var(--mat-sys-error);
+}
+
+.good {
+  color: var(--mat-sys-primary);
+  font-weight: 700;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  th {
+    font: var(--mat-sys-label-medium);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+    border-bottom: 2px solid var(--mat-sys-on-surface);
+  }
+
+  .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.col-expand {
+  width: 48px;
+}
+
+.employee-row {
+  cursor: pointer;
+
+  &:hover,
+  &.expanded {
+    background: var(--mat-sys-surface-container-low);
+  }
+}
+
+.name-cell {
+  font-weight: 600;
+}
+
+.detail-row > td {
+  background: var(--mat-sys-surface-container-lowest);
+  vertical-align: top;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 32px;
+  padding: 4px 0 12px;
+}
+
+.detail-block {
+  h4 {
+    margin: 0 0 8px;
+    font: var(--mat-sys-label-medium);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding: 6px 0;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+  }
+}
+
+.none {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.detail-date {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.detail-note {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.tag {
+  padding: 2px 8px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  &.warn {
+    border-color: var(--mat-sys-error);
+    color: var(--mat-sys-error);
+  }
+}
+
+@media (max-width: 720px) {
+  .summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summary-cell:nth-child(odd) {
+    border-left: none;
+    padding-left: 0;
+  }
+
+  .details {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}

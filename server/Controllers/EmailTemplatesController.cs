@@ -149,6 +149,10 @@ public class EmailTemplatesController(AppDbContext db, IEmailSender emailSender)
             ["{{userCode}}"] = "123456",
             ["{{loginLink}}"] = $"{Request.Scheme}://{Request.Host}/",
             ["{{availabilityLink}}"] = $"{Request.Scheme}://{Request.Host}/{location.LocationCode}/employee/availability",
+            ["{{coveringFor}}"] = "Sample Coworker",
+            ["{{shiftDate}}"] = weekStart.ToString("ddd, MMM d"),
+            ["{{shiftName}}"] = sampleShift.Name,
+            ["{{shiftTime}}"] = ShiftAssignmentsController.FormatTimeRange(sampleShift, settings.TimeFormat),
         };
     }
 

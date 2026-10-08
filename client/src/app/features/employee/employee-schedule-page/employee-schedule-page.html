@@ -50,6 +50,9 @@
             @if (shift.isAbsent) {
               <span class="attendance-badge absent" [title]="shift.absenceNote ?? ''">Absent</span>
             }
+            @if (coverLabel(shift); as cover) {
+              <span class="attendance-badge cover">{{ cover }}</span>
+            }
           </div>
         }
       </mat-card-content>

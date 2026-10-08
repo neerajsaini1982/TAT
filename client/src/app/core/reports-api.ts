@@ -64,6 +64,49 @@ export interface EmailHoursReportResultDto {
   failed: string[];
 }
 
+export interface CallOutDetailDto {
+  date: string;
+  shiftName: string;
+  shiftStartTime: string;
+  shiftEndTime: string;
+  note: string | null;
+  // Null when nobody was put on the shift.
+  coveredByName: string | null;
+}
+
+// A shift covered for someone else, described by the absent employee's
+// shift. wasAlreadyWorking: they had a shift of their own that day and
+// stayed on.
+export interface CoverDetailDto {
+  date: string;
+  shiftName: string;
+  shiftStartTime: string;
+  shiftEndTime: string;
+  coveredForName: string;
+  wasAlreadyWorking: boolean;
+}
+
+export interface EmployeeCallOutReportDto {
+  employeeId: number;
+  fullName: string;
+  scheduledShifts: number;
+  callOuts: number;
+  callOutsCovered: number;
+  shiftsCovered: number;
+  callOutDetails: CallOutDetailDto[];
+  coverDetails: CoverDetailDto[];
+}
+
+// One posted shift in the employee schedule report. scheduledMinutes is the
+// shift span less scheduled lunch.
+export interface ScheduledShiftDto {
+  date: string;
+  shiftName: string;
+  shiftStartTime: string;
+  shiftEndTime: string;
+  scheduledMinutes: number;
+}
+
 @Service()
 export class ReportsApi {
   private readonly http = inject(HttpClient);
@@ -75,6 +118,21 @@ export class ReportsApi {
   getHoursReport(locationCode: string, startDate: string, endDate: string) {
     const params = new URLSearchParams({ locationCode, startDate, endDate });
     return this.http.get<EmployeeHoursReportDto[]>(`${this.base}/hours?${params.toString()}`);
+  }
+
+  // Admin/Sa only — per employee, the shifts they were marked absent for and
+  // the shifts they covered for someone else. See
+  // ReportsController.GetCallOutReport.
+  getCallOutReport(locationCode: string, startDate: string, endDate: string) {
+    const params = new URLSearchParams({ locationCode, startDate, endDate });
+    return this.http.get<EmployeeCallOutReportDto[]>(`${this.base}/call-outs?${params.toString()}`);
+  }
+
+  // Admin/Sa only — one employee's posted shifts over a date range, absent
+  // or not. See ReportsController.GetEmployeeScheduleReport.
+  getEmployeeScheduleReport(locationCode: string, employeeId: number, startDate: string, endDate: string) {
+    const params = new URLSearchParams({ locationCode, employeeId: String(employeeId), startDate, endDate });
+    return this.http.get<ScheduledShiftDto[]>(`${this.base}/employee-schedule?${params.toString()}`);
   }
 
   // Admin/Sa only — emails each employee their own hours for the range using

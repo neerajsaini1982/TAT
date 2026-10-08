@@ -157,6 +157,9 @@
                     @if (shift.assignment.isAbsent) {
                       <span class="attendance-badge absent" [title]="shift.assignment.absenceNote ?? ''">Absent</span>
                     }
+                    @if (coverLabel(shift.assignment); as cover) {
+                      <span class="attendance-badge cover">{{ cover }}</span>
+                    }
                     @if (isLate(shift)) {
                       <span class="attendance-badge warn">Late</span>
                     }
@@ -174,6 +177,14 @@
                         @if (shift.assignment.isAbsent) {
                           <button type="button" class="clear-absent-btn" mat-icon-button (click)="clearAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Clear absent">
                             <mat-icon>how_to_reg</mat-icon>
+                          </button>
+                          <button
+                            type="button"
+                            mat-icon-button
+                            (click)="cover(shift)"
+                            [title]="shift.assignment.coveredByAssignmentId === null ? 'Find cover' : 'Change cover'"
+                          >
+                            <mat-icon>{{ shift.assignment.coveredByAssignmentId === null ? 'person_add' : 'swap_horiz' }}</mat-icon>
                           </button>
                         } @else {
                           <button type="button" class="mark-absent-btn" mat-icon-button (click)="markAbsent(shift)" [disabled]="markingId() === shift.assignment.id" title="Mark absent">

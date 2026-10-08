@@ -1,6 +1,6 @@
 import { Component, computed, input } from '@angular/core';
 
-import { ShiftAssignmentDto } from '../../../core/shift-assignments-api';
+import { ShiftAssignmentDto, coverLabel } from '../../../core/shift-assignments-api';
 import { employeeColor } from '../../../core/employee-colors';
 import { LaidOutEvent, formatClockTime, hourLabel, layoutDayEvents, toMinutes } from '../../../core/day-view-layout';
 import { WeekTimelineDay } from '../schedule-week-timeline/schedule-week-timeline';
@@ -43,6 +43,7 @@ export class ScheduleWeekDaysTimeline {
   readonly days = input<WeekTimelineDay[]>([]);
 
   protected readonly employeeColor = employeeColor;
+  protected readonly coverLabel = coverLabel;
   protected readonly hourLabel = hourLabel;
   protected readonly totalHeightPx = TIMELINE_HEIGHT_PX;
 

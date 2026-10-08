@@ -5,7 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { catchError, forkJoin, of, switchMap } from 'rxjs';
 
-import { ShiftAssignmentDto, ShiftAssignmentsApi } from '../../../core/shift-assignments-api';
+import { ShiftAssignmentDto, ShiftAssignmentsApi, coverLabel, needsCover } from '../../../core/shift-assignments-api';
 import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
 import { LocationSettingsApi, TimeFormat, WorkweekDay } from '../../../core/location-settings-api';
 import { AvailabilityApi, AvailabilityDto } from '../../../core/availability-api';
@@ -15,6 +15,7 @@ import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { employeeColor } from '../../../core/employee-colors';
 import { formatInstant, formatTimeOnly } from '../../../core/location-time';
 import { isLateClockIn } from '../../../core/attendance-flags';
+import { hourLabel, toMinutes } from '../../../core/day-view-layout';
 import {
   DAY_LABELS_SHORT,
   addDays,
@@ -58,6 +59,30 @@ interface WeekDayHours {
   worked: number;
   isToday: boolean;
   isFuture: boolean;
+}
+
+// One hour of one day in the Coverage by Hour gadget. headcount is the
+// average number of people on shift across the hour (staff-minutes / 60), so
+// someone starting at 10:45 counts as a quarter of a person for 10-11.
+interface CoverageCell {
+  date: string;
+  dayLabel: string;
+  headcount: number;
+  // Share of the week's busiest hour, 0-1 — drives the cell's shade.
+  intensity: number;
+  people: { name: string; timeLabel: string }[];
+}
+
+interface CoverageRow {
+  hourLabel: string;
+  rangeLabel: string;
+  cells: CoverageCell[];
+}
+
+interface CoverageDay {
+  date: string;
+  label: string;
+  isToday: boolean;
 }
 
 // One week's point in the Labor Hours Trend gadget. x/y are percentages of
@@ -170,7 +195,7 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
   selector: 'app-admin-dashboard',
   imports: [RouterLink, MatButtonModule, MatIconModule],
   templateUrl: './admin-dashboard.html',
-  styleUrls: ['./admin-dashboard.scss', './admin-dashboard-charts.scss'],
+  styleUrls: ['./admin-dashboard.scss', './admin-dashboard-charts.scss', './admin-dashboard-coverage.scss'],
 })
 export class AdminDashboard implements OnInit {
   @Input({ required: true }) locationCode!: string;
@@ -194,6 +219,9 @@ export class AdminDashboard implements OnInit {
 
   protected readonly weekRangeLabel = signal('');
   protected readonly weekDays = signal<WeekDayHours[]>([]);
+  protected readonly coverageDays = signal<CoverageDay[]>([]);
+  protected readonly coverageRows = signal<CoverageRow[]>([]);
+  protected readonly coveragePeak = signal<{ headcount: number; when: string } | null>(null);
   protected readonly attendance = signal<AttendanceSlice[]>([]);
   protected readonly trendWeeks = signal<TrendWeek[]>([]);
   protected readonly trendMaxMinutes = signal(60);
@@ -211,6 +239,8 @@ export class AdminDashboard implements OnInit {
   protected readonly duration = formatDurationMinutes;
 
   protected readonly employeeColor = employeeColor;
+  protected readonly coverLabel = coverLabel;
+  protected readonly needsCover = needsCover;
   protected readonly hoursLabel = hoursMinutesLabel;
 
   protected readonly scheduledCount = computed(() => this.shifts().length);
@@ -387,6 +417,7 @@ export class AdminDashboard implements OnInit {
           );
 
           this.weekDays.set(this.buildWeekDays(monday, today, assignments, report));
+          this.setCoverage(monday, today, assignments, settings.timeFormat);
           this.attendance.set(this.buildAttendance(today, assignments, entryByShiftId, grace));
           this.setTrend(monday, report);
           this.overtimeThreshold.set(settings.weeklyOvertimeAfterMinutes);
@@ -451,6 +482,80 @@ export class AdminDashboard implements OnInit {
         isFuture: date > today,
       };
     });
+  }
+
+  // How many people are scheduled each hour of each day this week, from the
+  // earliest shift start to the latest shift end. Absent shifts don't count
+  // (their cover, if any, is its own assignment and does). A shift running
+  // past midnight is counted up to midnight only.
+  private setCoverage(monday: Date, today: string, assignments: ShiftAssignmentDto[], timeFormat: TimeFormat): void {
+    const hour = (h: number) => (timeFormat === 'TwentyFourHour' ? `${String(h % 24).padStart(2, '0')}:00` : hourLabel(h));
+    const shifts = assignments
+      .filter((a) => !a.isAbsent)
+      .map((a) => {
+        const start = toMinutes(a.shiftStartTime);
+        const end = toMinutes(a.shiftEndTime);
+        return {
+          date: a.date,
+          start,
+          end: end > start ? end : 24 * 60,
+          name: `${a.accountFirstName} ${a.accountLastName}`,
+          timeLabel: `${formatTimeOnly(a.shiftStartTime, timeFormat)} – ${formatTimeOnly(a.shiftEndTime, timeFormat)}`,
+        };
+      })
+      .sort((a, b) => a.start - b.start || a.name.localeCompare(b.name));
+
+    const days = DAY_LABELS_SHORT.map((label, i) => {
+      const date = formatDate(addDays(monday, i));
+      return { date, label, isToday: date === today };
+    });
+    this.coverageDays.set(days);
+
+    if (shifts.length === 0) {
+      this.coverageRows.set([]);
+      this.coveragePeak.set(null);
+      return;
+    }
+
+    const firstHour = Math.floor(Math.min(...shifts.map((s) => s.start)) / 60);
+    const lastHour = Math.ceil(Math.max(...shifts.map((s) => s.end)) / 60);
+    const rows: CoverageRow[] = [];
+    for (let h = firstHour; h < lastHour; h++) {
+      rows.push({
+        hourLabel: hour(h),
+        rangeLabel: `${hour(h)} – ${hour(h + 1)}`,
+        cells: days.map((day) => {
+          const onShift = shifts.filter((s) => s.date === day.date && s.start < (h + 1) * 60 && s.end > h * 60);
+          const minutes = onShift.reduce((sum, s) => sum + Math.min(s.end, (h + 1) * 60) - Math.max(s.start, h * 60), 0);
+          return {
+            date: day.date,
+            dayLabel: day.label,
+            headcount: Math.round((minutes / 60) * 10) / 10,
+            intensity: 0,
+            people: onShift.map(({ name, timeLabel }) => ({ name, timeLabel })),
+          };
+        }),
+      });
+    }
+
+    const cells = rows.flatMap((row) => row.cells.map((cell) => ({ row, cell })));
+    const peak = cells.reduce((best, c) => (c.cell.headcount > best.cell.headcount ? c : best));
+    for (const { cell } of cells) {
+      cell.intensity = cell.headcount / peak.cell.headcount;
+    }
+    this.coverageRows.set(rows);
+    this.coveragePeak.set({
+      headcount: peak.cell.headcount,
+      when: `${dayOfWeekLabel(peak.cell.date)}, ${peak.row.rangeLabel}`,
+    });
+  }
+
+  // The cell's shade: one hue, stronger with more people. Empty hours stay
+  // the plain surface.
+  protected coverageShade(cell: CoverageCell): string | null {
+    return cell.headcount === 0
+      ? null
+      : `color-mix(in srgb, var(--viz-scheduled) ${Math.round(12 + cell.intensity * 88)}%, var(--mat-sys-surface))`;
   }
 
   // Scheduled and logged hours for this week and the seven before it. The
@@ -656,6 +761,17 @@ export class AdminDashboard implements OnInit {
   ): AttentionItem[] {
     const items: AttentionItem[] = [];
     const admin = ['/', this.locationCode, 'admin'];
+
+    const uncovered = assignments.filter((a) => a.date === today && needsCover(a));
+    if (uncovered.length > 0) {
+      items.push({
+        icon: 'person_off',
+        text: `${plural(uncovered.length, 'absent shift')} today ${uncovered.length === 1 ? 'has' : 'have'} no cover`,
+        detail: uncovered.map((a) => `${a.accountFirstName} ${a.accountLastName}`).join(', '),
+        linkLabel: 'Find cover',
+        link: [...admin, 'view-schedule'],
+      });
+    }
     const nextWeekLabel = formatWeekRange(nextMonday);
 
     const draftsThisWeek = assignments.filter((a) => a.date >= today && a.date >= weekStart && !a.isPublished).length;

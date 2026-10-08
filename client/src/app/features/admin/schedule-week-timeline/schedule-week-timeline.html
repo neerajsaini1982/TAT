@@ -35,6 +35,9 @@
             <span class="event-title">{{ laidOut.event.accountFirstName }} {{ laidOut.event.accountLastName }}</span>
             <span class="event-shift">{{ laidOut.event.shiftName }}</span>
             <span class="event-time">{{ timeRangeLabel(laidOut.event) }}</span>
+            @if (coverLabel(laidOut.event); as cover) {
+              <span class="event-time">{{ cover }}</span>
+            }
           </div>
         }
       </div>

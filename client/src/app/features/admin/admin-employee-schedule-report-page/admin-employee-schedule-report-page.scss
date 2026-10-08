@@ -1,0 +1,139 @@
+// Same page furniture as the payroll and call-out reports — duplicated
+// rather than shared since Angular's view encapsulation scopes styles per
+// component.
+:host {
+  display: block;
+  padding-bottom: 40px;
+}
+
+.report-head {
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+  padding-bottom: 12px;
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    font: var(--mat-sys-headline-medium);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+}
+
+.kicker {
+  margin: 0 0 4px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mat-sys-primary);
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.employee-field {
+  min-width: 300px;
+}
+
+.run-btn {
+  height: 48px;
+  padding: 0 24px;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  font-weight: 600;
+  margin: 0 0 16px;
+}
+
+.status {
+  margin: 0;
+  padding: 64px 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 15px;
+}
+
+.ran-for {
+  margin: 0 0 16px;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 2px solid var(--mat-sys-on-surface);
+  border-bottom: 2px solid var(--mat-sys-on-surface);
+  margin-bottom: 12px;
+}
+
+.summary-cell {
+  padding: 16px 20px;
+  border-left: 1px solid var(--mat-sys-outline-variant);
+
+  &:first-child {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
+.summary-label {
+  margin: 0 0 6px;
+  font: var(--mat-sys-label-medium);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.summary-value {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  th {
+    font: var(--mat-sys-label-medium);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+    border-bottom: 2px solid var(--mat-sys-on-surface);
+  }
+
+  .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.date-cell {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.time-cell {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
