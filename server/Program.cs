@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -108,7 +109,9 @@ builder.Services.AddAuthorizationBuilder()
     .AddPolicy("SaOnly", policy => policy.RequireRole(nameof(AccountRole.Sa)))
     .AddPolicy("AdminOrAbove", policy => policy.RequireRole(nameof(AccountRole.Sa), nameof(AccountRole.Admin)))
     .AddPolicy("LeadOrAbove", policy => policy.RequireRole(nameof(AccountRole.Sa), nameof(AccountRole.Admin), nameof(AccountRole.Lead)))
+    .AddPolicy("ScheduleManager", policy => policy.AddRequirements(new ScheduleManagerRequirement()))
     .AddPolicy("Kiosk", policy => policy.RequireRole(nameof(AccountRole.Kiosk)));
+builder.Services.AddScoped<IAuthorizationHandler, ScheduleManagerHandler>();
 
 var app = builder.Build();
 

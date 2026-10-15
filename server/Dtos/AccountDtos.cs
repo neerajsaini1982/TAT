@@ -17,6 +17,8 @@ public record AccountDto(
     bool CanSeeAllSchedules,
     // See Account.CanWriteUpOthers.
     bool CanWriteUpOthers,
+    // See Account.CanManageOthersSchedules.
+    bool CanManageOthersSchedules,
     string? UserCode,
     string? LocationCode,
     // Populated by the ADP employee-directory import (see
@@ -87,7 +89,9 @@ public record UpdateAccountRequest(
     EmploymentType? EmploymentType,
     bool IsOvertimeExempt = false,
     // See Account.CanWriteUpOthers.
-    bool CanWriteUpOthers = false);
+    bool CanWriteUpOthers = false,
+    // See Account.CanManageOthersSchedules.
+    bool CanManageOthersSchedules = false);
 
 // LoginLink is built client-side (it already knows its own origin) and
 // passed through rather than the server guessing its hostname.

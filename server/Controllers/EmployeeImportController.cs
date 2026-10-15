@@ -361,6 +361,7 @@ public class EmployeeImportController(AppDbContext db) : ControllerBase
         a.IsOnShiftSchedule,
         a.CanSeeAllSchedules,
         a.CanWriteUpOthers,
+        a.CanManageOthersSchedules,
         a.UserCode,
         a.Location?.LocationCode,
         a.BirthDate,
