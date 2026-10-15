@@ -45,7 +45,7 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier, 
     // who's clocked in, on break, etc. — GetMine only ever shows the
     // caller's own entries.
     [HttpGet]
-    [Authorize(Policy = "LeadOrAbove")]
+    [Authorize(Policy = "ScheduleManager")]
     public ActionResult<IEnumerable<TimeEntryDto>> GetForLocation([FromQuery] string locationCode, [FromQuery] DateOnly date)
     {
         if (!CanAccess(locationCode))
@@ -90,7 +90,7 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier, 
     // this skips the open-segment guard: it's exactly the override for
     // someone who left without going through the normal flow.
     [HttpPost("{id:int}/admin-clock-out")]
-    [Authorize(Policy = "LeadOrAbove")]
+    [Authorize(Policy = "ScheduleManager")]
     public async Task<ActionResult<TimeEntryDto>> AdminClockOut(int id, AdminClockOutRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Note))
@@ -129,7 +129,7 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier, 
     // exists yet, otherwise overwrites every punch (and wholesale-replaces
     // every segment) on the existing one.
     [HttpPut("by-assignment/{shiftAssignmentId:int}/admin-edit")]
-    [Authorize(Policy = "LeadOrAbove")]
+    [Authorize(Policy = "ScheduleManager")]
     public async Task<ActionResult<TimeEntryDto>> AdminEditTimes(int shiftAssignmentId, AdminEditTimeEntryRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Note))
@@ -187,7 +187,7 @@ public class TimeEntriesController(AppDbContext db, IScheduleNotifier notifier, 
     // normally but a supervisor later confirms it was early. Only valid once
     // the entry has been clocked out.
     [HttpPut("{id:int}/left-early")]
-    [Authorize(Policy = "LeadOrAbove")]
+    [Authorize(Policy = "ScheduleManager")]
     public async Task<ActionResult<TimeEntryDto>> MarkLeftEarly(int id, MarkLeftEarlyRequest request)
     {
         var entry = db.TimeEntries

@@ -511,6 +511,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         account.IsOnShiftSchedule = request.IsOnShiftSchedule;
         account.CanSeeAllSchedules = request.CanSeeAllSchedules;
         account.CanWriteUpOthers = request.CanWriteUpOthers;
+        account.CanManageOthersSchedules = request.CanManageOthersSchedules;
         account.Role = request.Role;
         account.HourlyRate = request.HourlyRate;
         account.DateOfBirth = request.DateOfBirth;
@@ -709,6 +710,7 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         a.IsOnShiftSchedule,
         a.CanSeeAllSchedules,
         a.CanWriteUpOthers,
+        a.CanManageOthersSchedules,
         a.UserCode,
         a.Location?.LocationCode,
         a.BirthDate,

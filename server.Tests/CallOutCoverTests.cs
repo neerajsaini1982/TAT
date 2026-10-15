@@ -790,7 +790,9 @@ public sealed class CallOutCoverTests : IDisposable
     }
 
     [Fact]
-    public void The_cover_routes_are_open_to_leads_and_closed_to_employees()
+    // ScheduleManager = Lead and above, or an Employee with Can Manage
+    // Others' Schedules (see ScheduleManagerAuthorizationTests).
+    public void The_cover_routes_are_open_to_schedule_managers_only()
     {
         foreach (var action in new[]
         {
@@ -802,7 +804,7 @@ public sealed class CallOutCoverTests : IDisposable
                 .GetCustomAttributes(typeof(Microsoft.AspNetCore.Authorization.AuthorizeAttribute), false)
                 .Cast<Microsoft.AspNetCore.Authorization.AuthorizeAttribute>()
                 .Single();
-            Assert.Equal("LeadOrAbove", authorize.Policy);
+            Assert.Equal("ScheduleManager", authorize.Policy);
         }
     }
 

@@ -25,6 +25,10 @@ export interface AccountDto {
   // Lets a non-admin record a write-up against a coworker from the schedule
   // screen — create only; it grants no view of existing write-ups.
   canWriteUpOthers: boolean;
+  // Lets a non-Lead act on coworkers' shifts from the schedule screen —
+  // Mark/Clear Absent, find cover, edit punch times. Separate from
+  // canSeeAllSchedules: seeing the roster doesn't imply managing it.
+  canManageOthersSchedules: boolean;
   userCode: string | null;
   locationCode: string | null;
   // Populated by the ADP employee-directory import (see employee-import-api.ts);
@@ -94,6 +98,7 @@ export interface UpdateAccountRequest {
   isOnShiftSchedule: boolean;
   canSeeAllSchedules: boolean;
   canWriteUpOthers: boolean;
+  canManageOthersSchedules: boolean;
   role: Role;
   // Only required when role moves away from Employee.
   username?: string;
