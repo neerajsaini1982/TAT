@@ -82,9 +82,10 @@ function workedMinutes(entry: TimeEntryDto): number {
 // any number of actual ones, at most one open at a time). Self-punch
 // actions (Clock In/+Break/+Lunch/End/Clock Out) only ever render for the
 // caller's own shift, since punching is self-service; Mark/Clear Absent and
-// Edit Times additionally require the caller to actually hold Lead/Admin
-// privilege server-side (LeadOrAbove) — a plain Employee whose role was
-// granted schedule visibility can see the roster but not act on it.
+// Edit Times additionally require Lead/Admin, or an Employee whose account
+// has Can Manage Others' Schedules (the server's ScheduleManager policy) — a
+// plain Employee granted schedule visibility can see the roster but not act
+// on it.
 // Defaults to the Monday-Sunday of the current week, today onward (i.e.
 // "what's left of this week") — location scope can additionally browse to
 // any other week (see canBrowseWeeks/previousWeek/nextWeek), at which
@@ -131,12 +132,14 @@ export class CurrentWeekSchedule implements OnInit {
   protected readonly showEmployeeNames = computed(() =>
     this.days().some((d) => d.shifts.some((s) => !s.isMine)),
   );
-  // Mark/Clear Absent and Edit Times hit LeadOrAbove server endpoints —
-  // hide them for a plain Employee who can see the roster but can't act on
-  // it, so the buttons never appear only to 403 on click.
+  // Mark/Clear Absent and Edit Times hit ScheduleManager server endpoints
+  // (Lead/Admin/Sa, or an account with Can Manage Others' Schedules, loaded
+  // in ngOnInit) — hide them for anyone else, so the buttons never appear
+  // only to 403 on click.
+  private readonly hasManageAccess = signal(false);
   protected readonly canManageOthers = computed(() => {
     const role = this.auth.role();
-    return role === 'Sa' || role === 'Admin' || role === 'Lead';
+    return role === 'Sa' || role === 'Admin' || role === 'Lead' || this.hasManageAccess();
   });
   // Admin/Sa can always write someone up; anyone else only with their
   // account's Can Writeup Others access (loaded in ngOnInit). The server
@@ -201,7 +204,15 @@ export class CurrentWeekSchedule implements OnInit {
     const role = this.auth.role();
     if (role !== 'Sa' && role !== 'Admin') {
       this.accountsApi.getMine().subscribe({
-        next: (account) => this.hasWriteUpAccess.set(account.canWriteUpOthers),
+        next: (account) => {
+          this.hasWriteUpAccess.set(account.canWriteUpOthers);
+          // The first load() ran before we knew, so it only fetched the
+          // caller's own punches — reload to pull in everyone's.
+          if (account.canManageOthersSchedules && !this.hasManageAccess()) {
+            this.hasManageAccess.set(true);
+            this.load();
+          }
+        },
         error: () => this.hasWriteUpAccess.set(false),
       });
     }
@@ -260,15 +271,14 @@ export class CurrentWeekSchedule implements OnInit {
           // 'mine' scope usually only needs the caller's own — but Schedule
           // Visibility can grant a roster there too (e.g. Lead with
           // LeadSeesAllSchedules), and TimeEntriesController.GetForLocation
-          // is LeadOrAbove, so a Lead seeing a roster this way still has
-          // permission to see everyone's punches, not just their own. An
-          // Employee granted a roster view does NOT have that server
-          // permission, so this stays role-gated rather than just
+          // is ScheduleManager, so a Lead (or an Employee with Can Manage
+          // Others' Schedules) seeing a roster this way still has permission
+          // to see everyone's punches, not just their own. An Employee who
+          // only has a roster view does NOT have that server permission, so
+          // this stays gated on canManageOthers rather than just
           // roster-visible.
-          const role = this.auth.role();
           const rosterVisible = assignments.some((a) => a.accountId !== this.myAccountId);
-          const canSeeOthersPunches =
-            isLocationScope || (rosterVisible && (role === 'Sa' || role === 'Admin' || role === 'Lead'));
+          const canSeeOthersPunches = isLocationScope || (rosterVisible && this.canManageOthers());
 
           const entries$ = canSeeOthersPunches
             ? visibleDates.length > 0

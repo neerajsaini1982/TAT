@@ -323,7 +323,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     // didn't happen, so a stray punch (e.g. clocked in then never showed
     // up again) shouldn't be left dangling behind it.
     [HttpPut("{id:int}/absent")]
-    [Authorize(Policy = "LeadOrAbove")]
+    [Authorize(Policy = "ScheduleManager")]
     public async Task<ActionResult<ShiftAssignmentDto>> MarkAbsent(int id, MarkAbsentRequest request)
     {
         var assignment = db.ShiftAssignments
@@ -400,7 +400,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     // working that day are included with the facts the picker warns about —
     // for the latter, the single combined shift they'd be given.
     [HttpGet("{id:int}/cover-candidates")]
-    [Authorize(Policy = "LeadOrAbove")]
+    [Authorize(Policy = "ScheduleManager")]
     public ActionResult<CoverCandidatesDto> GetCoverCandidates(int id, [FromQuery] int? shiftId = null)
     {
         var assignment = LoadForCover(id);
@@ -536,7 +536,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     // validated before anything changes and saved in one go, so a cover
     // employee who can't take the shift leaves the absence unrecorded too.
     [HttpPut("{id:int}/call-out")]
-    [Authorize(Policy = "LeadOrAbove")]
+    [Authorize(Policy = "ScheduleManager")]
     public async Task<ActionResult<CallOutResultDto>> CallOut(int id, CallOutRequest request)
     {
         var assignment = LoadForCover(id);
@@ -602,7 +602,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     // Assigns cover on a shift that's already marked absent ("Find Cover"),
     // or swaps the cover employee for someone else.
     [HttpPut("{id:int}/cover")]
-    [Authorize(Policy = "LeadOrAbove")]
+    [Authorize(Policy = "ScheduleManager")]
     public async Task<ActionResult<CallOutResultDto>> AssignCover(int id, AssignCoverRequest request)
     {
         var assignment = LoadForCover(id);
@@ -632,7 +632,7 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
     // punches belong to it); someone whose own shift was combined with it
     // goes back to the shift they had.
     [HttpDelete("{id:int}/cover")]
-    [Authorize(Policy = "LeadOrAbove")]
+    [Authorize(Policy = "ScheduleManager")]
     public async Task<ActionResult<ShiftAssignmentDto>> RemoveCover(int id)
     {
         var assignment = LoadForCover(id);

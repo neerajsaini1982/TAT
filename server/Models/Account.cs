@@ -34,6 +34,13 @@ public class Account
     // grants no view of anyone's existing write-ups, and never a write-up
     // about themselves. Admin/Sa can already write people up regardless.
     public bool CanWriteUpOthers { get; set; } = false;
+
+    // Lets a non-Lead act on other employees' shifts from the schedule
+    // screen — Mark/Clear Absent, find cover, edit or close out their punch
+    // times (see ScheduleManagerHandler). Separate from CanSeeAllSchedules
+    // on purpose: seeing the roster doesn't imply being trusted to change
+    // it. Admin/Lead/Sa can already do all of this regardless.
+    public bool CanManageOthersSchedules { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // 6-digit code an Employee types in at /{locationCode}/employee to log in.

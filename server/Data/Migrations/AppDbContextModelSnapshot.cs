@@ -35,6 +35,9 @@ namespace Server.Data.Migrations
                     b.Property<string>("BirthDate")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("CanManageOthersSchedules")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("CanSeeAllSchedules")
                         .HasColumnType("INTEGER");
 
