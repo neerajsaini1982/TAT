@@ -69,6 +69,7 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseSqlite(sqliteC
 builder.Services.AddScoped<TokenService>();
 builder.Services.AddScoped<TimeEntryPunchService>();
 builder.Services.AddScoped<KioskPinService>();
+builder.Services.AddScoped<DemoLocationSeeder>();
 
 // Keys live outside publish/wwwroot (both get rm -rf'd on every
 // publish-win.sh rebuild — see that script) so encrypted SSNs stay readable
