@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCardModule } from '@angular/material/card';
+import { MatSelectModule } from '@angular/material/select';
 
 import { LocationsApi, LocationDto, DemoLocationResult } from '../../../core/locations-api';
 
@@ -41,6 +42,7 @@ const emptyForm = (): FormModel => ({
     MatInputModule,
     MatSlideToggleModule,
     MatCardModule,
+    MatSelectModule,
   ],
   templateUrl: './locations-page.html',
   styleUrl: './locations-page.scss',
@@ -59,6 +61,8 @@ export class LocationsPage implements OnInit {
   protected readonly demoBusy = signal(false);
   protected readonly demoError = signal<string | null>(null);
   protected readonly demoResult = signal<DemoLocationResult | null>(null);
+  protected readonly sourceLocations = computed(() => this.locations().filter((l) => l.locationCode !== 'demo'));
+  protected demoSource = 'l2psj';
   protected demoPassword = '';
   protected kioskPasscode = '';
 
@@ -97,12 +101,12 @@ export class LocationsPage implements OnInit {
   }
 
   resetDemo(): void {
-    if (this.hasDemo() && !confirm('Wipe and rebuild the Demo location? Anything added to it will be lost.')) {
+    if (this.hasDemo() && !confirm('Replace the Demo location with a fresh copy? Anything added to it will be lost.')) {
       return;
     }
     this.demoError.set(null);
     this.demoBusy.set(true);
-    this.api.resetDemo(this.demoPassword, this.kioskPasscode).subscribe({
+    this.api.resetDemo(this.demoSource, this.demoPassword, this.kioskPasscode).subscribe({
       next: (result) => {
         this.demoBusy.set(false);
         this.showDemoForm.set(false);

@@ -24,6 +24,7 @@ public record UpdateLocationRequest(
     bool IsActive);
 
 public record ResetDemoLocationRequest(
+    string SourceLocationCode,
     string AdminPassword,
     string KioskPasscode);
 

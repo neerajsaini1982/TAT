@@ -57,11 +57,12 @@ public partial class LocationsController(AppDbContext db) : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = location.Id }, ToDto(location));
     }
 
-    // Creates the "demo" location for showing the product to prospects, or
-    // wipes and rebuilds it if it already exists — see DemoLocationSeeder.
-    // Only ever touches the location with that exact code.
+    // Creates the "demo" location for showing the product to prospects as an
+    // anonymized copy of a real one, or wipes and rebuilds it if it already
+    // exists — see DemoLocationCopier. Only ever replaces the location with
+    // that exact code.
     [HttpPost("demo")]
-    public ActionResult<DemoLocationResult> ResetDemo(ResetDemoLocationRequest request, [FromServices] DemoLocationSeeder seeder)
+    public ActionResult<DemoLocationResult> ResetDemo(ResetDemoLocationRequest request, [FromServices] DemoLocationCopier copier)
     {
         if (string.IsNullOrWhiteSpace(request.AdminPassword) || request.AdminPassword.Length < 8)
         {
@@ -73,7 +74,18 @@ public partial class LocationsController(AppDbContext db) : ControllerBase
             return BadRequest("The kiosk passcode must be at least 4 characters.");
         }
 
-        return Ok(seeder.Reset(request.AdminPassword, request.KioskPasscode));
+        var source = request.SourceLocationCode.Trim().ToLowerInvariant();
+        if (source == DemoLocationCopier.DemoLocationCode)
+        {
+            return BadRequest("Pick a real location to copy, not the demo itself.");
+        }
+
+        if (!db.Locations.Any(l => l.LocationCode == source))
+        {
+            return NotFound($"No location with code '{source}'.");
+        }
+
+        return Ok(copier.CopyFrom(source, request.AdminPassword, request.KioskPasscode));
     }
 
     [HttpPut("{id:int}")]

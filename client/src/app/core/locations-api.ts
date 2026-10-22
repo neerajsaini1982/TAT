@@ -47,8 +47,8 @@ export class LocationsApi {
     return this.http.put<LocationDto>(`${this.base}/${id}`, request);
   }
 
-  resetDemo(adminPassword: string, kioskPasscode: string) {
-    return this.http.post<DemoLocationResult>(`${this.base}/demo`, { adminPassword, kioskPasscode });
+  resetDemo(sourceLocationCode: string, adminPassword: string, kioskPasscode: string) {
+    return this.http.post<DemoLocationResult>(`${this.base}/demo`, { sourceLocationCode, adminPassword, kioskPasscode });
   }
 
   delete(id: number) {
