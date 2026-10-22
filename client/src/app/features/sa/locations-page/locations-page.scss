@@ -38,3 +38,29 @@
 table {
   width: 100%;
 }
+
+.hint {
+  margin: 0 0 12px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.demo-card {
+  margin-bottom: 16px;
+  overflow-x: auto;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.logins {
+  border-collapse: collapse;
+
+  th,
+  td {
+    text-align: left;
+    padding: 6px 12px 6px 0;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    white-space: nowrap;
+  }
+}

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Server.Data;
 using Server.Dtos;
 using Server.Models;
+using Server.Services;
 
 namespace Server.Controllers;
 
@@ -54,6 +55,37 @@ public partial class LocationsController(AppDbContext db) : ControllerBase
         db.SaveChanges();
 
         return CreatedAtAction(nameof(Get), new { id = location.Id }, ToDto(location));
+    }
+
+    // Creates the "demo" location for showing the product to prospects as an
+    // anonymized copy of a real one, or wipes and rebuilds it if it already
+    // exists — see DemoLocationCopier. Only ever replaces the location with
+    // that exact code.
+    [HttpPost("demo")]
+    public ActionResult<DemoLocationResult> ResetDemo(ResetDemoLocationRequest request, [FromServices] DemoLocationCopier copier)
+    {
+        if (string.IsNullOrWhiteSpace(request.AdminPassword) || request.AdminPassword.Length < 8)
+        {
+            return BadRequest("The demo password must be at least 8 characters.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.KioskPasscode) || request.KioskPasscode.Length < 4)
+        {
+            return BadRequest("The kiosk passcode must be at least 4 characters.");
+        }
+
+        var source = request.SourceLocationCode.Trim().ToLowerInvariant();
+        if (source == DemoLocationCopier.DemoLocationCode)
+        {
+            return BadRequest("Pick a real location to copy, not the demo itself.");
+        }
+
+        if (!db.Locations.Any(l => l.LocationCode == source))
+        {
+            return NotFound($"No location with code '{source}'.");
+        }
+
+        return Ok(copier.CopyFrom(source, request.AdminPassword, request.KioskPasscode));
     }
 
     [HttpPut("{id:int}")]

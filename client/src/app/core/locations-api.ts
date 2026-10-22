@@ -13,6 +13,20 @@ export interface LocationDto {
   isActive: boolean;
 }
 
+export interface DemoLoginDto {
+  name: string;
+  jobTitle: string;
+  role: string;
+  username: string | null;
+  userCode: string | null;
+  kioskPin: string | null;
+}
+
+export interface DemoLocationResult {
+  location: LocationDto;
+  logins: DemoLoginDto[];
+}
+
 export type CreateLocationRequest = Omit<LocationDto, 'id' | 'isActive'>;
 export type UpdateLocationRequest = Omit<LocationDto, 'id' | 'locationCode'>;
 
@@ -31,6 +45,10 @@ export class LocationsApi {
 
   update(id: number, request: UpdateLocationRequest) {
     return this.http.put<LocationDto>(`${this.base}/${id}`, request);
+  }
+
+  resetDemo(sourceLocationCode: string, adminPassword: string, kioskPasscode: string) {
+    return this.http.post<DemoLocationResult>(`${this.base}/demo`, { sourceLocationCode, adminPassword, kioskPasscode });
   }
 
   delete(id: number) {
