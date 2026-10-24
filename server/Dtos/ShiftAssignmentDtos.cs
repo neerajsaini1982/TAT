@@ -39,6 +39,10 @@ public record CreateShiftAssignmentRequest(int ShiftId, int AccountId, DateOnly 
 // drag-and-drop reorder doesn't need to delete-then-recreate.
 public record MoveShiftAssignmentRequest(int AccountId, DateOnly Date);
 
+// Two employees working the same day trade shifts: each keeps their own
+// assignment, only the shift templates are exchanged.
+public record SwapShiftAssignmentsRequest(int FirstAssignmentId, int SecondAssignmentId);
+
 // Note is required when marking absent (explains why); optional/ignored
 // when clearing it.
 public record MarkAbsentRequest(bool IsAbsent, string? Note);

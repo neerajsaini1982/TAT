@@ -1,0 +1,38 @@
+<h2 mat-dialog-title>Swap Shifts · {{ data.dateLabel }}</h2>
+<mat-dialog-content class="content">
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>First employee</mat-label>
+    <mat-select [value]="firstId()" (selectionChange)="setFirst($event.value)">
+      @for (o of data.options; track o.assignmentId) {
+        <mat-option [value]="o.assignmentId">{{ o.employeeName }} · {{ o.shiftLabel }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  <mat-form-field appearance="outline" class="field">
+    <mat-label>Second employee</mat-label>
+    <mat-select [value]="secondId()" (selectionChange)="setSecond($event.value)" [disabled]="firstId() === null">
+      @for (o of secondOptions(); track o.assignmentId) {
+        <mat-option [value]="o.assignmentId">{{ o.employeeName }} · {{ o.shiftLabel }}</mat-option>
+      }
+    </mat-select>
+  </mat-form-field>
+
+  @if (first() && second()) {
+    <div class="preview">
+      <div><strong>{{ first()!.employeeName }}</strong> → {{ second()!.shiftLabel }}</div>
+      <div><strong>{{ second()!.employeeName }}</strong> → {{ first()!.shiftLabel }}</div>
+    </div>
+  }
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()" [disabled]="saving()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="swap()" [disabled]="!first() || !second() || saving()">
+    <mat-icon>swap_vert</mat-icon>
+    Swap Shift
+  </button>
+</mat-dialog-actions>

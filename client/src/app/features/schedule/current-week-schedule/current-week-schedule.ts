@@ -21,6 +21,7 @@ import { NoteDialog, NoteDialogData } from '../../admin/note-dialog/note-dialog'
 import { CallOutActions } from '../../admin/call-out-dialog/call-out-actions';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../../admin/edit-time-entry-dialog/edit-time-entry-dialog';
 import { WriteUpDialog, WriteUpDialogData } from '../../accounts/write-up-dialog/write-up-dialog';
+import { SwapShiftDialog, SwapShiftDialogData } from '../../admin/swap-shift-dialog/swap-shift-dialog';
 
 interface DayShift {
   assignment: ShiftAssignmentDto;
@@ -109,6 +110,8 @@ export class CurrentWeekSchedule implements OnInit {
   // dialog.
   @Input() focusDate: string | null = null;
   @Input() focusShiftId: number | null = null;
+  // Shows the per-day Swap Shifts icon (admin View Schedule page only).
+  @Input() allowSwap = false;
 
   private readonly api = inject(ShiftAssignmentsApi);
   private readonly timeEntriesApi = inject(TimeEntriesApi);
@@ -148,6 +151,11 @@ export class CurrentWeekSchedule implements OnInit {
   protected readonly canWriteUpOthers = computed(() => {
     const role = this.auth.role();
     return role === 'Sa' || role === 'Admin' || this.hasWriteUpAccess();
+  });
+  // Swapping shifts is Admin/Sa only (the server's AdminOrAbove policy).
+  protected readonly canSwap = computed(() => {
+    const role = this.auth.role();
+    return this.allowSwap && this.scope === 'location' && (role === 'Sa' || role === 'Admin');
   });
   protected readonly showActions = computed(
     () => this.showEmployeeNames() && (this.canManageOthers() || this.canWriteUpOthers()),
@@ -525,6 +533,39 @@ export class CurrentWeekSchedule implements OnInit {
   // Find, change or remove cover on a shift that's already absent.
   cover(shift: DayShift): void {
     this.callOutActions.cover(shift.assignment).subscribe((changed) => changed && this.load());
+  }
+
+  // Shifts on this day that can still be traded: not absent, not part of a
+  // cover, and nobody has clocked in yet (the server enforces the same).
+  swappableShifts(day: DayGroup): DayShift[] {
+    return day.shifts.filter(
+      (s) =>
+        !s.entry &&
+        !s.assignment.isAbsent &&
+        s.assignment.coversAssignmentId === null &&
+        s.assignment.coveredByAssignmentId === null,
+    );
+  }
+
+  canSwapDay(day: DayGroup): boolean {
+    const shiftIds = new Set(this.swappableShifts(day).map((s) => s.assignment.shiftId));
+    return shiftIds.size >= 2;
+  }
+
+  swapShifts(day: DayGroup): void {
+    const data: SwapShiftDialogData = {
+      dateLabel: `${day.dayLabel} ${day.dateLabel}`,
+      options: this.swappableShifts(day).map((s) => ({
+        assignmentId: s.assignment.id,
+        shiftId: s.assignment.shiftId,
+        employeeName: s.employeeName,
+        shiftLabel: this.scheduledTime(s.assignment),
+      })),
+    };
+    this.dialog
+      .open<SwapShiftDialog, SwapShiftDialogData, boolean>(SwapShiftDialog, { data })
+      .afterClosed()
+      .subscribe((swapped) => swapped && this.load());
   }
 
   clearAbsent(shift: DayShift): void {

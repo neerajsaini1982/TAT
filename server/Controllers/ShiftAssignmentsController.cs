@@ -297,6 +297,74 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         return Ok(ToDto(assignment, breakWindows));
     }
 
+    // Two employees working the same day trade shifts (e.g. Magaly takes
+    // Adrian's 12-8 and Adrian takes her 8-4). Only the ShiftIds are
+    // exchanged, so each employee keeps their own assignment and its
+    // published state. Blocked once either side has clocked in, been marked
+    // absent, or is part of a cover pairing — those tie the assignment to
+    // the shift it had, and swapping underneath them would scramble the
+    // record.
+    [HttpPost("swap")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public async Task<ActionResult<IEnumerable<ShiftAssignmentDto>>> Swap(SwapShiftAssignmentsRequest request)
+    {
+        if (request.FirstAssignmentId == request.SecondAssignmentId)
+        {
+            return BadRequest("Pick two different employees to swap.");
+        }
+
+        var pair = db.ShiftAssignments
+            .Include(a => a.Shift).ThenInclude(s => s!.Location)
+            .Include(a => a.Shift).ThenInclude(s => s!.ScheduledBreaks)
+            .Include(a => a.Account)
+            .Include(a => a.CoveredByAssignment)
+            .Where(a => a.Id == request.FirstAssignmentId || a.Id == request.SecondAssignmentId)
+            .ToList();
+        var first = pair.SingleOrDefault(a => a.Id == request.FirstAssignmentId);
+        var second = pair.SingleOrDefault(a => a.Id == request.SecondAssignmentId);
+        if (first is null || second is null
+            || !CanAccess(first.Shift?.Location?.LocationCode)
+            || first.Shift!.LocationId != second.Shift!.LocationId)
+        {
+            return NotFound();
+        }
+
+        if (first.Date != second.Date)
+        {
+            return BadRequest("Both shifts must be on the same day.");
+        }
+
+        if (first.ShiftId == second.ShiftId)
+        {
+            return BadRequest("Both employees are already on the same shift.");
+        }
+
+        foreach (var a in pair)
+        {
+            var name = $"{a.Account!.FirstName} {a.Account.LastName}";
+            if (a.IsAbsent)
+            {
+                return BadRequest($"{name} is marked absent. Clear the absence first.");
+            }
+            if (a.CoversAssignmentId is not null || a.CoveredByAssignment is not null || a.OriginalShiftId is not null)
+            {
+                return BadRequest($"{name}'s shift is part of a cover. Remove the cover first.");
+            }
+            if (db.TimeEntries.Any(t => t.ShiftAssignmentId == a.Id))
+            {
+                return BadRequest($"{name} has already clocked in for this shift.");
+            }
+        }
+
+        (first.ShiftId, second.ShiftId) = (second.ShiftId, first.ShiftId);
+        (first.Shift, second.Shift) = (second.Shift, first.Shift);
+        db.SaveChanges();
+
+        var breakWindows = ComputeBreakWindows(db, pair);
+        await notifier.NotifyLocationChanged(first.Shift!.Location!.LocationCode);
+        return Ok(new[] { ToDto(first, breakWindows), ToDto(second, breakWindows) });
+    }
+
     [HttpDelete("{id:int}")]
     [Authorize(Policy = "AdminOrAbove")]
     public async Task<IActionResult> Delete(int id)
