@@ -4,8 +4,87 @@
   </a>
   <h2>Locations</h2>
   <span class="spacer"></span>
+  <button mat-stroked-button (click)="startDemo()">{{ hasDemo() ? 'Reset Demo' : 'Create Demo' }}</button>
   <button mat-flat-button color="primary" (click)="startCreate()">Add Location</button>
 </div>
+
+@if (showDemoForm()) {
+  <mat-card class="form-card">
+    <mat-card-content>
+      <form (ngSubmit)="resetDemo()" class="form" autocomplete="off">
+        <p class="hint">
+          Copies a location into Demo (code <strong>demo</strong>) with its settings, shifts, schedule and punches.
+          Everyone gets a made-up name and email. Birth dates, addresses, phone numbers, photos, documents and
+          write-ups are left out, and email is turned off.
+          @if (hasDemo()) {
+            The current Demo, and anything added to it, is replaced. The location you copy from is not changed.
+          }
+        </p>
+        <mat-form-field appearance="outline">
+          <mat-label>Copy from</mat-label>
+          <mat-select name="demoSource" [(ngModel)]="demoSource" required>
+            @for (l of sourceLocations(); track l.id) {
+              <mat-option [value]="l.locationCode">{{ l.name }} ({{ l.locationCode }})</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Password for the demo's admins and leads</mat-label>
+          <input matInput type="password" name="demoPassword" [(ngModel)]="demoPassword" required minlength="8" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Kiosk passcode</mat-label>
+          <input matInput type="password" name="kioskPasscode" [(ngModel)]="kioskPasscode" required minlength="4" />
+        </mat-form-field>
+        @if (demoError()) {
+          <p class="error">{{ demoError() }}</p>
+        }
+        <div class="form-actions">
+          <button mat-flat-button color="primary" type="submit" [disabled]="demoBusy()">
+            {{ hasDemo() ? 'Reset Demo' : 'Create Demo' }}
+          </button>
+          <button mat-button type="button" (click)="showDemoForm.set(false)">Cancel</button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+}
+
+@if (demoResult(); as result) {
+  <mat-card class="demo-card">
+    <mat-card-content>
+      <div class="header">
+        <h3>Demo is ready at /{{ result.location.locationCode }}</h3>
+        <span class="spacer"></span>
+        <button mat-icon-button (click)="demoResult.set(null)" aria-label="Close">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      <p class="hint">
+        Admins and leads sign in at /{{ result.location.locationCode }}/admin with their username below and the
+        password you just set. Staff sign in at /{{ result.location.locationCode }}/employee with their code, or punch at
+        /{{ result.location.locationCode }}/kiosk with their PIN.
+      </p>
+      <table class="logins">
+        <thead>
+          <tr><th>Name</th><th>Job title</th><th>Role</th><th>Username</th><th>Code</th><th>Kiosk PIN</th></tr>
+        </thead>
+        <tbody>
+          @for (login of result.logins; track login.name) {
+            <tr>
+              <td>{{ login.name }}</td>
+              <td>{{ login.jobTitle }}</td>
+              <td>{{ login.role }}</td>
+              <td>{{ login.username ?? '' }}</td>
+              <td>{{ login.userCode ?? '' }}</td>
+              <td>{{ login.kioskPin ?? '' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </mat-card-content>
+  </mat-card>
+}
 
 @if (showForm()) {
   <mat-card class="form-card">

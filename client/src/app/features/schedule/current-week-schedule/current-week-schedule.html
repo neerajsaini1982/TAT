@@ -48,7 +48,22 @@
               <span class="today-badge">Today</span>
             }
           </div>
-          <span class="day-hours" title="Logged / Scheduled">{{ hoursLabel(day.workedHours) }} / {{ hoursLabel(day.scheduledHours) }} hrs</span>
+          <div class="day-heading-end">
+            @if (canSwap()) {
+              <button
+                type="button"
+                class="swap-btn"
+                mat-icon-button
+                (click)="swapShifts(day)"
+                [disabled]="!canSwapDay(day)"
+                [title]="canSwapDay(day) ? 'Swap shifts' : 'Needs two employees on different shifts who have not clocked in'"
+                aria-label="Swap shifts"
+              >
+                <mat-icon>swap_vert</mat-icon>
+              </button>
+            }
+            <span class="day-hours" title="Logged / Scheduled">{{ hoursLabel(day.workedHours) }} / {{ hoursLabel(day.scheduledHours) }} hrs</span>
+          </div>
         </div>
 
         <div class="table-scroll">

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { MatTableModule } from '@angular/material/table';
@@ -8,8 +8,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatCardModule } from '@angular/material/card';
+import { MatSelectModule } from '@angular/material/select';
 
-import { LocationsApi, LocationDto } from '../../../core/locations-api';
+import { LocationsApi, LocationDto, DemoLocationResult } from '../../../core/locations-api';
 
 interface FormModel {
   name: string;
@@ -41,6 +42,7 @@ const emptyForm = (): FormModel => ({
     MatInputModule,
     MatSlideToggleModule,
     MatCardModule,
+    MatSelectModule,
   ],
   templateUrl: './locations-page.html',
   styleUrl: './locations-page.scss',
@@ -54,6 +56,16 @@ export class LocationsPage implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected form: FormModel = emptyForm();
 
+  protected readonly hasDemo = computed(() => this.locations().some((l) => l.locationCode === 'demo'));
+  protected readonly showDemoForm = signal(false);
+  protected readonly demoBusy = signal(false);
+  protected readonly demoError = signal<string | null>(null);
+  protected readonly demoResult = signal<DemoLocationResult | null>(null);
+  protected readonly sourceLocations = computed(() => this.locations().filter((l) => l.locationCode !== 'demo'));
+  protected demoSource = 'l2psj';
+  protected demoPassword = '';
+  protected kioskPasscode = '';
+
   protected readonly columns = ['name', 'locationCode', 'phone', 'email', 'isActive', 'actions'];
 
   ngOnInit(): void {
@@ -65,6 +77,7 @@ export class LocationsPage implements OnInit {
   }
 
   startCreate(): void {
+    this.showDemoForm.set(false);
     this.editingId.set(null);
     this.form = emptyForm();
     this.error.set(null);
@@ -76,6 +89,35 @@ export class LocationsPage implements OnInit {
     this.form = { ...location };
     this.error.set(null);
     this.showForm.set(true);
+  }
+
+  startDemo(): void {
+    this.showForm.set(false);
+    this.demoResult.set(null);
+    this.demoError.set(null);
+    this.demoPassword = '';
+    this.kioskPasscode = '';
+    this.showDemoForm.set(true);
+  }
+
+  resetDemo(): void {
+    if (this.hasDemo() && !confirm('Replace the Demo location with a fresh copy? Anything added to it will be lost.')) {
+      return;
+    }
+    this.demoError.set(null);
+    this.demoBusy.set(true);
+    this.api.resetDemo(this.demoSource, this.demoPassword, this.kioskPasscode).subscribe({
+      next: (result) => {
+        this.demoBusy.set(false);
+        this.showDemoForm.set(false);
+        this.demoResult.set(result);
+        this.load();
+      },
+      error: (err) => {
+        this.demoBusy.set(false);
+        this.demoError.set(typeof err?.error === 'string' ? err.error : 'Failed to build the demo location.');
+      },
+    });
   }
 
   cancel(): void {
