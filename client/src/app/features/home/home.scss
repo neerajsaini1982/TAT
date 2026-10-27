@@ -34,7 +34,8 @@
 .wrap {
   max-width: 1120px;
   margin: 0 auto;
-  padding: 0 28px;
+  /* Inline only, so it doesn't wipe out a section's vertical spacing. */
+  padding-inline: 28px;
 }
 
 h1,
@@ -195,7 +196,7 @@ nav a:hover::after {
 
 /* ---------- hero ---------- */
 .hero {
-  padding: 64px 0 56px;
+  padding-block: 64px 56px;
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
   gap: 56px;
@@ -400,6 +401,66 @@ section {
   font-size: 0.92rem;
   color: var(--ink-soft);
   margin: 0;
+}
+
+/* "also included" checklist under the manager tools */
+.extras {
+  list-style: none;
+  padding: 0;
+  margin: 30px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.extras li {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  border: 1px solid var(--steel);
+  border-radius: 999px;
+  padding: 6px 14px 6px 30px;
+  position: relative;
+}
+.extras li::before {
+  content: '✓';
+  position: absolute;
+  left: 12px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* faq */
+.faq-list {
+  max-width: 760px;
+  border-top: 1px solid var(--steel);
+}
+.faq-list details {
+  border-bottom: 1px solid var(--steel);
+  padding: 18px 0;
+}
+.faq-list summary {
+  cursor: pointer;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.faq-list summary::-webkit-details-marker {
+  display: none;
+}
+.faq-list summary::after {
+  content: '+';
+  color: var(--accent);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.faq-list details[open] summary::after {
+  content: '−';
+}
+.faq-list p {
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  margin: 10px 0 0;
 }
 
 /* why band */
