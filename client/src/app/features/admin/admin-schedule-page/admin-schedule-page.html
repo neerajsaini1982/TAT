@@ -38,6 +38,10 @@
       Draft — not visible to employees yet
     </span>
   }
+  <button mat-stroked-button (click)="copyPreviousWeek()" title="Fill this week from last week's schedule">
+    <mat-icon>content_copy</mat-icon>
+    Copy previous week
+  </button>
   <button
     mat-flat-button
     color="primary"
@@ -188,6 +192,7 @@
                     [style.--employee-color]="employeeColor(a.accountId)"
                     cdkDrag
                     [cdkDragData]="{ kind: 'assignment', assignment: a }"
+                    [cdkDragDisabled]="!canMove(a)"
                     [title]="a.shiftName"
                   >
                     <span class="chip-time">{{ a.shiftStartTime.slice(0, 5) }}–{{ a.shiftEndTime.slice(0, 5) }}</span>
@@ -218,6 +223,17 @@
                     }
 
                     <div class="chip-actions">
+                      @if (canMove(a)) {
+                        <button
+                          type="button"
+                          mat-icon-button
+                          [matMenuTriggerFor]="moveMenu"
+                          [matMenuTriggerData]="{ a: a }"
+                          title="Move to another employee"
+                        >
+                          <mat-icon>forward</mat-icon>
+                        </button>
+                      }
                       @if (a.isAbsent) {
                         <button type="button" mat-icon-button (click)="clearAbsent(a)" title="Clear absent">
                           <mat-icon>how_to_reg</mat-icon>
@@ -309,4 +325,18 @@
     }
   </div>
 </div>
+
+<mat-menu #moveMenu="matMenu" class="move-menu">
+  <ng-template matMenuContent let-a="a">
+    <div class="move-menu-title" mat-menu-item disabled>Move {{ a.shiftStartTime.slice(0, 5) }}–{{ a.shiftEndTime.slice(0, 5) }} to…</div>
+    @for (t of moveTargets(a); track t.accountId) {
+      <button mat-menu-item [disabled]="t.note !== null" (click)="moveTo(a, t.accountId)">
+        <span>{{ t.name }}</span>
+        @if (t.note) {
+          <span class="move-note"> — {{ t.note }}</span>
+        }
+      </button>
+    }
+  </ng-template>
+</mat-menu>
 }

@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ConnectedPosition, OverlayModule } from '@angular/cdk/overlay';
+import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -10,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { catchError, forkJoin, of } from 'rxjs';
 
 import { AvailabilityApi } from '../../../core/availability-api';
@@ -23,6 +25,7 @@ import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-f
 import { addDays, combineDateAndTime, formatDate, formatWeekRange, hoursMinutesLabel, mondayOf } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
 import { CallOutActions } from '../call-out-dialog/call-out-actions';
+import { CopyWeekActions } from '../copy-week-dialog/copy-week-actions';
 import { PublishScheduleDialog, PublishScheduleDialogData } from '../publish-schedule-dialog/publish-schedule-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
 import { TimeOffApi, TimeOffCalendarEntryDto, formatTimeOffMinutes } from '../../../core/time-off-api';
@@ -57,8 +60,8 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 // "10:45" narrows to shifts starting/ending at 10:45, and Tab commits the
 // top match and jumps to the next cell (wrapping to the next employee's
 // Monday after Sunday), so a whole week can be filled in without leaving
-// the keyboard. Assignment chips are no longer draggable — moving a shift
-// means removing it and re-adding it on the new cell. Everything else
+// the keyboard. Existing shift cards can still be dragged to another
+// employee/day, or moved with the card's "Move to…" menu. Everything else
 // (view modes, publish, filters, attendance actions) is identical to the
 // drag-and-drop page, so keep the two in sync when one of them changes.
 @Component({
@@ -73,6 +76,10 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatMenuModule,
+    CdkDropListGroup,
+    CdkDropList,
+    CdkDrag,
     ScheduleDayView,
     ScheduleWeekTimeline,
   ],
@@ -89,6 +96,7 @@ export class AdminScheduleAssignPage implements OnInit {
   private readonly realtime = inject(ScheduleRealtime);
   private readonly dialog = inject(MatDialog);
   private readonly callOutActions = inject(CallOutActions);
+  private readonly copyWeekActions = inject(CopyWeekActions);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
@@ -536,6 +544,84 @@ export class AdminScheduleAssignPage implements OnInit {
       return `${day.dayLabel}: available ${day.availableStartTime.slice(0, 5)}–${day.availableEndTime.slice(0, 5)}, but this shift runs ${shiftStart.slice(0, 5)}–${shiftEnd.slice(0, 5)}.`;
     }
     return null;
+  }
+
+  // Opens the copy dialog for last week → this week; reloads if anything
+  // was copied.
+  copyPreviousWeek(): void {
+    const to = this.weekStart();
+    const from = addDays(to, -7);
+    this.copyWeekActions
+      .open({
+        locationCode: this.locationCode,
+        fromWeekStartDate: formatDate(from),
+        toWeekStartDate: formatDate(to),
+        fromWeekLabel: formatWeekRange(from),
+        toWeekLabel: formatWeekRange(to),
+        existingCount: this.allAssignments().length,
+      })
+      .subscribe((changed) => changed && this.load());
+  }
+
+  // Absent, cover, and clocked-in shifts are tied to who they're on, so
+  // they can't be dragged or moved (the server refuses too).
+  canMove(a: ShiftAssignmentDto): boolean {
+    return (
+      !a.isAbsent &&
+      a.coversAssignmentId === null &&
+      a.coveredByAssignmentId === null &&
+      a.originalShiftName === null &&
+      this.entryFor(a) === null
+    );
+  }
+
+  // Everyone else at the location, for the card's "Move to…" menu. Those
+  // already working that day, or not available, are shown but disabled.
+  moveTargets(a: ShiftAssignmentDto): { accountId: number; name: string; note: string | null }[] {
+    return this.rows()
+      .filter((r) => r.accountId !== a.accountId)
+      .map((r) => {
+        const day = r.days.find((d) => d.date === a.date);
+        const note = !day
+          ? null
+          : day.assignments.length > 0
+            ? 'Already working'
+            : !day.isAvailable && !this.developmentMode()
+              ? 'Not available'
+              : null;
+        return { accountId: r.accountId, name: r.name, note };
+      });
+  }
+
+  moveTo(a: ShiftAssignmentDto, accountId: number): void {
+    const row = this.rows().find((r) => r.accountId === accountId);
+    const day = row?.days.find((d) => d.date === a.date);
+    if (row && day) {
+      this.moveAssignment(a, row, day);
+    }
+  }
+
+  private moveAssignment(a: ShiftAssignmentDto, row: EmployeeRow, day: DayCell): void {
+    const mismatch = this.partialAvailabilityWarning(day, a.shiftStartTime, a.shiftEndTime);
+    if (mismatch && !confirm(`${row.name} — ${mismatch} Move anyway?`)) {
+      return;
+    }
+    this.error.set(null);
+    this.assignmentsApi.move(a.id, { accountId: row.accountId, date: day.date }).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(err?.error ?? 'Failed to move shift.'),
+    });
+  }
+
+  // Drop targets refuse days the employee isn't available (unless
+  // Development Mode is on), same as the drag-and-drop page.
+  canDropHere = (_drag: CdkDrag<ShiftAssignmentDto>, drop: CdkDropList<DayCell>): boolean =>
+    drop.data.isAvailable || this.developmentMode();
+
+  onAssignmentDrop(event: CdkDragDrop<DayCell, DayCell, ShiftAssignmentDto>, row: EmployeeRow, day: DayCell): void {
+    if (event.previousContainer !== event.container) {
+      this.moveAssignment(event.item.data, row, day);
+    }
   }
 
   publish(): void {

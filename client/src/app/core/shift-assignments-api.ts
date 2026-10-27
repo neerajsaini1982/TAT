@@ -70,6 +70,23 @@ export interface MoveShiftAssignmentRequest {
   date: string;
 }
 
+export interface CopyWeekSkippedDto {
+  accountId: number;
+  employeeName: string;
+  date: string;
+  shiftName: string;
+  reason: string;
+}
+
+export interface CopyWeekResultDto {
+  copiedCount: number;
+  // With overwrite: shifts cleared from the target week, and ones kept
+  // because they have attendance on them (absent, cover, clocked in…).
+  removedCount: number;
+  keptCount: number;
+  skipped: CopyWeekSkippedDto[];
+}
+
 export interface MarkAbsentRequest {
   isAbsent: boolean;
   note: string | null;
@@ -179,6 +196,18 @@ export class ShiftAssignmentsApi {
   // Two employees on the same day trade shifts (admin only).
   swap(firstAssignmentId: number, secondAssignmentId: number) {
     return this.http.post<ShiftAssignmentDto[]>(`${this.base}/swap`, { firstAssignmentId, secondAssignmentId });
+  }
+
+  // Fills toWeekStartDate's week from fromWeekStartDate's as drafts; shifts
+  // that can't be copied come back in `skipped` with a reason. With
+  // overwrite, the target week's shifts are cleared first.
+  copyWeek(fromWeekStartDate: string, toWeekStartDate: string, overwrite: boolean, locationCode?: string) {
+    return this.http.post<CopyWeekResultDto>(`${this.base}/copy-week`, {
+      locationCode,
+      fromWeekStartDate,
+      toWeekStartDate,
+      overwrite,
+    });
   }
 
   delete(id: number) {

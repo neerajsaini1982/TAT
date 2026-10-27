@@ -1,0 +1,64 @@
+.content {
+  width: 520px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary,
+.warn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.summary mat-icon {
+  color: #2e7d32;
+}
+
+.warn {
+  align-items: flex-start;
+  color: #8a5a00;
+}
+
+.hint {
+  margin: 0;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 13px;
+}
+
+.error {
+  margin: 0;
+  color: #c62828;
+}
+
+.skipped {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  th,
+  td {
+    text-align: left;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  }
+
+  th {
+    font-weight: 600;
+  }
+}
+
+.mode {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.option-hint {
+  display: block;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+}
