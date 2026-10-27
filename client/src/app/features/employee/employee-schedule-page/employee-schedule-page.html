@@ -26,6 +26,18 @@
   </div>
 }
 
+@if (timeOff().length > 0) {
+  <a class="time-off-strip" [routerLink]="['/', locationCode, 'employee', 'time-off']">
+    <mat-icon>beach_access</mat-icon>
+    <span>
+      Time off:
+      @for (t of timeOff(); track t.id; let last = $last) {
+        <strong>{{ timeOffRange(t) }}</strong> ({{ t.typeName }}){{ last ? '' : ', ' }}
+      }
+    </span>
+  </a>
+}
+
 <div class="days">
   @for (day of days(); track day.date) {
     <mat-card class="day-card">

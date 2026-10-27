@@ -65,6 +65,8 @@ export class AdminPayrollReportPage implements OnInit {
     'overtimeTime',
     'doubleTimeTime',
     'sickTime',
+    'paidTimeOff',
+    'unpaidTimeOff',
     'totalTime',
     'notes',
   ];
@@ -120,6 +122,8 @@ export class AdminPayrollReportPage implements OnInit {
       overtimeMinutes: rows.reduce((sum, r) => sum + r.totalOvertimeMinutes, 0),
       doubleTimeMinutes: rows.reduce((sum, r) => sum + r.totalDoubleTimeMinutes, 0),
       sickMinutes: rows.reduce((sum, r) => sum + r.totalSickMinutes, 0),
+      paidTimeOffMinutes: rows.reduce((sum, r) => sum + r.totalPaidTimeOffMinutes, 0),
+      unpaidTimeOffMinutes: rows.reduce((sum, r) => sum + r.totalUnpaidTimeOffMinutes, 0),
       totalMinutes: rows.reduce((sum, r) => sum + this.totalMinutes(r), 0),
       absentDays: rows.reduce((sum, r) => sum + r.absentDays, 0),
       openEntryDays: rows.reduce((sum, r) => sum + r.openEntryDays, 0),
@@ -133,7 +137,8 @@ export class AdminPayrollReportPage implements OnInit {
   // the server splits them (totalRegular/Overtime/DoubleTimeMinutes) under
   // the location's overtime rules.
   totalMinutes(emp: EmployeeHoursReportDto): number {
-    return emp.totalNetWorkedMinutes + emp.totalSickMinutes;
+    // Paid time off counts too; unpaid time off never does.
+    return emp.totalNetWorkedMinutes + emp.totalSickMinutes + emp.totalPaidTimeOffMinutes;
   }
 
   ngOnInit(): void {

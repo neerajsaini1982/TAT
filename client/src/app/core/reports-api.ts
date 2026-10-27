@@ -26,6 +26,10 @@ export interface DailyHoursDto {
   sickMinutes: number;
   shiftAssignmentId: number | null;
   manualSickNotes: string[];
+  // Approved time off (paid counts in Total Paid; unpaid is info only).
+  paidTimeOffMinutes: number;
+  unpaidTimeOffMinutes: number;
+  timeOffBreakdown: string[] | null;
 }
 
 export interface EmployeeHoursReportDto {
@@ -46,6 +50,8 @@ export interface EmployeeHoursReportDto {
   openEntryDays: number;
   totalSickMinutes: number;
   days: DailyHoursDto[];
+  totalPaidTimeOffMinutes: number;
+  totalUnpaidTimeOffMinutes: number;
 }
 
 // See ReportsController.EmailHoursReport. employeeIds null = everyone in the

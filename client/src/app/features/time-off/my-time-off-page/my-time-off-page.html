@@ -1,0 +1,53 @@
+<div class="header">
+  <a mat-icon-button [routerLink]="backLink()" aria-label="Back">
+    <mat-icon>arrow_back</mat-icon>
+  </a>
+  <h2>My Time Off</h2>
+  @if (settings()?.timeOffEnabled !== false) {
+    <button mat-flat-button color="primary" class="new-btn" (click)="request()">
+      <mat-icon>add</mat-icon> Request time off
+    </button>
+  }
+</div>
+
+@if (settings()?.timeOffEnabled === false) {
+  <p class="notice">Time-off requests aren't turned on for this location. Talk to your manager.</p>
+} @else if (settings()?.timeOffMinNoticeDays) {
+  <p class="notice">Please ask at least {{ settings()!.timeOffMinNoticeDays }} days ahead.</p>
+}
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p class="status">Loading…</p>
+} @else if (requests().length === 0) {
+  <p class="status">You haven't asked for any time off yet.</p>
+} @else {
+  @for (group of [{ title: 'Coming up', items: upcoming() }, { title: 'Past & closed', items: past() }]; track group.title) {
+    @if (group.items.length > 0) {
+      <h3 class="group-title">{{ group.title }}</h3>
+      <ul class="cards">
+        @for (r of group.items; track r.id) {
+          <li class="card" [class]="'status-' + r.status.toLowerCase()">
+            <div class="card-main">
+              <span class="chip">{{ r.status }}</span>
+              <p class="dates">{{ range(r) }}</p>
+              <p class="meta">{{ r.typeName }} · {{ hoursLabel(r) }}</p>
+              @if (r.note) {
+                <p class="note">“{{ r.note }}”</p>
+              }
+              @if (r.reviewComment) {
+                <p class="review">{{ r.reviewedByName }}: {{ r.reviewComment }}</p>
+              }
+            </div>
+            @if (canCancel(r)) {
+              <button mat-stroked-button (click)="cancel(r)" [disabled]="busyId() === r.id">Cancel</button>
+            }
+          </li>
+        }
+      </ul>
+    }
+  }
+}

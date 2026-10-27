@@ -1,0 +1,105 @@
+:host {
+  display: block;
+  padding-bottom: 32px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+
+  h2 {
+    margin: 0;
+    flex: 1;
+  }
+}
+
+.notice,
+.error {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  background: var(--mat-sys-surface-container);
+  border-left: 4px solid var(--mat-sys-primary);
+}
+
+.error {
+  background: var(--mat-sys-error-container);
+  border-left-color: var(--mat-sys-error);
+  font-weight: 600;
+}
+
+.status {
+  padding: 48px 0;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.group-title {
+  margin: 24px 0 8px;
+  font: var(--mat-sys-label-large);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-left: 4px solid var(--mat-sys-outline);
+  background: var(--mat-sys-surface-container-lowest);
+
+  &.status-approved {
+    border-left-color: #2e7d32;
+  }
+  &.status-pending {
+    border-left-color: #ed8b00;
+  }
+  &.status-denied {
+    border-left-color: var(--mat-sys-error);
+  }
+}
+
+.card-main {
+  flex: 1;
+  min-width: 0;
+
+  p {
+    margin: 2px 0;
+  }
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 8px;
+  font: var(--mat-sys-label-small);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--mat-sys-surface-container-high);
+}
+
+.dates {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.meta,
+.note,
+.review {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 14px;
+}

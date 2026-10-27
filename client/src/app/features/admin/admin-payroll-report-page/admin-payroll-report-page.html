@@ -88,6 +88,16 @@
       <p class="summary-value">{{ formatDecimalHours(totals().sickMinutes) }}</p>
       <p class="summary-sub">{{ formatDuration(totals().sickMinutes) }}</p>
     </div>
+    <div class="summary-cell">
+      <p class="summary-label">Paid Time Off</p>
+      <p class="summary-value">{{ formatDecimalHours(totals().paidTimeOffMinutes) }}</p>
+      <p class="summary-sub">{{ formatDuration(totals().paidTimeOffMinutes) }}</p>
+    </div>
+    <div class="summary-cell">
+      <p class="summary-label">Unpaid Time Off</p>
+      <p class="summary-value">{{ formatDecimalHours(totals().unpaidTimeOffMinutes) }}</p>
+      <p class="summary-sub">{{ formatDuration(totals().unpaidTimeOffMinutes) }}</p>
+    </div>
     <div class="summary-cell is-total">
       <p class="summary-label">Total Paid</p>
       <p class="summary-value">{{ formatDecimalHours(totals().totalMinutes) }}</p>
@@ -202,6 +212,38 @@
         </td>
       </ng-container>
 
+      <ng-container matColumnDef="paidTimeOff">
+        <th mat-header-cell *matHeaderCellDef title="Paid time off">Paid Off</th>
+        <td mat-cell *matCellDef="let emp" data-label="Paid Time Off">
+          <div class="time-cell">
+            <span class="time-decimal">{{ formatDecimalHours(emp.totalPaidTimeOffMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(emp.totalPaidTimeOffMinutes) }}</span>
+          </div>
+        </td>
+        <td mat-footer-cell *matFooterCellDef>
+          <div class="time-cell">
+            <span class="time-decimal">{{ formatDecimalHours(totals().paidTimeOffMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(totals().paidTimeOffMinutes) }}</span>
+          </div>
+        </td>
+      </ng-container>
+
+      <ng-container matColumnDef="unpaidTimeOff">
+        <th mat-header-cell *matHeaderCellDef title="Unpaid time off (not in Total Paid)">Unpaid Off</th>
+        <td mat-cell *matCellDef="let emp" data-label="Unpaid Time Off">
+          <div class="time-cell">
+            <span class="time-decimal">{{ formatDecimalHours(emp.totalUnpaidTimeOffMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(emp.totalUnpaidTimeOffMinutes) }}</span>
+          </div>
+        </td>
+        <td mat-footer-cell *matFooterCellDef>
+          <div class="time-cell">
+            <span class="time-decimal">{{ formatDecimalHours(totals().unpaidTimeOffMinutes) }}</span>
+            <span class="time-hm">{{ formatDuration(totals().unpaidTimeOffMinutes) }}</span>
+          </div>
+        </td>
+      </ng-container>
+
       <ng-container matColumnDef="totalTime">
         <th mat-header-cell *matHeaderCellDef>Total Paid</th>
         <td mat-cell *matCellDef="let emp" data-label="Total Paid" class="total-col">
@@ -249,6 +291,8 @@
             <span class="day-head-num">Overtime</span>
             <span class="day-head-num">Double Time</span>
             <span class="day-head-num">Sick</span>
+            <span class="day-head-num">Paid Off</span>
+            <span class="day-head-num">Unpaid Off</span>
             <span class="day-head-num">Total</span>
             <span class="day-head-notes">Notes</span>
           </div>
@@ -270,7 +314,9 @@
                     <td class="day-numeric-col" data-label="Double Time" [class.flag]="day.doubleTimeMinutes > 0">{{ formatDuration(day.doubleTimeMinutes) }}</td>
                   }
                   <td class="day-numeric-col" data-label="Sick">{{ formatDuration(day.sickMinutes) }}</td>
-                  <td class="day-numeric-col day-total-col" data-label="Total">{{ formatDuration((day.netWorkedMinutes ?? 0) + day.sickMinutes) }}</td>
+                  <td class="day-numeric-col" data-label="Paid Time Off">{{ formatDuration(day.paidTimeOffMinutes) }}</td>
+                  <td class="day-numeric-col" data-label="Unpaid Time Off">{{ formatDuration(day.unpaidTimeOffMinutes) }}</td>
+                  <td class="day-numeric-col day-total-col" data-label="Total">{{ formatDuration((day.netWorkedMinutes ?? 0) + day.sickMinutes + day.paidTimeOffMinutes) }}</td>
                   <td class="notes-cell">
                     @if (day.leftEarly) {
                       <span class="tag tag-flag">Left early{{ day.leftEarlyNote ? ' — ' + day.leftEarlyNote : '' }}</span>
@@ -292,6 +338,9 @@
                     }
                     @for (note of day.manualSickNotes; track note) {
                       <span class="tag">Sick — {{ note }}</span>
+                    }
+                    @for (label of day.timeOffBreakdown ?? []; track label) {
+                      <span class="tag">Time off — {{ label }}</span>
                     }
                   </td>
                 </tr>
