@@ -25,6 +25,7 @@ import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
 import { CallOutActions } from '../call-out-dialog/call-out-actions';
 import { PublishScheduleDialog, PublishScheduleDialogData } from '../publish-schedule-dialog/publish-schedule-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
+import { TimeOffApi, TimeOffCalendarEntryDto, formatTimeOffMinutes } from '../../../core/time-off-api';
 import { ScheduleDayView } from '../schedule-day-view/schedule-day-view';
 import { ScheduleWeekTimeline, WeekTimelineDay } from '../schedule-week-timeline/schedule-week-timeline';
 
@@ -80,6 +81,7 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 })
 export class AdminScheduleAssignPage implements OnInit {
   private readonly availabilityApi = inject(AvailabilityApi);
+  private readonly timeOffApi = inject(TimeOffApi);
   private readonly shiftsApi = inject(ShiftsApi);
   private readonly assignmentsApi = inject(ShiftAssignmentsApi);
   private readonly settingsApi = inject(LocationSettingsApi);
@@ -415,8 +417,14 @@ export class AdminScheduleAssignPage implements OnInit {
       assignments: this.assignmentsApi.getForWeek(weekIso, this.locationCode),
       shifts: this.shiftsApi.getAll(this.locationCode),
       entries: this.timeEntriesApi.getForLocation(this.locationCode, this.todayIso).pipe(catchError(() => of([]))),
+      timeOff: this.timeOffApi
+        .calendar(this.locationCode, weekIso, formatDate(addDays(this.weekStart(), 6)))
+        .pipe(catchError(() => of([] as TimeOffCalendarEntryDto[]))),
     }).subscribe({
-      next: ({ roster, assignments, shifts, entries }) => {
+      next: ({ roster, assignments, shifts, entries, timeOff }) => {
+        // Approved time off: a full day reads as not available (the server
+        // refuses to assign it too); a partial day is just noted.
+        const timeOffByKey = new Map(timeOff.map((t) => [`${t.accountId}|${t.date}`, t]));
         this.shifts.set(shifts.filter((s) => s.isActive));
         this.entriesByAssignmentId.set(new Map(entries.map((e) => [e.shiftAssignmentId, e])));
 
@@ -428,15 +436,26 @@ export class AdminScheduleAssignPage implements OnInit {
 
         this.rows.set(
           roster.map((person) => {
-            const days = person.days.map((d, i): DayCell => ({
-              date: d.date,
-              dayLabel: DAY_HEADERS[i],
-              isAvailable: d.isAvailable,
-              availabilityLabel: this.availabilityLabel(d.isAvailable, d.startTime, d.endTime),
-              availableStartTime: d.isAvailable ? d.startTime : null,
-              availableEndTime: d.isAvailable ? d.endTime : null,
-              assignments: assignmentsByKey.get(`${person.accountId}|${d.date}`) ?? [],
-            }));
+            const days = person.days.map((d, i): DayCell => {
+              const off = timeOffByKey.get(`${person.accountId}|${d.date}`);
+              const fullDayOff = !!off && !off.isPartialDay;
+              const isAvailable = d.isAvailable && !fullDayOff;
+              let availabilityLabel = this.availabilityLabel(d.isAvailable, d.startTime, d.endTime);
+              if (off) {
+                availabilityLabel = fullDayOff
+                  ? `Time off — ${off.typeName}`
+                  : `${availabilityLabel} · ${formatTimeOffMinutes(off.minutes)} off (${off.typeName})`;
+              }
+              return {
+                date: d.date,
+                dayLabel: DAY_HEADERS[i],
+                isAvailable,
+                availabilityLabel,
+                availableStartTime: isAvailable ? d.startTime : null,
+                availableEndTime: isAvailable ? d.endTime : null,
+                assignments: assignmentsByKey.get(`${person.accountId}|${d.date}`) ?? [],
+              };
+            });
             const totalHours = days.reduce(
               (sum, d) => sum + d.assignments.reduce((s, a) => s + a.hours, 0),
               0,

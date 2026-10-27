@@ -8,7 +8,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { ShiftAssignmentDto, ShiftAssignmentsApi, coverLabel } from '../../../core/shift-assignments-api';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
 import { Auth } from '../../../core/auth';
-import { dayOfWeekLabel, hoursMinutesLabel, toMmDdYyyy } from '../../../core/week-utils';
+import { TimeOffApi, TimeOffRequestDto, timeOffDateRange } from '../../../core/time-off-api';
+import { dayOfWeekLabel, formatDate, hoursMinutesLabel, toMmDdYyyy } from '../../../core/week-utils';
 
 interface DayGroup {
   date: string;
@@ -36,6 +37,7 @@ export class EmployeeSchedulePage implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly auth = inject(Auth);
+  private readonly timeOffApi = inject(TimeOffApi);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
   private readonly myAccountId = this.auth.accountId();
 
@@ -54,6 +56,9 @@ export class EmployeeSchedulePage implements OnInit {
     round2(this.days().reduce((sum, d) => sum + d.hours, 0)),
   );
   protected readonly hoursLabel = hoursMinutesLabel;
+  // My approved time off that hasn't finished yet, shown above the shifts.
+  protected readonly timeOff = signal<TimeOffRequestDto[]>([]);
+  protected readonly timeOffRange = timeOffDateRange;
 
   ngOnInit(): void {
     this.load();
@@ -66,6 +71,16 @@ export class EmployeeSchedulePage implements OnInit {
   load(): void {
     this.loading.set(true);
     this.error.set(null);
+    const today = formatDate(new Date());
+    this.timeOffApi.mine().subscribe({
+      next: (requests) =>
+        this.timeOff.set(
+          requests
+            .filter((r) => r.status === 'Approved' && r.endDate >= today)
+            .sort((a, b) => a.startDate.localeCompare(b.startDate)),
+        ),
+      error: () => this.timeOff.set([]),
+    });
     this.api.getMine().subscribe({
       next: (assignments) => this.applyAssignments(assignments),
       error: () => {

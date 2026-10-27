@@ -1,0 +1,23 @@
+.content {
+  width: 440px;
+  max-width: 90vw;
+}
+
+.field {
+  width: 100%;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: var(--mat-sys-surface-container-low);
+  border-left: 3px solid var(--mat-sys-primary);
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin: 8px 0 0;
+}

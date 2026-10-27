@@ -158,6 +158,16 @@ $mobile: 767.98px;
 
 // Logged / scheduled hours. Labelled via ::after so the two numbers aren't
 // a bare ratio floating at the end of the row.
+.day-heading-end {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.swap-btn {
+  align-self: center;
+}
+
 .day-hours {
   display: flex;
   flex-direction: column;

@@ -507,6 +507,27 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
         account.LastName = request.LastName;
         account.Email = request.Email;
         account.Phone = request.Phone;
+        // Deactivating leaves their history alone but cancels anything still
+        // waiting for a decision.
+        if (account.IsActive && !request.IsActive)
+        {
+            var pending = db.TimeOffRequests
+                .Where(r => r.AccountId == account.Id && r.Status == TimeOffStatus.Pending)
+                .ToList();
+            foreach (var timeOff in pending)
+            {
+                timeOff.Status = TimeOffStatus.Cancelled;
+                db.TimeOffRequestEvents.Add(new TimeOffRequestEvent
+                {
+                    TimeOffRequestId = timeOff.Id,
+                    Action = TimeOffEventAction.Cancelled,
+                    ActorAccountId = CallerAccountId(),
+                    At = DateTime.UtcNow,
+                    Comment = "Employee deactivated",
+                });
+            }
+        }
+
         account.IsActive = request.IsActive;
         account.IsOnShiftSchedule = request.IsOnShiftSchedule;
         account.CanSeeAllSchedules = request.CanSeeAllSchedules;
@@ -625,6 +646,13 @@ public class AccountsController(AppDbContext db, IEmailSender emailSender, SsnPr
             db.WriteUpEvents.Any(e => e.ByAccountId == id))
         {
             return Conflict("This account has write-ups on record, so it can't be deleted. Deactivate it instead.");
+        }
+
+        // Same for time-off requests: they're part of payroll history.
+        if (db.TimeOffRequests.Any(r => r.AccountId == id || r.CreatedByAccountId == id || r.ReviewedByAccountId == id) ||
+            db.TimeOffRequestEvents.Any(e => e.ActorAccountId == id))
+        {
+            return Conflict("This account has time-off requests on record, so it can't be deleted. Deactivate it instead.");
         }
 
         db.Accounts.Remove(account);

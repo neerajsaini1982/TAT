@@ -176,6 +176,11 @@ export class ShiftAssignmentsApi {
     return this.http.put<ShiftAssignmentDto>(`${this.base}/${id}/move`, request);
   }
 
+  // Two employees on the same day trade shifts (admin only).
+  swap(firstAssignmentId: number, secondAssignmentId: number) {
+    return this.http.post<ShiftAssignmentDto[]>(`${this.base}/swap`, { firstAssignmentId, secondAssignmentId });
+  }
+
   delete(id: number) {
     return this.http.delete<void>(`${this.base}/${id}`);
   }

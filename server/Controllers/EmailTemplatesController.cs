@@ -153,6 +153,12 @@ public class EmailTemplatesController(AppDbContext db, IEmailSender emailSender)
             ["{{shiftDate}}"] = weekStart.ToString("ddd, MMM d"),
             ["{{shiftName}}"] = sampleShift.Name,
             ["{{shiftTime}}"] = ShiftAssignmentsController.FormatTimeRange(sampleShift, settings.TimeFormat),
+            ["{{timeOffType}}"] = "Vacation",
+            ["{{timeOffDates}}"] = $"{PayrollHoursEmail.FormatDate(weekStart.AddDays(14), settings.DateFormat)} – {PayrollHoursEmail.FormatDate(weekStart.AddDays(18), settings.DateFormat)}",
+            ["{{note}}"] = "Family trip",
+            ["{{reviewComment}}"] = "Enjoy your trip!",
+            ["{{adminLink}}"] = $"{Request.Scheme}://{Request.Host}/{location.LocationCode}/admin/time-off",
+            ["{{employeeLink}}"] = $"{Request.Scheme}://{Request.Host}/{location.LocationCode}/employee/time-off",
         };
     }
 

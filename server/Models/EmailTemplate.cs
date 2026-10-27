@@ -10,9 +10,16 @@ public static class EmailTemplateKeys
     public const string LoginCredentials = "LoginCredentials";
     public const string PayrollHours = "PayrollHours";
     public const string CoverShiftAssigned = "CoverShiftAssigned";
+    public const string TimeOffRequested = "TimeOffRequested";
+    public const string TimeOffApproved = "TimeOffApproved";
+    public const string TimeOffDenied = "TimeOffDenied";
+    public const string TimeOffCancelled = "TimeOffCancelled";
 
     public static readonly IReadOnlyList<string> All =
-        [SchedulePublished, AvailabilityReminder, LoginCredentials, PayrollHours, CoverShiftAssigned];
+    [
+        SchedulePublished, AvailabilityReminder, LoginCredentials, PayrollHours, CoverShiftAssigned,
+        TimeOffRequested, TimeOffApproved, TimeOffDenied, TimeOffCancelled,
+    ];
 }
 
 public class EmailTemplate

@@ -24,6 +24,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<WriteUp> WriteUps => Set<WriteUp>();
     public DbSet<WriteUpEvent> WriteUpEvents => Set<WriteUpEvent>();
     public DbSet<WriteUpSignature> WriteUpSignatures => Set<WriteUpSignature>();
+    public DbSet<TimeOffType> TimeOffTypes => Set<TimeOffType>();
+    public DbSet<TimeOffRequest> TimeOffRequests => Set<TimeOffRequest>();
+    public DbSet<TimeOffRequestDay> TimeOffRequestDays => Set<TimeOffRequestDay>();
+    public DbSet<TimeOffRequestEvent> TimeOffRequestEvents => Set<TimeOffRequestEvent>();
+    public DbSet<TimeOffBlackout> TimeOffBlackouts => Set<TimeOffBlackout>();
 
     // SQLite has no native "datetime with offset" column type, so EF Core
     // round-trips every DateTime as Kind=Unspecified after a read — even
@@ -318,6 +323,82 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.HasIndex(s => s.WriteUpId);
+        });
+
+        modelBuilder.Entity<TimeOffType>(entity =>
+        {
+            entity.HasOne(t => t.Location)
+                .WithMany()
+                .HasForeignKey(t => t.LocationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(t => new { t.LocationId, t.Name }).IsUnique();
+        });
+
+        modelBuilder.Entity<TimeOffRequest>(entity =>
+        {
+            entity.Property(r => r.Status).HasConversion<string>();
+
+            // Restrict: time-off requests are a permanent record, like write-ups.
+            entity.HasOne(r => r.Account)
+                .WithMany()
+                .HasForeignKey(r => r.AccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.TimeOffType)
+                .WithMany()
+                .HasForeignKey(r => r.TimeOffTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.ReviewedByAccount)
+                .WithMany()
+                .HasForeignKey(r => r.ReviewedByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(r => r.CreatedByAccount)
+                .WithMany()
+                .HasForeignKey(r => r.CreatedByAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(r => new { r.LocationId, r.Status });
+            entity.HasIndex(r => new { r.AccountId, r.StartDate });
+        });
+
+        modelBuilder.Entity<TimeOffRequestDay>(entity =>
+        {
+            entity.HasOne(d => d.TimeOffRequest)
+                .WithMany(r => r.Days)
+                .HasForeignKey(d => d.TimeOffRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(d => new { d.TimeOffRequestId, d.Date }).IsUnique();
+        });
+
+        modelBuilder.Entity<TimeOffRequestEvent>(entity =>
+        {
+            entity.Property(e => e.Action).HasConversion<string>();
+
+            entity.HasOne(e => e.TimeOffRequest)
+                .WithMany(r => r.Events)
+                .HasForeignKey(e => e.TimeOffRequestId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ActorAccount)
+                .WithMany()
+                .HasForeignKey(e => e.ActorAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => e.TimeOffRequestId);
+        });
+
+        modelBuilder.Entity<TimeOffBlackout>(entity =>
+        {
+            entity.HasOne(b => b.Location)
+                .WithMany()
+                .HasForeignKey(b => b.LocationId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(b => new { b.LocationId, b.StartDate });
         });
     }
 

@@ -114,6 +114,14 @@ public class LocationSettings
     // GetPayPeriodFor). Null means only the pay day itself is known.
     public DateOnly? PayPeriodStartDate { get; set; }
 
+    // Time-off requests (TimeOffRequestsController). When off, employees
+    // can't submit new requests; admins can still enter time off.
+    public bool TimeOffEnabled { get; set; } = true;
+    // How many days ahead an employee must ask. Null: no minimum.
+    public int? TimeOffMinNoticeDays { get; set; }
+    // What a full day off counts for on a day the employee had no shift.
+    public int TimeOffFullDayMinutes { get; set; } = 480;
+
     // Next pay date on/after `today`, walking forward from PayDayStartDate
     // in PayPeriodDays-sized steps. Returns `today` itself when today is a
     // pay day.

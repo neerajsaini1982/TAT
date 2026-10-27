@@ -13,6 +13,10 @@ public static class EmailTemplateCatalog
         EmailTemplateKeys.LoginCredentials => "Login Credentials",
         EmailTemplateKeys.PayrollHours => "Payroll Hours",
         EmailTemplateKeys.CoverShiftAssigned => "Cover Shift Assigned",
+        EmailTemplateKeys.TimeOffRequested => "Time Off Requested",
+        EmailTemplateKeys.TimeOffApproved => "Time Off Approved",
+        EmailTemplateKeys.TimeOffDenied => "Time Off Denied",
+        EmailTemplateKeys.TimeOffCancelled => "Time Off Cancelled",
         _ => key,
     };
 
@@ -53,6 +57,35 @@ public static class EmailTemplateCatalog
             BodyHtml = "<p>Hi {{employeeName}},</p><p>You've been scheduled to cover {{coveringFor}}'s shift at {{locationName}}:</p>"
                 + "<p><strong>{{shiftDate}}</strong><br/>{{shiftName}}, {{shiftTime}}</p>"
                 + "<p>Please check your schedule on the app.</p>",
+        },
+        EmailTemplateKeys.TimeOffRequested => new EmailTemplate
+        {
+            Key = key,
+            Subject = "{{employeeName}} requested time off: {{timeOffDates}}",
+            BodyHtml = "<p>{{employeeName}} asked for time off at {{locationName}}:</p>"
+                + "<p><strong>{{timeOffType}}</strong>, {{timeOffDates}}<br/>Note: {{note}}</p>"
+                + "<p><a href=\"{{adminLink}}\">Review the request</a></p>",
+        },
+        EmailTemplateKeys.TimeOffApproved => new EmailTemplate
+        {
+            Key = key,
+            Subject = "Your time off on {{timeOffDates}} is approved",
+            BodyHtml = "<p>Hi {{employeeName}},</p><p>Your {{timeOffType}} request at {{locationName}} for {{timeOffDates}} has been approved.</p>"
+                + "<p>Comment: {{reviewComment}}</p><p><a href=\"{{employeeLink}}\">See your time off</a></p>",
+        },
+        EmailTemplateKeys.TimeOffDenied => new EmailTemplate
+        {
+            Key = key,
+            Subject = "Your time-off request for {{timeOffDates}} was not approved",
+            BodyHtml = "<p>Hi {{employeeName}},</p><p>Your {{timeOffType}} request at {{locationName}} for {{timeOffDates}} was not approved.</p>"
+                + "<p>Reason: {{reviewComment}}</p><p><a href=\"{{employeeLink}}\">See your time off</a></p>",
+        },
+        EmailTemplateKeys.TimeOffCancelled => new EmailTemplate
+        {
+            Key = key,
+            Subject = "{{employeeName}} cancelled time off: {{timeOffDates}}",
+            BodyHtml = "<p>{{employeeName}} cancelled their approved {{timeOffType}} at {{locationName}} for {{timeOffDates}}. "
+                + "They're available to schedule again on those days.</p><p><a href=\"{{adminLink}}\">See time off</a></p>",
         },
         _ => new EmailTemplate { Key = key, Subject = string.Empty, BodyHtml = string.Empty },
     };

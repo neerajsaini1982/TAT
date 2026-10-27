@@ -9,6 +9,7 @@ import { ShiftAssignmentDto, ShiftAssignmentsApi, coverLabel, needsCover } from 
 import { TimeEntriesApi, TimeEntryDto } from '../../../core/time-entries-api';
 import { LocationSettingsApi, TimeFormat, WorkweekDay } from '../../../core/location-settings-api';
 import { AvailabilityApi, AvailabilityDto } from '../../../core/availability-api';
+import { TimeOffApi } from '../../../core/time-off-api';
 import { EmployeeHoursReportDto, ReportsApi } from '../../../core/reports-api';
 import { formatDurationMinutes } from '../../../core/duration-format';
 import { ScheduleRealtime } from '../../../core/schedule-realtime';
@@ -205,6 +206,7 @@ export class AdminDashboard implements OnInit {
   private readonly settingsApi = inject(LocationSettingsApi);
   private readonly reportsApi = inject(ReportsApi);
   private readonly availabilityApi = inject(AvailabilityApi);
+  private readonly timeOffApi = inject(TimeOffApi);
   private readonly realtime = inject(ScheduleRealtime);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -437,6 +439,24 @@ export class AdminDashboard implements OnInit {
           this.attentionItems.set(
             this.buildAttentionItems(today, weekStart, nextMonday, assignments, nextWeekAssignments, availability),
           );
+          // Time-off requests waiting for a decision go first.
+          this.timeOffApi
+            .pendingCount(this.locationCode)
+            .pipe(catchError(() => of(0)))
+            .subscribe((pending) => {
+              if (pending > 0) {
+                this.attentionItems.update((items) => [
+                  {
+                    icon: 'beach_access',
+                    text: `${plural(pending, 'time-off request')} waiting for a decision`,
+                    detail: null,
+                    linkLabel: 'Review',
+                    link: ['/', this.locationCode, 'admin', 'time-off'],
+                  },
+                  ...items,
+                ]);
+              }
+            });
 
           this.nextPayDate.set(settings.nextPayDate);
           this.payDayIsToday.set(settings.nextPayDate === today);
