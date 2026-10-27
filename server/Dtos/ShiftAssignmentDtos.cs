@@ -131,3 +131,14 @@ public record CoverCandidatesDto(
     List<CoverCandidateDto> Candidates);
 
 public record PublishScheduleRequest(string? LocationCode, DateOnly WeekStartDate, bool SendEmail = false);
+
+// Fills ToWeekStartDate's week from FromWeekStartDate's: same employee, same
+// weekday, same shift. Copies are drafts until the week is published.
+// Overwrite first clears ToWeekStartDate's week (except shifts with
+// attendance on them — see CopyWeek); otherwise existing shifts are kept.
+public record CopyWeekRequest(string? LocationCode, DateOnly FromWeekStartDate, DateOnly ToWeekStartDate, bool Overwrite = false);
+
+// One shift from the source week that wasn't copied, and why.
+public record CopyWeekSkippedDto(int AccountId, string EmployeeName, DateOnly Date, string ShiftName, string Reason);
+
+public record CopyWeekResultDto(int CopiedCount, int RemovedCount, int KeptCount, List<CopyWeekSkippedDto> Skipped);

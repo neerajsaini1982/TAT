@@ -597,3 +597,17 @@ tfoot td {
 ::ng-deep .cdk-drop-list-dragging .day-cell:not(.cdk-drag-placeholder) {
   transition: background-color 0.15s ease;
 }
+
+// "Move to…" menu on each shift card.
+::ng-deep .move-menu {
+  max-height: 60vh;
+
+  .move-menu-title {
+    font-weight: 600;
+  }
+
+  .move-note {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 12px;
+  }
+}

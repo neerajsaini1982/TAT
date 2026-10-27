@@ -604,3 +604,27 @@ tfoot td {
   background: var(--mat-sys-surface-container);
   font-weight: 600;
 }
+
+// Shift cards can be dragged to another employee/day (see onAssignmentDrop).
+::ng-deep .cdk-drag-preview {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+}
+
+::ng-deep .cdk-drag-placeholder {
+  opacity: 0.3;
+}
+
+// "Move to…" menu on each shift card.
+::ng-deep .move-menu {
+  max-height: 60vh;
+
+  .move-menu-title {
+    font-weight: 600;
+  }
+
+  .move-note {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 12px;
+  }
+}

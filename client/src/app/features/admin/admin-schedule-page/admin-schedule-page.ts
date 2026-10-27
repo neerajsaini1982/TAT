@@ -9,6 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatDialog } from '@angular/material/dialog';
+import { MatMenuModule } from '@angular/material/menu';
 import { CdkDrag, CdkDragDrop, CdkDropList, CdkDropListGroup } from '@angular/cdk/drag-drop';
 import { catchError, forkJoin, of } from 'rxjs';
 
@@ -23,6 +24,7 @@ import { isAnySegmentOverLimit, isLateClockIn } from '../../../core/attendance-f
 import { addDays, combineDateAndTime, formatDate, formatWeekRange, hoursMinutesLabel, mondayOf } from '../../../core/week-utils';
 import { NoteDialog, NoteDialogData } from '../note-dialog/note-dialog';
 import { CallOutActions } from '../call-out-dialog/call-out-actions';
+import { CopyWeekActions } from '../copy-week-dialog/copy-week-actions';
 import { PublishScheduleDialog, PublishScheduleDialogData } from '../publish-schedule-dialog/publish-schedule-dialog';
 import { EditTimeEntryDialog, EditTimeEntryDialogData, EditTimeEntryResult } from '../edit-time-entry-dialog/edit-time-entry-dialog';
 import { ScheduleDayView } from '../schedule-day-view/schedule-day-view';
@@ -65,6 +67,7 @@ const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatMenuModule,
     CdkDropListGroup,
     CdkDropList,
     CdkDrag,
@@ -83,6 +86,7 @@ export class AdminSchedulePage implements OnInit {
   private readonly realtime = inject(ScheduleRealtime);
   private readonly dialog = inject(MatDialog);
   private readonly callOutActions = inject(CallOutActions);
+  private readonly copyWeekActions = inject(CopyWeekActions);
   private readonly destroyRef = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   protected readonly locationCode = this.route.snapshot.paramMap.get('locationCode')!;
@@ -409,6 +413,73 @@ export class AdminSchedulePage implements OnInit {
       return `${day.dayLabel}: available ${day.availableStartTime.slice(0, 5)}–${day.availableEndTime.slice(0, 5)}, but this shift runs ${shiftStart.slice(0, 5)}–${shiftEnd.slice(0, 5)}.`;
     }
     return null;
+  }
+
+  // Opens the copy dialog for last week → this week; reloads if anything
+  // was copied.
+  copyPreviousWeek(): void {
+    const to = this.weekStart();
+    const from = addDays(to, -7);
+    this.copyWeekActions
+      .open({
+        locationCode: this.locationCode,
+        fromWeekStartDate: formatDate(from),
+        toWeekStartDate: formatDate(to),
+        fromWeekLabel: formatWeekRange(from),
+        toWeekLabel: formatWeekRange(to),
+        existingCount: this.allAssignments().length,
+      })
+      .subscribe((changed) => changed && this.load());
+  }
+
+  // Absent, cover, and clocked-in shifts are tied to who they're on, so
+  // they can't be dragged or moved (the server refuses too).
+  canMove(a: ShiftAssignmentDto): boolean {
+    return (
+      !a.isAbsent &&
+      a.coversAssignmentId === null &&
+      a.coveredByAssignmentId === null &&
+      a.originalShiftName === null &&
+      this.entryFor(a) === null
+    );
+  }
+
+  // Everyone else at the location, for the card's "Move to…" menu. Those
+  // already working that day, or not available, are shown but disabled.
+  moveTargets(a: ShiftAssignmentDto): { accountId: number; name: string; note: string | null }[] {
+    return this.rows()
+      .filter((r) => r.accountId !== a.accountId)
+      .map((r) => {
+        const day = r.days.find((d) => d.date === a.date);
+        const note = !day
+          ? null
+          : day.assignments.length > 0
+            ? 'Already working'
+            : !day.isAvailable && !this.developmentMode()
+              ? 'Not available'
+              : null;
+        return { accountId: r.accountId, name: r.name, note };
+      });
+  }
+
+  moveTo(a: ShiftAssignmentDto, accountId: number): void {
+    const row = this.rows().find((r) => r.accountId === accountId);
+    const day = row?.days.find((d) => d.date === a.date);
+    if (row && day) {
+      this.moveAssignment(a, row, day);
+    }
+  }
+
+  private moveAssignment(a: ShiftAssignmentDto, row: EmployeeRow, day: DayCell): void {
+    const mismatch = this.partialAvailabilityWarning(day, a.shiftStartTime, a.shiftEndTime);
+    if (mismatch && !confirm(`${row.name} — ${mismatch} Move anyway?`)) {
+      return;
+    }
+    this.error.set(null);
+    this.assignmentsApi.move(a.id, { accountId: row.accountId, date: day.date }).subscribe({
+      next: () => this.load(),
+      error: (err) => this.error.set(err?.error ?? 'Failed to move shift.'),
+    });
   }
 
   publish(): void {

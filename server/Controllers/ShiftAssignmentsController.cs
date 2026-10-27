@@ -290,6 +290,21 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             return BadRequest("This employee has approved time off on this date.");
         }
 
+        // Same rules as Swap: these tie the assignment to who it was on.
+        if (assignment.IsAbsent)
+        {
+            return BadRequest("This shift is marked absent. Clear the absence first.");
+        }
+        if (assignment.CoversAssignmentId is not null || assignment.OriginalShiftId is not null
+            || db.ShiftAssignments.Any(a => a.CoversAssignmentId == assignment.Id))
+        {
+            return BadRequest("This shift is part of a cover. Remove the cover first.");
+        }
+        if (db.TimeEntries.Any(t => t.ShiftAssignmentId == assignment.Id))
+        {
+            return BadRequest("This employee has already clocked in for this shift.");
+        }
+
         var alreadyAssigned = db.ShiftAssignments.Any(a =>
             a.Id != assignment.Id && a.AccountId == account.Id && a.Date == request.Date);
         if (alreadyAssigned)
@@ -373,6 +388,140 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         var breakWindows = ComputeBreakWindows(db, pair);
         await notifier.NotifyLocationChanged(first.Shift!.Location!.LocationCode);
         return Ok(new[] { ToDto(first, breakWindows), ToDto(second, breakWindows) });
+    }
+
+    // Fills a week from an earlier one so the admin doesn't start from a
+    // blank grid: each employee gets the same shift on the same weekday.
+    // Copies are drafts (unpublished). Anything that would fail Create's
+    // checks is skipped and reported rather than failing the whole copy, so
+    // one employee's time off doesn't block everyone else's week. Cover
+    // shifts are left out (they stood in for a one-off absence), and an
+    // employee whose shift was combined for a cover gets their own original
+    // shift back. With Overwrite, the target week is cleared first — except
+    // shifts that carry attendance (absent, cover, sick hours, clocked in),
+    // which are kept so that record isn't lost; those days are then skipped
+    // like any other already-scheduled day.
+    [HttpPost("copy-week")]
+    [Authorize(Policy = "AdminOrAbove")]
+    public async Task<ActionResult<CopyWeekResultDto>> CopyWeek(CopyWeekRequest request)
+    {
+        var location = ResolveLocation(request.LocationCode);
+        if (location is null)
+        {
+            return BadRequest("A valid locationCode is required.");
+        }
+
+        var offsetDays = request.ToWeekStartDate.DayNumber - request.FromWeekStartDate.DayNumber;
+        if (offsetDays == 0 || offsetDays % 7 != 0)
+        {
+            return BadRequest("Pick a different week to copy from.");
+        }
+
+        var fromEnd = request.FromWeekStartDate.AddDays(6);
+        var source = db.ShiftAssignments
+            .Include(a => a.Shift)
+            .Include(a => a.OriginalShift)
+            .Include(a => a.Account)
+            .Where(a => a.Shift!.LocationId == location.Id
+                && a.Date >= request.FromWeekStartDate && a.Date <= fromEnd
+                && a.CoversAssignmentId == null)
+            .OrderBy(a => a.Date)
+            .ThenBy(a => a.Account!.FirstName)
+            .ToList();
+
+        var toEnd = request.ToWeekStartDate.AddDays(6);
+        var removed = 0;
+        var kept = 0;
+        if (request.Overwrite)
+        {
+            var existing = db.ShiftAssignments
+                .Include(a => a.CoveredByAssignment)
+                .Where(a => a.Shift!.LocationId == location.Id && a.Date >= request.ToWeekStartDate && a.Date <= toEnd)
+                .ToList();
+            var existingIds = existing.Select(a => a.Id).ToList();
+            var clockedIn = db.TimeEntries
+                .Where(t => existingIds.Contains(t.ShiftAssignmentId))
+                .Select(t => t.ShiftAssignmentId)
+                .ToHashSet();
+            foreach (var a in existing)
+            {
+                var hasAttendance = a.IsAbsent || a.SickMinutes > 0 || a.CoversAssignmentId is not null
+                    || a.CoveredByAssignment is not null || a.OriginalShiftId is not null || clockedIn.Contains(a.Id);
+                if (hasAttendance)
+                {
+                    kept++;
+                }
+                else
+                {
+                    db.ShiftAssignments.Remove(a);
+                    removed++;
+                }
+            }
+            db.SaveChanges();
+        }
+
+        var taken = db.ShiftAssignments
+            .Where(a => a.Shift!.LocationId == location.Id && a.Date >= request.ToWeekStartDate && a.Date <= toEnd)
+            .Select(a => new { a.AccountId, a.Date })
+            .AsEnumerable()
+            .Select(a => (a.AccountId, a.Date))
+            .ToHashSet();
+
+        var developmentMode = IsDevelopmentMode(location.Id);
+        var skipped = new List<CopyWeekSkippedDto>();
+        var copied = 0;
+
+        foreach (var a in source)
+        {
+            var shift = a.OriginalShift ?? a.Shift!;
+            var account = a.Account!;
+            var date = a.Date.AddDays(offsetDays);
+
+            string? reason = null;
+            if (!account.IsActive || account.LocationId != location.Id)
+            {
+                reason = "Employee is no longer active here.";
+            }
+            else if (account.Role is not (AccountRole.Employee or AccountRole.Lead or AccountRole.Admin))
+            {
+                reason = "Only employees, leads, and admins can be scheduled.";
+            }
+            else if (!shift.IsActive)
+            {
+                reason = "Shift no longer exists.";
+            }
+            else if (taken.Contains((account.Id, date)))
+            {
+                reason = "Already has a shift that day.";
+            }
+            else if (!developmentMode && TimeOffRules.ApprovedFullDayOff(db, account.Id, date) is not null)
+            {
+                reason = "Approved time off.";
+            }
+            else if (!developmentMode && !IsAvailable(account.Id, date))
+            {
+                reason = "Not available that day.";
+            }
+
+            if (reason is not null)
+            {
+                skipped.Add(new CopyWeekSkippedDto(
+                    account.Id, $"{account.FirstName} {account.LastName}", date, shift.Name, reason));
+                continue;
+            }
+
+            db.ShiftAssignments.Add(new ShiftAssignment { ShiftId = shift.Id, AccountId = account.Id, Date = date });
+            taken.Add((account.Id, date));
+            copied++;
+        }
+
+        db.SaveChanges();
+        if (copied > 0 || removed > 0)
+        {
+            await notifier.NotifyLocationChanged(location.LocationCode);
+        }
+
+        return Ok(new CopyWeekResultDto(copied, removed, kept, skipped));
     }
 
     [HttpDelete("{id:int}")]

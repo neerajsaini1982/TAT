@@ -1,0 +1,77 @@
+@if (result(); as r) {
+  <h2 mat-dialog-title>Schedule copied</h2>
+  <mat-dialog-content class="content">
+    <p class="summary">
+      <mat-icon>check_circle</mat-icon>
+      @if (r.removedCount > 0) {
+        {{ r.removedCount }} existing {{ r.removedCount === 1 ? 'shift' : 'shifts' }} replaced.
+      }
+      {{ r.copiedCount }} {{ r.copiedCount === 1 ? 'shift' : 'shifts' }} copied as a draft.
+      @if (r.skipped.length > 0) {
+        {{ r.skipped.length }} skipped.
+      }
+    </p>
+    @if (r.skipped.length > 0) {
+      <table class="skipped">
+        <thead>
+          <tr><th>Employee</th><th>Day</th><th>Shift</th><th>Reason</th></tr>
+        </thead>
+        <tbody>
+          @for (s of r.skipped; track $index) {
+            <tr>
+              <td>{{ s.employeeName }}</td>
+              <td>{{ dayLabel(s.date) }}</td>
+              <td>{{ s.shiftName }}</td>
+              <td>{{ s.reason }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+    @if (r.keptCount > 0) {
+      <p class="hint">
+        {{ r.keptCount }} {{ r.keptCount === 1 ? 'shift was' : 'shifts were' }} kept because of attendance on them
+        (absent, cover, sick hours or clock-in).
+      </p>
+    }
+    @if (r.copiedCount > 0) {
+      <p class="hint">Review the week, then click Post Schedule to make it visible to employees.</p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-flat-button color="primary" (click)="close()">Done</button>
+  </mat-dialog-actions>
+} @else {
+  <h2 mat-dialog-title>Copy previous week?</h2>
+  <mat-dialog-content class="content">
+    <p>
+      Shifts from <strong>{{ data.fromWeekLabel }}</strong> will be added to
+      <strong>{{ data.toWeekLabel }}</strong> — same employee, same day, same shift — as a draft.
+    </p>
+    @if (data.existingCount > 0) {
+      <p class="warn">
+        <mat-icon>info</mat-icon>
+        This week already has {{ data.existingCount }} {{ data.existingCount === 1 ? 'shift' : 'shifts' }}.
+      </p>
+      <mat-radio-group class="mode" [(ngModel)]="overwrite" aria-label="Existing shifts">
+        <mat-radio-button [value]="true">
+          Replace them with last week's schedule
+          <span class="option-hint">Shifts with attendance on them (absent, cover, clocked in) are kept.</span>
+        </mat-radio-button>
+        <mat-radio-button [value]="false">
+          Keep them and only fill empty days
+        </mat-radio-button>
+      </mat-radio-group>
+    }
+    <p class="hint">Shifts that can't be copied (time off, not available, inactive employee) are skipped and listed.</p>
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+  </mat-dialog-content>
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="close()" [disabled]="copying()">Cancel</button>
+    <button mat-flat-button color="primary" (click)="copy()" [disabled]="copying()">
+      {{ data.existingCount > 0 && overwrite ? 'Replace shifts' : 'Copy shifts' }}
+    </button>
+  </mat-dialog-actions>
+}
