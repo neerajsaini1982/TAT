@@ -31,9 +31,10 @@ public static class PayrollHoursEmail
     }
 
     // Same as the report page's totalMinutes(): every paid minute, i.e. net
-    // worked (regular + overtime + double time) plus sick.
+    // worked (regular + overtime + double time) plus sick plus paid time off.
+    // Unpaid time off is shown but never counted.
     public static int TotalPaidMinutes(EmployeeHoursReportDto employee) =>
-        employee.TotalNetWorkedMinutes + employee.TotalSickMinutes;
+        employee.TotalNetWorkedMinutes + employee.TotalSickMinutes + employee.TotalPaidTimeOffMinutes;
 
     public static string BuildHoursHtml(EmployeeHoursReportDto employee, DateFormat dateFormat)
     {
@@ -52,6 +53,8 @@ public static class PayrollHoursEmail
             ("Overtime", employee.TotalOvertimeMinutes),
             ("Double Time", employee.TotalDoubleTimeMinutes),
             ("Sick", employee.TotalSickMinutes),
+            ("Paid Time Off", employee.TotalPaidTimeOffMinutes),
+            ("Unpaid Time Off", employee.TotalUnpaidTimeOffMinutes),
             ("Total Paid", totalPaid),
         };
 
@@ -64,7 +67,10 @@ public static class PayrollHoursEmail
 
         var rows = employee.Days.Select(day =>
         {
-            var dateCell = $"<td style=\"{td}\">{WebUtility.HtmlEncode(FormatDayLabel(day.Date, dateFormat))}</td>";
+            var breakdown = day.TimeOffBreakdown is { Count: > 0 } labels
+                ? $"<div style=\"font-size:12px;color:#555;\">{WebUtility.HtmlEncode(string.Join(", ", labels))}</div>"
+                : string.Empty;
+            var dateCell = $"<td style=\"{td}\">{WebUtility.HtmlEncode(FormatDayLabel(day.Date, dateFormat))}{breakdown}</td>";
 
             string payCells;
             if (day.IsAbsent)
@@ -81,9 +87,11 @@ public static class PayrollHoursEmail
                     + $"<td style=\"{td}{num}\">{DurationOrDash(day.DoubleTimeMinutes)}</td>";
             }
 
-            var total = DurationOrDash((day.NetWorkedMinutes ?? 0) + day.SickMinutes);
+            var total = DurationOrDash((day.NetWorkedMinutes ?? 0) + day.SickMinutes + day.PaidTimeOffMinutes);
             return "<tr>" + dateCell + payCells
                 + $"<td style=\"{td}{num}\">{DurationOrDash(day.SickMinutes)}</td>"
+                + $"<td style=\"{td}{num}\">{DurationOrDash(day.PaidTimeOffMinutes)}</td>"
+                + $"<td style=\"{td}{num}\">{DurationOrDash(day.UnpaidTimeOffMinutes)}</td>"
                 + $"<td style=\"{td}{num}font-weight:bold;\">{total}</td></tr>";
         });
 
@@ -96,13 +104,16 @@ public static class PayrollHoursEmail
             + TotalCell(employee.TotalOvertimeMinutes)
             + TotalCell(employee.TotalDoubleTimeMinutes)
             + TotalCell(employee.TotalSickMinutes)
+            + TotalCell(employee.TotalPaidTimeOffMinutes)
+            + TotalCell(employee.TotalUnpaidTimeOffMinutes)
             + TotalCell(totalPaid)
             + "</tr>";
 
         var dayTable =
             "<table role=\"presentation\" style=\"border-collapse:collapse;min-width:100%;\">"
             + $"<tr><th style=\"{th}text-align:left;\">Day</th><th style=\"{th}{num}\">Regular</th><th style=\"{th}{num}\">Overtime</th>"
-            + $"<th style=\"{th}{num}\">Double Time</th><th style=\"{th}{num}\">Sick</th><th style=\"{th}{num}\">Total</th></tr>"
+            + $"<th style=\"{th}{num}\">Double Time</th><th style=\"{th}{num}\">Sick</th>"
+            + $"<th style=\"{th}{num}\">Paid Time Off</th><th style=\"{th}{num}\">Unpaid Time Off</th><th style=\"{th}{num}\">Total</th></tr>"
             + string.Concat(rows)
             + totalsRow
             + "</table>";

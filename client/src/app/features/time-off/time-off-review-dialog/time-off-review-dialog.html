@@ -1,0 +1,74 @@
+<div mat-dialog-title class="form-head">
+  <div class="form-head-text">
+    <span class="form-kicker">{{ r.employeeName }}</span>
+    <h3>{{ approving ? 'Approve' : 'Deny' }} {{ r.typeName }}</h3>
+  </div>
+  <button mat-icon-button type="button" class="form-close" (click)="cancel()" aria-label="Close">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+<form (ngSubmit)="save()" autocomplete="off">
+  <mat-dialog-content class="form-body">
+    <section class="form-section">
+      <p class="summary">
+        <strong>{{ range(r) }}</strong>
+        @if (r.isPartialDay && r.partialMinutes) {
+          · {{ format(r.partialMinutes) }}
+        }
+      </p>
+      @if (r.note) {
+        <p class="hint">“{{ r.note }}”</p>
+      }
+
+      @if (approving) {
+        @if (preview(); as p) {
+          <div class="preview">
+            @if (p.conflicts.length > 0) {
+              <p class="preview-title">Shifts already scheduled</p>
+              <ul>
+                @for (c of p.conflicts; track c.shiftAssignmentId) {
+                  <li>{{ dayLabel(c.date) }} · {{ c.shiftName }}{{ c.isPublished ? '' : ' (draft)' }}</li>
+                }
+              </ul>
+              @if (!r.isPartialDay) {
+                <mat-checkbox name="removeShifts" [(ngModel)]="removeShifts">Remove posted shifts on these days</mat-checkbox>
+                <p class="hint">Draft shifts are removed either way. Shifts already clocked into or covered are kept.</p>
+              }
+            } @else {
+              <p class="hint">No shifts scheduled on these days.</p>
+            }
+            <p class="preview-title">Hours counted per day</p>
+            <div class="days">
+              @for (d of days; track d.date) {
+                <label class="day">
+                  <span>{{ dayLabel(d.date) }}</span>
+                  <input type="number" min="0" max="24" step="0.25" [name]="'day-' + d.date" [ngModel]="hours(d)" (ngModelChange)="setHours(d, $event)" />
+                  <span class="unit">h</span>
+                </label>
+              }
+            </div>
+            <p class="hint">Total {{ format(totalMinutes()) }}. Set a day to 0 if they wouldn't have worked it.</p>
+          </div>
+        } @else if (!error()) {
+          <p class="hint">Checking the schedule…</p>
+        }
+      }
+
+      <mat-form-field appearance="outline" class="comment">
+        <mat-label>{{ approving ? 'Comment (optional)' : 'Reason' }}</mat-label>
+        <textarea matInput name="comment" rows="2" maxlength="500" [(ngModel)]="comment" [required]="!approving"></textarea>
+      </mat-form-field>
+    </section>
+
+    @if (error()) {
+      <p class="error form-error">{{ error() }}</p>
+    }
+  </mat-dialog-content>
+
+  <div class="form-actions">
+    <button mat-flat-button [color]="approving ? 'primary' : 'warn'" type="submit" [disabled]="saving() || (approving && !preview())">
+      {{ approving ? 'Approve' : 'Deny' }}
+    </button>
+    <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
+  </div>
+</form>

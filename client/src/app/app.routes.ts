@@ -57,6 +57,11 @@ export const routes: Routes = [
   { path: ':locationCode/admin/payroll-report', component: AdminPayrollReportPage, canActivate: [adminGuard] },
   { path: ':locationCode/admin/call-out-report', component: AdminCallOutReportPage, canActivate: [adminOnlyGuard] },
   { path: ':locationCode/admin/employee-schedule-report', component: AdminEmployeeScheduleReportPage, canActivate: [adminOnlyGuard] },
+  {
+    path: ':locationCode/admin/time-off',
+    loadComponent: () => import('./features/admin/lazy-dialogs').then((m) => m.AdminTimeOffPage),
+    canActivate: [adminOnlyGuard],
+  },
 
   { path: ':locationCode/employee', component: EmployeeHome },
   { path: ':locationCode/employee/availability', component: AvailabilityPage, canActivate: [employeeGuard] },
@@ -65,6 +70,11 @@ export const routes: Routes = [
   { path: ':locationCode/employee/documents', component: MyDocumentsPage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/write-ups', component: MyWriteUpsPage, canActivate: [employeeGuard] },
   { path: ':locationCode/employee/help', component: HelpPage, canActivate: [employeeGuard] },
+  {
+    path: ':locationCode/employee/time-off',
+    loadComponent: () => import('./features/admin/lazy-dialogs').then((m) => m.MyTimeOffPage),
+    canActivate: [employeeGuard],
+  },
   // Reuses AdminPayrollReportPage as-is — GetHoursReport scopes a non-Admin
   // caller down to just their own row server-side (see ReportsController),
   // so the one page doubles as a self-service report, with sick-hours

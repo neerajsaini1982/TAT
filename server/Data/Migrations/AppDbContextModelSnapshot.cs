@@ -475,6 +475,15 @@ namespace Server.Data.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("TimeOffEnabled")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TimeOffFullDayMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("TimeOffMinNoticeDays")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("TimeZone")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -745,6 +754,189 @@ namespace Server.Data.Migrations
                     b.HasIndex("TimeEntryId");
 
                     b.ToTable("TimeEntrySegments");
+                });
+
+            modelBuilder.Entity("Server.Models.TimeOffBlackout", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("LocationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LocationId", "StartDate");
+
+                    b.ToTable("TimeOffBlackouts");
+                });
+
+            modelBuilder.Entity("Server.Models.TimeOffRequest", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("CreatedByAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("EndDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool?>("IsPaid")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPartialDay")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LocationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PartialMinutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ReviewComment")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("ReviewedByAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TimeOffTypeId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByAccountId");
+
+                    b.HasIndex("ReviewedByAccountId");
+
+                    b.HasIndex("TimeOffTypeId");
+
+                    b.HasIndex("AccountId", "StartDate");
+
+                    b.HasIndex("LocationId", "Status");
+
+                    b.ToTable("TimeOffRequests");
+                });
+
+            modelBuilder.Entity("Server.Models.TimeOffRequestDay", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Minutes")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("TimeOffRequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TimeOffRequestId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("TimeOffRequestDays");
+                });
+
+            modelBuilder.Entity("Server.Models.TimeOffRequestEvent", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("ActorAccountId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TimeOffRequestId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorAccountId");
+
+                    b.HasIndex("TimeOffRequestId");
+
+                    b.ToTable("TimeOffRequestEvents");
+                });
+
+            modelBuilder.Entity("Server.Models.TimeOffType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Color")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LocationId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PayrollCode")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LocationId", "Name")
+                        .IsUnique();
+
+                    b.ToTable("TimeOffTypes");
                 });
 
             modelBuilder.Entity("Server.Models.WriteUp", b =>
@@ -1106,6 +1298,92 @@ namespace Server.Data.Migrations
                     b.Navigation("TimeEntry");
                 });
 
+            modelBuilder.Entity("Server.Models.TimeOffBlackout", b =>
+                {
+                    b.HasOne("Server.Models.Location", "Location")
+                        .WithMany()
+                        .HasForeignKey("LocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Location");
+                });
+
+            modelBuilder.Entity("Server.Models.TimeOffRequest", b =>
+                {
+                    b.HasOne("Server.Models.Account", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Server.Models.Account", "CreatedByAccount")
+                        .WithMany()
+                        .HasForeignKey("CreatedByAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Server.Models.Account", "ReviewedByAccount")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByAccountId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Server.Models.TimeOffType", "TimeOffType")
+                        .WithMany()
+                        .HasForeignKey("TimeOffTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("CreatedByAccount");
+
+                    b.Navigation("ReviewedByAccount");
+
+                    b.Navigation("TimeOffType");
+                });
+
+            modelBuilder.Entity("Server.Models.TimeOffRequestDay", b =>
+                {
+                    b.HasOne("Server.Models.TimeOffRequest", "TimeOffRequest")
+                        .WithMany("Days")
+                        .HasForeignKey("TimeOffRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("TimeOffRequest");
+                });
+
+            modelBuilder.Entity("Server.Models.TimeOffRequestEvent", b =>
+                {
+                    b.HasOne("Server.Models.Account", "ActorAccount")
+                        .WithMany()
+                        .HasForeignKey("ActorAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Server.Models.TimeOffRequest", "TimeOffRequest")
+                        .WithMany("Events")
+                        .HasForeignKey("TimeOffRequestId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ActorAccount");
+
+                    b.Navigation("TimeOffRequest");
+                });
+
+            modelBuilder.Entity("Server.Models.TimeOffType", b =>
+                {
+                    b.HasOne("Server.Models.Location", "Location")
+                        .WithMany()
+                        .HasForeignKey("LocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Location");
+                });
+
             modelBuilder.Entity("Server.Models.WriteUp", b =>
                 {
                     b.HasOne("Server.Models.Account", "Account")
@@ -1187,6 +1465,13 @@ namespace Server.Data.Migrations
             modelBuilder.Entity("Server.Models.TimeEntry", b =>
                 {
                     b.Navigation("Segments");
+                });
+
+            modelBuilder.Entity("Server.Models.TimeOffRequest", b =>
+                {
+                    b.Navigation("Days");
+
+                    b.Navigation("Events");
                 });
 
             modelBuilder.Entity("Server.Models.WriteUp", b =>

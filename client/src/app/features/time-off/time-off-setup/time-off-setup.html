@@ -1,0 +1,103 @@
+@if (error()) {
+  <p class="msg error">{{ error() }}</p>
+}
+@if (saved()) {
+  <p class="msg ok" role="status">{{ saved() }}</p>
+}
+
+<section class="block">
+  <h3>Settings</h3>
+  <mat-slide-toggle [(ngModel)]="settings.timeOffEnabled">Employees can request time off</mat-slide-toggle>
+  <div class="row-fields">
+    <mat-form-field appearance="outline">
+      <mat-label>Minimum notice (days)</mat-label>
+      <input matInput type="number" min="0" max="365" [(ngModel)]="settings.timeOffMinNoticeDays" placeholder="None" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>Full day counts as (hours)</mat-label>
+      <input matInput type="number" min="0.25" max="24" step="0.25" [(ngModel)]="fullDayHours" />
+      <mat-hint>Used when the employee had no shift that day</mat-hint>
+    </mat-form-field>
+    <button mat-flat-button color="primary" (click)="saveSettings()">Save settings</button>
+  </div>
+</section>
+
+<section class="block">
+  <h3>Time-off types</h3>
+  <p class="hint">Paid types count toward Total Paid on the payroll report. Changing this only affects time off approved afterwards.</p>
+  <table class="types">
+    <thead>
+      <tr><th>Order</th><th>Name</th><th>Paid</th><th>Active</th><th>Payroll code</th><th></th></tr>
+    </thead>
+    <tbody>
+      <tr class="locked">
+        <td></td>
+        <td>Sick</td>
+        <td>Always paid</td>
+        <td>Built in</td>
+        <td></td>
+        <td></td>
+      </tr>
+      @for (t of types(); track t.id; let first = $first; let last = $last) {
+        <tr [class.inactive]="!t.isActive">
+          <td class="order">
+            <button mat-icon-button (click)="move(t, -1)" [disabled]="first" aria-label="Move up"><mat-icon>arrow_upward</mat-icon></button>
+            <button mat-icon-button (click)="move(t, 1)" [disabled]="last" aria-label="Move down"><mat-icon>arrow_downward</mat-icon></button>
+          </td>
+          <td>
+            <input class="cell-input" [value]="t.name" (change)="updateType(t, { name: $any($event.target).value })" aria-label="Name" />
+          </td>
+          <td><mat-slide-toggle [checked]="t.isPaid" (change)="updateType(t, { isPaid: $event.checked })" aria-label="Paid" /></td>
+          <td><mat-slide-toggle [checked]="t.isActive" (change)="updateType(t, { isActive: $event.checked })" aria-label="Active" /></td>
+          <td>
+            <input class="cell-input code" [value]="t.payrollCode ?? ''" placeholder="—" (change)="updateType(t, { payrollCode: $any($event.target).value || null })" aria-label="Payroll code" />
+          </td>
+          <td>
+            @if (!t.isUsed) {
+              <button mat-icon-button (click)="deleteType(t)" aria-label="Delete"><mat-icon>delete</mat-icon></button>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  <div class="row-fields">
+    <mat-form-field appearance="outline">
+      <mat-label>New type</mat-label>
+      <input matInput [(ngModel)]="newTypeName" (keydown.enter)="addType()" placeholder="e.g. Maternity leave" />
+    </mat-form-field>
+    <button mat-stroked-button (click)="addType()">Add type</button>
+  </div>
+</section>
+
+<section class="block">
+  <h3>Blackout dates</h3>
+  <p class="hint">Employees can't request time off on these days. You can still add time off for someone on them.</p>
+  @if (blackouts().length === 0) {
+    <p class="hint">No blackout dates.</p>
+  } @else {
+    <ul class="blackouts">
+      @for (b of blackouts(); track b.id) {
+        <li>
+          <span><strong>{{ b.name }}</strong> — {{ range(b) }}</span>
+          <button mat-icon-button (click)="deleteBlackout(b)" aria-label="Remove"><mat-icon>delete</mat-icon></button>
+        </li>
+      }
+    </ul>
+  }
+  <div class="row-fields">
+    <mat-form-field appearance="outline">
+      <mat-label>Name</mat-label>
+      <input matInput [(ngModel)]="newBlackout.name" placeholder="e.g. Thanksgiving week" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>From</mat-label>
+      <input matInput type="date" [(ngModel)]="newBlackout.startDate" />
+    </mat-form-field>
+    <mat-form-field appearance="outline">
+      <mat-label>To</mat-label>
+      <input matInput type="date" [min]="newBlackout.startDate" [(ngModel)]="newBlackout.endDate" />
+    </mat-form-field>
+    <button mat-stroked-button (click)="addBlackout()">Add blackout</button>
+  </div>
+</section>

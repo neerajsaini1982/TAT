@@ -36,6 +36,10 @@
       } @else {
         <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'payroll-report']">Payroll Report</a>
       }
+      @if (auth.role() === 'Admin') {
+        <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'time-off']">Time Off Requests</a>
+      }
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'time-off']">My Time Off</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'write-ups']">My Write-Ups</a>
       @if (auth.role() === 'Admin') {
         <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'admin', 'settings']">Settings</a>
@@ -73,6 +77,7 @@
       <mat-divider />
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'schedule']">My Schedule</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'availability']">My Availability</a>
+      <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'time-off']">My Time Off</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'reports']">Report</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'write-ups']">My Write-Ups</a>
       <a mat-menu-item [routerLink]="['/', auth.locationCode(), 'employee', 'help']">Help</a>

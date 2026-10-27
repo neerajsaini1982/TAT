@@ -1,0 +1,119 @@
+:host {
+  display: block;
+}
+
+.block {
+  padding: 16px 0 24px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  h3 {
+    margin: 0 0 8px;
+    font: var(--mat-sys-title-medium);
+    font-weight: 700;
+  }
+}
+
+.row-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: center;
+  margin-top: 12px;
+
+  button {
+    height: 48px;
+    margin-bottom: 20px;
+  }
+}
+
+.hint {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.msg {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  font-weight: 600;
+
+  &.error {
+    background: var(--mat-sys-error-container);
+    border-left: 4px solid var(--mat-sys-error);
+  }
+  &.ok {
+    background: var(--mat-sys-surface-container);
+    border-left: 4px solid #2e7d32;
+  }
+}
+
+.types {
+  width: 100%;
+  max-width: 760px;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    font: var(--mat-sys-label-small);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mat-sys-on-surface-variant);
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--mat-sys-on-surface);
+  }
+
+  td {
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+
+  .locked td {
+    color: var(--mat-sys-on-surface-variant);
+    font-style: italic;
+    height: 40px;
+  }
+
+  .inactive td {
+    opacity: 0.6;
+  }
+}
+
+.order {
+  white-space: nowrap;
+}
+
+.cell-input {
+  width: 100%;
+  min-width: 120px;
+  padding: 6px 8px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--mat-sys-outline-variant);
+
+  &.code {
+    min-width: 80px;
+    max-width: 120px;
+  }
+}
+
+.blackouts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 560px;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+}
+
+@media (max-width: 720px) {
+  .types {
+    display: block;
+    overflow-x: auto;
+  }
+}

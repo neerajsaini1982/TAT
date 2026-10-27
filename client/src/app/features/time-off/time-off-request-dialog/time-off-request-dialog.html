@@ -1,0 +1,107 @@
+<div mat-dialog-title class="form-head">
+  <div class="form-head-text">
+    <span class="form-kicker">Time off</span>
+    <h3>{{ isAdmin ? 'Add Time Off' : 'Request Time Off' }}</h3>
+  </div>
+  <button mat-icon-button type="button" class="form-close" (click)="cancel()" aria-label="Close">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+<form (ngSubmit)="save()" autocomplete="off">
+  <mat-dialog-content class="form-body">
+    <section class="form-section">
+      <div class="form-grid">
+        @if (isAdmin) {
+          <mat-form-field appearance="outline" class="span-2">
+            <mat-label>Employee</mat-label>
+            <mat-select name="accountId" [(ngModel)]="form.accountId" (ngModelChange)="changed()" required>
+              @for (e of employees(); track e.id) {
+                <mat-option [value]="e.id">{{ e.firstName }} {{ e.lastName }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        <mat-form-field appearance="outline" class="span-2">
+          <mat-label>Type</mat-label>
+          <mat-select name="typeId" [(ngModel)]="form.typeId" (ngModelChange)="changed()" required>
+            @for (t of types(); track t.id) {
+              <mat-option [value]="t.id">{{ t.name }}{{ isAdmin ? (t.isPaid ? ' (paid)' : ' (unpaid)') : '' }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-checkbox class="span-2 partial" name="isPartialDay" [(ngModel)]="form.isPartialDay" (ngModelChange)="startChanged()">
+          Part of a day
+        </mat-checkbox>
+        <mat-form-field appearance="outline">
+          <mat-label>{{ form.isPartialDay ? 'Date' : 'First day off' }}</mat-label>
+          <input matInput type="date" name="startDate" [(ngModel)]="form.startDate" (ngModelChange)="startChanged()" required />
+        </mat-form-field>
+        @if (form.isPartialDay) {
+          <mat-form-field appearance="outline">
+            <mat-label>Hours off</mat-label>
+            <input matInput type="number" min="0.25" max="23.75" step="0.25" name="hours" [(ngModel)]="form.hours" (ngModelChange)="changed()" required />
+          </mat-form-field>
+        } @else {
+          <mat-form-field appearance="outline">
+            <mat-label>Last day off</mat-label>
+            <input matInput type="date" name="endDate" [min]="form.startDate" [(ngModel)]="form.endDate" (ngModelChange)="changed()" required />
+          </mat-form-field>
+        }
+        <mat-form-field appearance="outline" class="span-2">
+          <mat-label>Note (optional)</mat-label>
+          <textarea matInput name="note" rows="2" maxlength="500" [(ngModel)]="form.note"></textarea>
+        </mat-form-field>
+      </div>
+
+      @if (upcomingBlackouts().length > 0) {
+        <div class="blackouts">
+          <p class="blackouts-title"><mat-icon>block</mat-icon> No time off on these dates</p>
+          <ul>
+            @for (b of upcomingBlackouts(); track b.id) {
+              <li><strong>{{ b.name }}</strong> — {{ range(b) }}</li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (preview(); as p) {
+        <div class="preview">
+          @if (p.conflicts.length > 0) {
+            <p class="preview-title">Shifts already scheduled</p>
+            <ul class="conflicts">
+              @for (c of p.conflicts; track c.shiftAssignmentId) {
+                <li>{{ dayLabel(c.date) }} · {{ c.shiftName }}{{ c.isPublished ? '' : ' (draft)' }}</li>
+              }
+            </ul>
+            @if (!form.isPartialDay) {
+              <mat-checkbox name="removeShifts" [(ngModel)]="removeShifts">Remove posted shifts on these days</mat-checkbox>
+              <p class="hint">Draft shifts are removed either way.</p>
+            }
+          }
+          <p class="preview-title">Hours counted per day</p>
+          <div class="days">
+            @for (d of days; track d.date) {
+              <label class="day">
+                <span>{{ dayLabel(d.date) }}</span>
+                <input type="number" min="0" max="24" step="0.25" [name]="'day-' + d.date" [ngModel]="hours(d)" (ngModelChange)="setHours(d, $event)" />
+                <span class="unit">h</span>
+              </label>
+            }
+          </div>
+          <p class="hint">Total {{ format(totalMinutes()) }}. Set a day to 0 if they wouldn't have worked it.</p>
+        </div>
+      }
+    </section>
+
+    @if (error()) {
+      <p class="error form-error">{{ error() }}</p>
+    }
+  </mat-dialog-content>
+
+  <div class="form-actions">
+    <button mat-flat-button color="primary" type="submit" [disabled]="saving()">
+      {{ isAdmin ? (preview() ? 'Save as approved' : 'Next') : 'Send request' }}
+    </button>
+    <button mat-stroked-button type="button" (click)="cancel()">Cancel</button>
+  </div>
+</form>

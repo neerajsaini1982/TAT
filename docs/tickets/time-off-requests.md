@@ -23,9 +23,10 @@ known to be away.
    an optional note.
 2. As an employee, I can see all my requests and their status (Pending,
    Approved, Denied, Cancelled), including the reviewer's comment.
-3. As an employee, I can cancel a request while it is Pending. Once Approved,
-   I can ask to cancel it, which needs admin approval (or: only an admin can
-   cancel it — see open questions).
+3. As an employee, I can cancel my own request while it is Pending or
+   Approved (only for days that haven't started yet). No admin approval is
+   needed; the location's admins get an email when approved time off is
+   cancelled.
 4. As an employee, I see my approved time off on my schedule
    (`employee-schedule-page`) and on the current-week schedule.
 
@@ -44,8 +45,8 @@ known to be away.
 
 **Lead**
 10. As a lead, I can see approved time off on the schedule so I don't plan
-    around someone who's away. (Whether leads can approve is an open
-    question.)
+    around someone who's away. Leads can't approve, deny or create requests —
+    only the location's admin can.
 
 ## Rules
 
@@ -55,6 +56,10 @@ known to be away.
 - A request can't start in the past, except when an admin creates it.
 - A request can't overlap another Pending or Approved request for the same
   employee.
+- **Blackout dates:** an employee can't request time off on any day that
+  falls inside one of the location's blackout dates; the request form says
+  which blackout blocks it. An admin can still create time off on a blackout
+  date on an employee's behalf (e.g. bereavement).
 - **Scheduling:** `ShiftAssignmentsController` create/move must reject
   assigning an employee to a date covered by an Approved full-day request
   ("This employee has approved time off on this date."). Partial-day time off
@@ -135,6 +140,10 @@ New `TimeOffRequestEvent` (history, never deleted): Id, TimeOffRequestId,
 Action (Submitted, Approved, Denied, Cancelled, Edited), ActorAccountId, At,
 Comment.
 
+New `Server/Models/TimeOffBlackout.cs` (one list per location): Id,
+LocationId, Name (e.g. "Thanksgiving week"), StartDate, EndDate (DateOnly,
+inclusive).
+
 New `LocationSettings` fields:
 - `TimeOffEnabled` (bool, default true)
 - `TimeOffMinNoticeDays` (int?, default null = no minimum)
@@ -170,6 +179,15 @@ Time-off types (`TimeOffTypesController`):
 | PUT | `/api/time-off-types/{id}` | AdminOrAbove | rename, paid/unpaid, active, order, colour, code |
 | DELETE | `/api/time-off-types/{id}` | AdminOrAbove | only if never used; otherwise 409 — deactivate instead |
 
+Blackout dates (`TimeOffBlackoutsController`):
+
+| Method | Route | Who | Purpose |
+|---|---|---|---|
+| GET | `/api/time-off-blackouts` | any signed-in user | my location's blackouts (request dialog) |
+| POST | `/api/time-off-blackouts` | AdminOrAbove | add |
+| PUT | `/api/time-off-blackouts/{id}` | AdminOrAbove | edit |
+| DELETE | `/api/time-off-blackouts/{id}` | AdminOrAbove | remove (doesn't touch existing requests) |
+
 Admins only see requests for their own location; Sa sees all. An employee
 only ever sees their own requests, and never the event history.
 
@@ -180,6 +198,8 @@ edited in the email template editor:
 - **Time Off Requested** — to the location's admins
 - **Time Off Approved** / **Time Off Denied** — to the employee, with the
   reviewer's comment
+- **Time Off Cancelled** — to the location's admins, when an employee
+  cancels approved time off
 
 Sent with `EmailSender` using the location's SMTP settings; skipped quietly
 if SMTP isn't set up (same as current emails).
@@ -243,16 +263,18 @@ Kiosk: no change (optionally show "Time off" in `kiosk-schedule`).
       Total Paid; neither counts towards overtime.
 - [ ] Request/approve/deny emails sent, editable in the template editor.
 - [ ] Settings for enable/disable, minimum notice and full-day length.
+- [ ] Admins can manage blackout dates; employees can't request on them.
+- [ ] Employees can cancel approved time off; admins are emailed.
 - [ ] Server tests cover the cases above.
 
-## Open questions
-
-1. Can leads approve requests, or only admins? (Could reuse a per-account
-   flag like `CanWriteUpOthers`.)
-2. Should employees be able to cancel an already-approved request themselves?
-3. Blackout dates (e.g. holidays when no time off allowed) — v1 or later?
-
 ## Decided
+
+- Only the location's admin approves, denies or creates requests. Leads
+  can't (`AdminOrAbove`, not `LeadOrAbove`).
+- Employees can cancel their own approved time off without admin approval;
+  admins are emailed when that happens.
+- Blackout dates are in v1. Admins manage them in location settings;
+  employees can't request on them; admins can still add time off on them.
 
 - Time-off types are configured per location by the location's admin.
 - Sick stays on the existing logic and is always paid. All other default

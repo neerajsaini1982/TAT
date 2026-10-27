@@ -1,0 +1,84 @@
+<div class="report-head">
+  <p class="kicker">Location {{ locationCode }}</p>
+  <h2>Time Off</h2>
+</div>
+
+<div class="toolbar">
+  <nav class="tabs" aria-label="Time off views">
+    <button type="button" [class.active]="tab() === 'pending'" (click)="tab.set('pending')">
+      Pending @if (pending().length > 0) {<span class="count">{{ pending().length }}</span>}
+    </button>
+    <button type="button" [class.active]="tab() === 'upcoming'" (click)="tab.set('upcoming')">Upcoming</button>
+    <button type="button" [class.active]="tab() === 'all'" (click)="tab.set('all')">History</button>
+    <button type="button" [class.active]="tab() === 'setup'" (click)="tab.set('setup')">Setup</button>
+  </nav>
+  @if (tab() !== 'setup') {
+    <button mat-flat-button color="primary" (click)="add()"><mat-icon>add</mat-icon> Add time off</button>
+  }
+</div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+
+@if (tab() === 'setup') {
+  <app-time-off-setup [locationCode]="locationCode" />
+} @else if (loading()) {
+  <p class="status">Loading…</p>
+} @else if (shown().length === 0) {
+  <p class="status">
+    @switch (tab()) {
+      @case ('pending') { No requests waiting for a decision. }
+      @case ('upcoming') { No approved time off coming up. }
+      @default { No time off yet. }
+    }
+  </p>
+} @else {
+  <ul class="rows">
+    @for (r of shown(); track r.id) {
+      <li class="row" [class]="statusClass(r.status)">
+        <div class="who">
+          <p class="name">{{ r.employeeName }}</p>
+          <p class="sub">{{ r.typeName }}{{ paidLabel(r) }}</p>
+        </div>
+        <div class="when">
+          <p class="dates">{{ range(r) }}</p>
+          <p class="sub">{{ hoursLabel(r) }}</p>
+        </div>
+        <div class="detail">
+          <span class="chip">{{ r.status }}</span>
+          @if (r.note) {
+            <p class="sub">“{{ r.note }}”</p>
+          }
+          @if (r.reviewComment) {
+            <p class="sub">{{ r.reviewedByName }}: {{ r.reviewComment }}</p>
+          }
+        </div>
+        <div class="actions">
+          @if (r.status === 'Pending') {
+            <button mat-flat-button color="primary" (click)="review(r, 'approve')">Approve</button>
+            <button mat-stroked-button (click)="review(r, 'deny')">Deny</button>
+          }
+          @if (r.status === 'Approved') {
+            <button mat-stroked-button (click)="cancel(r)">Cancel</button>
+          }
+          <button mat-icon-button (click)="toggleHistory(r.id)" aria-label="History" [attr.aria-expanded]="openHistoryId() === r.id">
+            <mat-icon>history</mat-icon>
+          </button>
+        </div>
+        @if (openHistoryId() === r.id && r.history) {
+          <ol class="history">
+            @for (h of r.history; track $index) {
+              <li>
+                <strong>{{ h.action }}</strong> by {{ h.actorName }} · {{ h.at | date: 'MMM d, h:mm a' }}
+                @if (h.comment) {
+                  — {{ h.comment }}
+                }
+              </li>
+            }
+          </ol>
+        }
+      </li>
+    }
+  </ul>
+}

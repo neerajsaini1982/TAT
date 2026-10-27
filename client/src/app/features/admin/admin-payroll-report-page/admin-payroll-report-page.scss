@@ -82,7 +82,7 @@
 // the numbers that get keyed into ADP — so it reads before the roster.
 .summary {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   border-top: 2px solid var(--mat-sys-on-surface);
   border-bottom: 2px solid var(--mat-sys-on-surface);
   margin-bottom: 12px;
@@ -168,7 +168,7 @@
   width: 100%;
   // Fixed columns (52 + 200 + 5×118 = 842px) plus room for Notes. Below this
   // the container scrolls sideways instead of crushing Notes to a sliver.
-  min-width: 1020px;
+  min-width: 1256px;
   table-layout: fixed;
   border-collapse: collapse;
   background: transparent;
@@ -227,6 +227,8 @@
 .mat-column-overtimeTime,
 .mat-column-doubleTimeTime,
 .mat-column-sickTime,
+.mat-column-paidTimeOff,
+.mat-column-unpaidTimeOff,
 .mat-column-totalTime {
   width: 118px;
   white-space: nowrap;
@@ -434,7 +436,7 @@ th.mat-column-totalTime,
     }
   }
 
-  // Five cells in two columns would strand Total Paid in a half-width row of
+  // Seven cells in two columns would strand Total Paid in a half-width row of
   // its own, so it takes the full width instead.
   .summary-cell.is-total {
     grid-column: 1 / -1;
@@ -504,6 +506,8 @@ th.mat-column-totalTime,
   td.mat-column-overtimeTime,
   td.mat-column-doubleTimeTime,
   td.mat-column-sickTime,
+  td.mat-column-paidTimeOff,
+  td.mat-column-unpaidTimeOff,
   td.mat-column-totalTime {
     width: auto;
     display: block;
