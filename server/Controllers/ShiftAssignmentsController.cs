@@ -227,6 +227,11 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             return BadRequest("This employee is not available on this date.");
         }
 
+        if (!IsDevelopmentMode(shift.LocationId) && TimeOffRules.ApprovedFullDayOff(db, account.Id, request.Date) is not null)
+        {
+            return BadRequest("This employee has approved time off on this date.");
+        }
+
         var alreadyAssigned = db.ShiftAssignments.Any(a =>
             a.AccountId == account.Id && a.Date == request.Date);
         if (alreadyAssigned)
@@ -278,6 +283,11 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         if (!IsDevelopmentMode(assignment.Shift!.LocationId) && !IsAvailable(account.Id, request.Date))
         {
             return BadRequest("This employee is not available on this date.");
+        }
+
+        if (!IsDevelopmentMode(assignment.Shift!.LocationId) && TimeOffRules.ApprovedFullDayOff(db, account.Id, request.Date) is not null)
+        {
+            return BadRequest("This employee has approved time off on this date.");
         }
 
         var alreadyAssigned = db.ShiftAssignments.Any(a =>
@@ -445,11 +455,18 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
             .Select(d => d.Availability!.AccountId)
             .ToHashSet();
         var developmentMode = settings?.DevelopmentMode ?? false;
+        // Anyone with approved full-day time off that day isn't offered.
+        var onTimeOffIds = db.TimeOffRequests
+            .Where(r => r.LocationId == shift.LocationId && r.Status == TimeOffStatus.Approved && !r.IsPartialDay
+                && r.StartDate <= assignment.Date && r.EndDate >= assignment.Date)
+            .Select(r => r.AccountId)
+            .ToHashSet();
 
         var candidates = db.Accounts
             .Where(a => a.LocationId == shift.LocationId && a.IsActive && a.IsOnShiftSchedule && a.Id != assignment.AccountId)
             .ToList()
             .Where(a => a.Role is AccountRole.Employee or AccountRole.Lead or AccountRole.Admin)
+            .Where(a => developmentMode || !onTimeOffIds.Contains(a.Id))
             .Select(account => new
             {
                 account,
@@ -758,6 +775,11 @@ public class ShiftAssignmentsController(AppDbContext db, IScheduleNotifier notif
         {
             return (null, Conflict(
                 "This employee already has a shift on this date. Confirm to replace it with the new shift."));
+        }
+
+        if (!IsDevelopmentMode(shift.LocationId) && TimeOffRules.ApprovedFullDayOff(db, account.Id, absent.Date) is not null)
+        {
+            return (null, BadRequest("This employee has approved time off on this date."));
         }
 
         if (!confirmUnavailable && !IsDevelopmentMode(shift.LocationId) && !IsAvailable(account.Id, absent.Date))

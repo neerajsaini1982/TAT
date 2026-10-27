@@ -309,6 +309,23 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
 
         var sickEntries = sickEntriesQuery.ToList();
 
+        // Approved time off in the range (the per-day minutes fixed when it
+        // was approved). Not worked time, so only the range itself is needed
+        // — it never feeds overtime.
+        var timeOffQuery = db.TimeOffRequestDays
+            .Include(d => d.TimeOffRequest).ThenInclude(r => r!.Account)
+            .Include(d => d.TimeOffRequest).ThenInclude(r => r!.TimeOffType)
+            .Where(d => d.TimeOffRequest!.LocationId == location.Id
+                && d.TimeOffRequest.Status == TimeOffStatus.Approved
+                && d.Date >= startDate && d.Date <= endDate
+                && d.Minutes > 0);
+        if (onlyAccountId is not null)
+        {
+            timeOffQuery = timeOffQuery.Where(d => d.TimeOffRequest!.AccountId == onlyAccountId);
+        }
+
+        var timeOffDays = timeOffQuery.ToList();
+
         var assignmentIds = assignments.Select(a => a.Id).ToList();
         var entriesByAssignmentId = db.TimeEntries
             .Include(t => t.Segments)
@@ -317,10 +334,12 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
 
         var accountsById = assignments.Select(a => a.Account!)
             .Concat(sickEntries.Select(s => s.Account!))
+            .Concat(timeOffDays.Select(d => d.TimeOffRequest!.Account!))
             .GroupBy(a => a.Id)
             .ToDictionary(g => g.Key, g => g.First());
         var assignmentsByAccountId = assignments.ToLookup(a => a.AccountId);
         var sickEntriesByAccountId = sickEntries.ToLookup(s => s.AccountId);
+        var timeOffByAccountId = timeOffDays.ToLookup(d => d.TimeOffRequest!.AccountId);
 
         // Drop employees with nothing to show for the range (no net worked
         // time, e.g. scheduled but never clocked in, or absent) — but keep
@@ -333,13 +352,15 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
                 accountsById[accountId],
                 assignmentsByAccountId[accountId].ToList(),
                 sickEntriesByAccountId[accountId].ToList(),
+                timeOffByAccountId[accountId].ToList(),
                 entriesByAssignmentId,
                 breakLimitMinutes,
                 lunchLimitMinutes,
                 overtimePolicy,
                 startDate,
                 endDate))
-            .Where(e => e.TotalNetWorkedMinutes > 0 || e.OpenEntryDays > 0 || e.TotalSickMinutes > 0)
+            .Where(e => e.TotalNetWorkedMinutes > 0 || e.OpenEntryDays > 0 || e.TotalSickMinutes > 0
+                || e.TotalPaidTimeOffMinutes > 0 || e.TotalUnpaidTimeOffMinutes > 0)
             .OrderBy(e => e.FullName)
             .ToList();
     }
@@ -348,6 +369,7 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
         Account account,
         List<ShiftAssignment> assignments,
         List<SickTimeEntry> sickEntries,
+        List<TimeOffRequestDay> timeOffDays,
         Dictionary<int, TimeEntry> entriesByAssignmentId,
         int breakLimitMinutes,
         int lunchLimitMinutes,
@@ -359,11 +381,13 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
         // recorded sick entry — a date can have one, the other, or both.
         var dates = assignments.Select(a => a.Date)
             .Concat(sickEntries.Select(s => s.Date))
+            .Concat(timeOffDays.Select(d => d.Date))
             .Distinct()
             .OrderBy(d => d);
 
         var assignmentsByDate = assignments.ToLookup(a => a.Date);
         var sickEntriesByDate = sickEntries.ToLookup(s => s.Date);
+        var timeOffByDate = timeOffDays.ToLookup(d => d.Date);
 
         var days = dates
             .Select(date => BuildDay(
@@ -372,7 +396,16 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
                 sickEntriesByDate[date].ToList(),
                 entriesByAssignmentId,
                 breakLimitMinutes,
-                lunchLimitMinutes))
+                lunchLimitMinutes)
+                with
+                {
+                    PaidTimeOffMinutes = timeOffByDate[date].Where(d => d.TimeOffRequest!.IsPaid == true).Sum(d => d.Minutes),
+                    UnpaidTimeOffMinutes = timeOffByDate[date].Where(d => d.TimeOffRequest!.IsPaid != true).Sum(d => d.Minutes),
+                    TimeOffBreakdown = timeOffByDate[date]
+                        .GroupBy(d => d.TimeOffRequest!.TimeOffType!.Name)
+                        .Select(g => $"{g.Key} {TimeOffRules.FormatMinutes(g.Sum(d => d.Minutes))}")
+                        .ToList(),
+                })
             .ToList();
 
         // Rules run over every loaded day (whole workweeks), then only the
@@ -411,7 +444,9 @@ public class ReportsController(AppDbContext db, IEmailSender emailSender) : Cont
             days.Count(d => d.IsAbsent),
             days.Count(d => d.StillClockedIn),
             days.Sum(d => d.SickMinutes),
-            days);
+            days,
+            days.Sum(d => d.PaidTimeOffMinutes),
+            days.Sum(d => d.UnpaidTimeOffMinutes));
     }
 
     // Usually one assignment per employee per date, but folds in more than

@@ -44,7 +44,14 @@ public record DailyHoursDto(
     // the editable sick-hours field since those rows aren't editable there.
     int SickMinutes,
     int? ShiftAssignmentId,
-    List<string> ManualSickNotes);
+    List<string> ManualSickNotes,
+    // Approved time off on this date (TimeOffRequestDay rows), split by
+    // whether it was paid when approved. Paid counts in Total Paid; unpaid
+    // is shown for information only. Neither is worked time, so neither
+    // feeds overtime. Breakdown is "Vacation 8h"-style labels per type.
+    int PaidTimeOffMinutes = 0,
+    int UnpaidTimeOffMinutes = 0,
+    List<string>? TimeOffBreakdown = null);
 
 // Consolidated totals for one employee across the requested date range — the
 // top level of the drill-down report (see ReportsController). Days is the
@@ -73,7 +80,9 @@ public record EmployeeHoursReportDto(
     int AbsentDays,
     int OpenEntryDays,
     int TotalSickMinutes,
-    List<DailyHoursDto> Days);
+    List<DailyHoursDto> Days,
+    int TotalPaidTimeOffMinutes = 0,
+    int TotalUnpaidTimeOffMinutes = 0);
 
 // See ReportsController.EmailHoursReport. EmployeeIds null = everyone in the
 // report; TestToAddress set = send one [TEST] copy there instead.
